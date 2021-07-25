@@ -78,7 +78,6 @@ for nb in nbins:
     leg.Draw()
 
     can.Print(can.GetName() + '.png')
-    can.Print(can.GetName() + '.eps')
     can.Print(can.GetName() + '.pdf')
     funs.append(fun)
 

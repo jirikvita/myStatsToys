@@ -60,7 +60,9 @@ def main(argv):
     words = {2016: 1473,
              2017: 1283,
              2018: 1155,
-             2019: 996}
+             2019: 996.,
+             2020 : 426.,
+    }
     canname = 'ZemanovaSlova'
     can = ROOT.TCanvas(canname, canname)
     cans.append(can)
@@ -89,7 +91,7 @@ def main(argv):
     gr.Draw('P')
     fun = ROOT.TF1('fun', '[0]+[1]*x', 2015, 2028)
     fun.SetParameter(314200, -155)
-    gr.Fit('fun')
+    gr.Fit(fun, '', '', 2015., 2019.5)
     fun.Draw('same')
 
     text = '#chi^{2}' + '/ndf = {:2.2f} '.format(fun.GetChisquare() / fun.GetNDF()) + 'Y_{0}' + ' = {:3.1f}'.format(-fun.GetParameter(0) / fun.GetParameter(1)) 

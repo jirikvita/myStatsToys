@@ -1,0 +1,66 @@
+
+\documentclass[t,compress,10pt,xcolor=svgnames]{beamer}
+%\documentclass[t,compress,12pt,xcolor=svgnames]{beamer}
+%\documentclass[t,compress,12pt,xcolor=svgnames,handout]{beamer}
+
+%\newcounter{eqnum}[section]
+%\renewcommand{\theeqnum}{\thesection.\arabic{eqnum}}
+%\def\Eq{\refstepcounter{eqnum}\eqno{(\theeqnum)}}
+
+% jiri kvita: my definitions:
+\input{defs}
+\usepackage[utf8]{inputenc}
+\usepackage{color}
+\usepackage{landscape}
+\usepackage{slashed}
+\usepackage[OT1]{fontenc}
+\input epsf
+\input rotate
+
+\usepackage{graphicx,epsfig}
+%\usepackage{beamerthemeshadow}
+% some extra colors
+\definecolor{dgreen}{rgb}{0,0.7,0}
+\colorlet{lorange}{red!20!yellow}
+\colorlet{dorange}{red!60!yellow}
+
+
+% special functions
+\newcommand{\refs}[1]{{\footnotesize\textcolor{dgreen}{#1}}}
+\newcommand{\hlight}[1]{\textcolor{structure}{#1}}
+\newcommand{\comm}[1]{\textcolor{dorange}{#1}}
+
+% fonts
+\usefonttheme[onlymath]{serif}
+\setbeamerfont{title}{series=\bfseries}
+
+% colors
+%\setbeamercolor{author}{fg=dgreen}
+%\setbeamercolor{institute}{fg=dgreen}
+\setbeamercolor{math text displayed}{fg=structure}
+
+% for head- and footlines
+\setbeamercolor{palette tertiary}{bg=blue!10!white}
+
+% structural elements
+%\useoutertheme[footline=authorinstitute,subsection=false]{smoothbars}
+%\useinnertheme{circles}
+
+
+% theme choice:
+
+%\useoutertheme[footline=authortitle,subsection=false]{miniframes}
+%\useoutertheme[footline=authorinstitutetitle,subsection=false]{miniframes}
+
+%\setbeamertemplate{navigation symbols}{}
+%\usetheme{Malmoe}
+\usetheme{Madrid}
+%\usetheme{JuanLesPins}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{section in toc}[sections numbered]
+\setbeamertemplate{subsection in toc}{\hspace{1em}
+\textcolor{structure}{$\bullet$} \inserttocsubsection \\}
+\useoutertheme[footline=,subsection=false]{miniframes}
+
+% other commands
+\newcommand{\half}{ {\textstyle\frac{1}{2}} }
