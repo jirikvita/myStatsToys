@@ -1,0 +1,7 @@
+histogram 4 ciselnych cisel, inkluzivne, a v kazdem sloupci
+korelacni koeficient ve stejnych 4 kategoriich
+histogramy cifer v kazde kategorii
+(inclusive, 1st column, 2nd column, 3rd column)
+
+
+

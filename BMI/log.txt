@@ -1,0 +1,55 @@
+Loop1...
+Processing 0 ev.h=170.652 ev.w=87.3574
+Processing 1000 ev.h=167.144 ev.w=58.5745
+Processing 2000 ev.h=159.918 ev.w=68.4463
+Processing 3000 ev.h=168.472 ev.w=84.0777
+Processing 4000 ev.h=179.181 ev.w=110.304
+Processing 5000 ev.h=168.458 ev.w=80.7516
+Processing 6000 ev.h=174.586 ev.w=69.7358
+Processing 7000 ev.h=188.176 ev.w=89.083
+Processing 8000 ev.h=166.683 ev.w=77.2688
+Processing 9000 ev.h=167.336 ev.w=74.0385
+Processing 10000 ev.h=180.993 ev.w=76.0233
+Processing 11000 ev.h=173.292 ev.w=68.9274
+Processing 12000 ev.h=183.71 ev.w=86.5043
+Processing 13000 ev.h=173.184 ev.w=93.7346
+Processing 14000 ev.h=185.394 ev.w=99.6349
+Processing 15000 ev.h=150.461 ev.w=58.3973
+Processing 16000 ev.h=163.115 ev.w=69.2208
+Processing 17000 ev.h=178.681 ev.w=76.7982
+Processing 18000 ev.h=182.796 ev.w=109.485
+Processing 19000 ev.h=192.139 ev.w=93.5944
+Correlation coefficient from the TH2: 0.709805
+Info in <TCanvas::Print>: eps file hw.eps has been created
+Info in <TCanvas::Print>: eps file bmi.eps has been created
+Info in <TCanvas::Print>: eps file canproducts.eps has been created
+Info in <TCanvas::Print>: eps file canmean.eps has been created
+Info in <TCanvas::Print>: eps file can2d.eps has been created
+Covariance matrix: 
+
+2x2 matrix is as follows
+
+     |      0    |      1    |
+-------------------------------
+   0 |      95.71       90.96 
+   1 |      90.96       171.6 
+
+Correlation matrix: 
+
+2x2 matrix is as follows
+
+     |      0    |      1    |
+-------------------------------
+   0 |          1      0.7098 
+   1 |     0.7098           1 
+
+ meanh: 1.75152
+ meanw: 83.1323
+ meanB: 27.0136
+ rmsh: 0.0978324
+ rmsw: 13.0993
+ rmsB: 2.98285
+
+Error propagation for B: 
+ sigmaBnoCorr: 5.21776
+ sigmaB: 2.97915

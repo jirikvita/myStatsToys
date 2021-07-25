@@ -1,0 +1,156 @@
+/* 
+ * Author: Olda
+ * Example: BMI - body mass index
+ * Given: sample with weight and height of the population
+ *
+ * Compute: 
+ *  1) mean and standard deviation for weight and height variables
+ *  2) their covariance and correlation coefficient of mass and weight
+ *  3) use 1) and 2) to calculate mean and variance of BMI index (BMI = weight/ (height * height). Hint: Pay attention which variables need to be correlated
+ *  4) how does the standard deviation changes if correlation is neglected?
+ *  5) compare results of 3) to standard deviation obtained from BMI sample distribution
+ */
+
+
+#include "TH1F.h"
+#include "TH2D.h"
+#include "TRandom3.h"
+#include "TCanvas.h"
+#include "TFile.h"
+#include "TStyle.h"
+#include "TChain.h"
+
+#include <math.h>
+#include <iostream>
+
+using std::cout;
+using std::endl;
+
+struct Event {
+
+   float bmi;
+   float h;
+   float w;
+
+};
+
+
+int main() {
+
+
+   gStyle-> SetOptStat(111111);
+
+   TFile * f       = TFile::Open("lidska_populace.root");
+   TTree * fChain;
+   f->GetObject("tree_lidi",fChain);
+   if (fChain == 0) return 1;
+
+
+   Event ev;
+   fChain->SetBranchAddress("height", &ev.h);
+   fChain->SetBranchAddress("weight", &ev.w);
+
+
+   // histos
+   TH2F * h_hw       = new TH2F("h_hw"    , "People Sample;height [cm]; weight [kg]"    , 60, 150, 210, 150, 0, 150 );
+   TH2F * h_hw2       = new TH2F("h_hw2"    , "People Sample;height [cm]; weight [kg]"  , 6000, 150*150, 210*210, 150, 0, 150 );
+   TH2F * h_wbmi     = new TH2F("h_wbmi"  , "People Sample;weight; bmi"       , 150, 0, 150, 100, 15, 50  );
+   TH2F * h_hbmi     = new TH2F("h_hbmi"  , "People Sample;heigh; bmi"        , 60, 150, 210  , 100, 15, 50  );
+   TH1F * h_bmi      = new TH1F("h_bmi"   , "BMI; BMI"                        , 100, 15, 50 );
+
+
+   // loop
+   Long64_t nentries = fChain->GetEntriesFast();
+   Long64_t nbytes = 0, nb = 0;
+   for (Long64_t jentry=0; jentry<nentries;jentry++) {
+      Long64_t ientry = fChain->LoadTree(jentry);
+      if (ientry < 0) break;
+      nb = fChain->GetEntry(jentry);   nbytes += nb;
+      // if (Cut(ientry) < 0) continue;
+
+
+
+      ev.bmi = (ev.h !=0 ) ? ev.w/ev.h/ev.h*1e4 : -999;  //cm -> m
+
+      h_hw     -> Fill(ev.h, ev.w);
+      h_hw2    -> Fill(ev.h*ev.h, ev.w);
+      h_bmi    -> Fill(ev.bmi);
+      h_wbmi   -> Fill(ev.w, ev.bmi);
+      h_hbmi   -> Fill(ev.h, ev.bmi);
+
+   }
+
+   
+   float cov  = h_hw -> GetCovariance();
+   float rho  = h_hw -> GetCorrelationFactor();
+   float cov2 = h_hw2-> GetCovariance();
+   float rho2 = h_hw2-> GetCorrelationFactor();
+   float cov_wbmi  = h_wbmi -> GetCovariance();
+   float rho_wbmi  = h_wbmi -> GetCorrelationFactor();
+   float cov_hbmi  = h_hbmi -> GetCovariance();
+   float rho_hbmi  = h_hbmi -> GetCorrelationFactor();
+
+
+   TH1D * hh = h_hw->  ProjectionX();
+   TH1D * hw = h_hw->  ProjectionY();
+
+   float w        = hw-> GetMean();
+   float sigma_w  = hw-> GetRMS();
+   float h        = hh-> GetMean();
+   float sigma_h  = hh-> GetRMS();
+
+   cout << "covariance  cov[h,w]     = " << cov  << endl;
+   cout << "covariance  cov[h2,w]    = " << cov2  << endl;
+   cout << "covariance  cov[w,bmi]   = " << cov_wbmi  << endl;
+   cout << "covariance  cov[h,bmi]   = " << cov_hbmi  << endl;
+   cout << "correlation rho[h,w]     = " << rho  << endl;
+   cout << "correlation rho[h2,w]    = " << rho2  << endl;
+   cout << "correlation rho[w,bmi]   = " << rho_wbmi  << endl;
+   cout << "correlation rho[h,bmi]   = " << rho_hbmi  << endl;
+
+   float B = w/h/h*1e4;
+
+   // (B/sigma_B)^2 = (sigma_w/w)^2 + (sigma_h^2/h^2)^2 - 2*cov[h^2, w]/w/h^2
+   float relB2 = sigma_w*sigma_w/w/w + 4*sigma_h*sigma_h/h/h - 2*cov2/w/h/h;
+
+   float relB2_noncor = sigma_w*sigma_w/w/w + 4*sigma_h*sigma_h/h/h ;
+   float sigma_B = sqrt(relB2*B*B);
+   float sigma_B_noncor = sqrt(relB2_noncor*B*B);
+
+   cout << "BMI                  =  " << B << " +- " << sigma_B << endl;
+   cout << "BMI(no correlation)  =  " << B << " +- " << sigma_B_noncor << endl;
+
+   float h_mean_B         = h_bmi-> GetMean();
+   float h_sigma_B   = h_bmi-> GetRMS();
+
+   cout << "BMI(true)            =  " << h_mean_B << " +- " << h_sigma_B << endl;
+
+
+
+   // plot
+   TCanvas *c = new TCanvas("c", "c", 0, 0, 800, 600);
+   h_hw-> Draw("colz");
+
+   c-> SaveAs("hw.eps");
+
+   c-> Clear();
+   h_hw-> ProjectionX()-> Draw();
+   c-> SaveAs("height.eps");
+
+   c-> Clear();
+   h_hw-> ProjectionY()-> Draw();
+   c-> SaveAs("weight.eps");
+
+   c-> Clear();
+   h_bmi-> Draw();
+   c-> SaveAs("bmi.eps");
+
+   c-> Clear();
+   h_wbmi-> Draw();
+   c-> SaveAs("wbmi.eps");
+
+   c-> Clear();
+   h_hbmi-> Draw();
+   c-> SaveAs("hbmi.eps");
+}
+

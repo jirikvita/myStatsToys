@@ -1,0 +1,16 @@
+DSID     name                                                                                             Filt. Eff    Xsection[nb]  
+
+996002   user.okepka.user.okepka.MC12_14TeV.996002.Herwigpp_SDN_H12007_jetjet_JZ2.NTUP_TRUTH.e01.p004/  6.333440e-02    4623.76     
+996003   user.okepka.user.okepka.MC12_14TeV.996003.Herwigpp_SDN_H12007_jetjet_JZ3.NTUP_TRUTH.e01.p004/  4.155930e-02    90.1324     
+997001   user.okepka.user.okepka.MC12_14TeV.997001.Herwigpp_SDP_H12007_jetjet_JZ1.NTUP_TRUTH.e01.p004/  1.041540e-01    828714      
+997001   user.okepka.user.okepka.MC12_14TeV.997001.Herwigpp_SDP_H12007_jetjet_JZ3.NTUP_TRUTH.e01.p004/  4.163090e-02    89.8678     
+997003   user.okepka.user.okepka.MC12_14TeV.997003.Herwigpp_SDP_H12007_jetjet_JZ2.NTUP_TRUTH.e01.p004/  6.364000e-02    4622.17     
+998001   user.okepka.user.okepka.MC12_14TeV.998001.Herwigpp_DPE_H12007_jetjet_JZ1.NTUP_TRUTH.e01.p004/  9.212850e-02    91586       
+998002   user.okepka.user.okepka.MC12_14TeV.998002.Herwigpp_DPE_H12007_jetjet_JZ2.NTUP_TRUTH.e01.p004/  4.994660e-02    401.352     
+998003   user.okepka.user.okepka.MC12_14TeV.998003.Herwigpp_DPE_H12007_jetjet_JZ3.NTUP_TRUTH.e01.p004/  2.729540e-02    5.99218     
+999002   user.okepka.user.okepka.MC12_14TeV.999002.Herwigpp_EE3CTEQ6L1_jetjet_JZ1.NTUP_TRUTH.e01.p004/  2.640190e-01    7.33745e+06 
+999003   user.okepka.user.okepka.MC12_14TeV.999003.Herwigpp_EE3CTEQ6L1_jetjet_JZ2.NTUP_TRUTH.e01.p004/  8.624260e-02    49452.5     
+999004   user.okepka.user.okepka.MC12_14TeV.999004.Herwigpp_EE3CTEQ6L1_jetjet_JZ3.NTUP_TRUTH.e01.p004/  5.655020e-02    1168.55     
+999005   user.okepka.user.okepka.MC12_14TeV.999005.Herwigpp_EE3CTEQ6L1_jetjet_JZ4.NTUP_TRUTH.e01.p004/  3.421450e-02    18.4564     
+999006   user.okepka.user.okepka.MC12_14TeV.999006.Herwigpp_EE3CTEQ6L1_jetjet_JZ5.NTUP_TRUTH.e01.p004/  1.866870e-02    0.547473    
+999007   user.okepka.user.okepka.MC12_14TeV.999007.Herwigpp_EE3CTEQ6L1_jetjet_JZ6.NTUP_TRUTH.e01.p004/  0.0558019       1.060630e-02 

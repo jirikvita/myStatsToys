@@ -1,0 +1,22 @@
+DSID     name                                                                                             Filt. Eff    Xsection[nb]  
+
+996001   user.okepka.MC12_14TeV.996001.Herwigpp_SDN_H12007_jetjet_JZ0.EVNT.e03/   9.891200e-01   7.85271e+06 
+996002   user.okepka.MC12_14TeV.996002.Herwigpp_SDN_H12007_jetjet_JZ1.EVNT.e03/   1.049230e-01   828614 
+996003   user.okepka.MC12_14TeV.996003.Herwigpp_SDN_H12007_jetjet_JZ2.EVNT.e03/   6.259000e-02   4635.59 
+996004   user.okepka.MC12_14TeV.996004.Herwigpp_SDN_H12007_jetjet_JZ3.EVNT.e03/   4.174150e-02   89.9433 
+997001   user.okepka.MC12_14TeV.997001.Herwigpp_SDP_H12007_jetjet_JZ0.EVNT.e03/   9.883380e-01   7.79823e+06 
+997002   user.okepka.MC12_14TeV.997002.Herwigpp_SDP_H12007_jetjet_JZ1.EVNT.e03/   1.065010e-01   827871 
+997003   user.okepka.MC12_14TeV.997003.Herwigpp_SDP_H12007_jetjet_JZ2.EVNT.e03/   6.311060e-02   4623.08 
+997004   user.okepka.MC12_14TeV.997004.Herwigpp_SDP_H12007_jetjet_JZ3.EVNT.e03/   4.054820e-02   89.8051 
+998001   user.okepka.MC12_14TeV.998001.Herwigpp_DPE_H12007_jetjet_JZ0.EVNT.e03/   9.914730e-01   940393 
+998002   user.okepka.MC12_14TeV.998002.Herwigpp_DPE_H12007_jetjet_JZ1.EVNT.e03/   9.271110e-02   91699.5 
+998003   user.okepka.MC12_14TeV.998003.Herwigpp_DPE_H12007_jetjet_JZ2.EVNT.e03/   4.896920e-02   400.594 
+998004   user.okepka.MC12_14TeV.998004.Herwigpp_DPE_H12007_jetjet_JZ3.EVNT.e03/   2.679040e-02   5.98082 
+999001   user.okepka.MC12_14TeV.999001.Herwigpp_EE3CTEQ6L1_jetjet_JZ0.EVNT.e03/   9.811620e-01   12437.9 
+999002   user.okepka.MC12_14TeV.999002.Herwigpp_EE3CTEQ6L1_jetjet_JZ1.EVNT.e03/   2.713260e-01   7.33637e+06 
+999003   user.okepka.MC12_14TeV.999003.Herwigpp_EE3CTEQ6L1_jetjet_JZ2.EVNT.e03/   8.659960e-02   49778 
+999004   user.okepka.MC12_14TeV.999004.Herwigpp_EE3CTEQ6L1_jetjet_JZ3.EVNT.e03/   5.665400e-02   1169.56 
+999005   user.okepka.MC12_14TeV.999005.Herwigpp_EE3CTEQ6L1_jetjet_JZ4.EVNT.e03/   3.498730e-02   18.408 
+999006   user.okepka.MC12_14TeV.999006.Herwigpp_EE3CTEQ6L1_jetjet_JZ5.EVNT.e03/   1.905870e-02   0.547233 
+995001   user.okepka.MC12_14TeV.995001.Pythia8_A2MSTW2008LO_minbias_inelastic_afpN.EVNT.e03/   6.381950e-02   7.931e+07 
+995002   user.okepka.MC12_14TeV.995002.Pythia8_A2MSTW2008LO_minbias_inelastic_afpP.EVNT.e03/   6.288990e-02   7.931e+07 
