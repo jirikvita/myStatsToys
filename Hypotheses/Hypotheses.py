@@ -5,6 +5,8 @@
 
 from myAll import *
 
+stuff = []
+
 tmin = 0.
 tmax = 10.
 tc = 5.2
@@ -37,8 +39,6 @@ tstat0_tobs.SetFillStyle(3004)
 tstat0_tobs.SetFillColor(tstat0.GetLineColor())
 tstat0_tobs.SetLineColor(tstat0_tobs.GetLineColor())
 
-
-
 tstat1 = ROOT.TF1('tstat1', '[0]*(x-[2])*(x-[3])*exp(-[1]*([3]-x+[2]))', tmin, tmax)
 tstat1.SetParameters(-1, 0.45, tmin, tmax)
 tstat1.SetParameter(0, tstat1.GetParameter(0) / tstat1.Integral(tmin, tmax) )
@@ -61,13 +61,9 @@ can = nextCan.nextTCanvas(name, name, 0, 0, 1200,800)
 #can.Divide(2,2)
 #can.cd(1)
 
-can.cd(1)
+can.cd()
 tstat0.Draw('')
 tstat1.Draw('same')
-tstat0_tc.Draw('Fsame')
-tstat0_tobs.Draw('Fsame')
-tstat1_tc.Draw('Fsame')
-
 
 yy = 0.15
 dy = 0.012
@@ -110,6 +106,16 @@ gH1.Draw()
 
 #ROOT.gPad.SetGridx() ; ROOT.gPad.SetGridy()
 
+print('Drawing filled...')
+tstat0_tc.Draw('same')
+tstat0_tobs.Draw('same')
+tstat1_tc.Draw('same')
+stuff.append([tstat0_tc, tstat0_tobs])
+stuff.append(tstat1_tc)
+
+
+
+can.Update()
 
 can.Print(can.GetName()+'.pdf')
 can.Print(can.GetName()+'.png')
