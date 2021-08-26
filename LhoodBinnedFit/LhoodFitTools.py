@@ -6,6 +6,10 @@ import ROOT
 
 from math import log, exp, pow
 
+kBadMu = -0.1
+kBadP0 = -1
+kEpsilon = 1.e-5
+
 gsigVals = []
 gbgVals = []
 gdataVals = []
@@ -56,7 +60,7 @@ class MyFunction( ROOT.TPyMultiGenFunction ):
 def minimizeLhood(step, mumin, mumax):
 
     mu = 0.5 * (mumax + mumin)
-    muerr = -1
+    muerr = kBadMu
     # https://root-forum.cern.ch/t/numerical-minimization-with-root-math-functor/13286#p58684
 
     # not returning errors:
@@ -84,7 +88,7 @@ def minimizeLhood(step, mumin, mumax):
         #print('minimizeLhood :: Lhood fit result: mu={} +/- {}'.format(mu, muerr))
     else:
         print 'minimizeLhood :: FAILED MINIMIZATION! :-('
-        mu = -1
+        mu = kBadMu
     return mu, muerr
 
 
@@ -121,7 +125,7 @@ def ComputeZeroCompatibility(mu, muerr):
     #hmu.SetBinContent(1, mu)
     #hmu.SetBinError(1, muerr)
     #p0 = hmu.Chi2Test(dummmodel, 'WW') # by default returns the pval
-    p0 = -1
+    p0 = kBadP0
     if muerr > 0:
         p0 = ROOT.TMath.Prob(pow(mu/muerr, 2), 1)
     

@@ -67,8 +67,8 @@ def main(argv):
     for N in Ns:
         hname = 'aver{}'.format(N)
         nbins = 100
-        x1 = 0.85 * count
-        x2 = 1.15*count
+        x1 = 0.85 * count*N
+        x2 = 1.15*count*N
         h1 = ROOT.TH1D(hname, hname, nbins, x1, x2)
         hs.append(h1)
         Ys = []
@@ -81,7 +81,7 @@ def main(argv):
             aver = 0
             for iy in range(0, len(Ys)):
                 aver = aver + Ys[iy][i]
-            aver = aver / N
+            #aver = aver / N
             h1.Fill(aver)
     can.Divide(2,2)
     for h1 in hs:
