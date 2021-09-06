@@ -500,8 +500,8 @@ def main(argv):
     dt = 0.1*kday
     
     systems = [ MakeSolarSystem(cw, ch, printstep),
-                #MakeBinary(cw, ch, printstep),
-                #MakeTertiary(cw, ch, printstep)
+                MakeBinary(cw, ch, printstep),
+                MakeTertiary(cw, ch, printstep)
     ]
 
     for system in systems:
@@ -513,7 +513,7 @@ def main(argv):
             system.DrawTracks()
 
     # more steps for the tertiry system:
-    for istep in range(Nsteps, 29*Nsteps):
+    for istep in range(Nsteps, 2*Nsteps):
         for system in systems[-1:]:
             MovePlanets(system, dt)
             system.DrawTracks()
