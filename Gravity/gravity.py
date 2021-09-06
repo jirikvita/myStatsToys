@@ -261,7 +261,7 @@ def MakeSolarSystem(cw, ch, printstep):
     # phi's are random
     # theta is 0
 
-    relSF = 7 # 40 ,120, 7...
+    relSF = 120 # 40 ,120, 7...
     SF = relSF * kAU
     
     X0 = relSF/2.*kAU
@@ -326,7 +326,7 @@ def MakeBinary(cw, ch, printstep):
 
     planets = [Sun1, Sun2]
 
-    system.planets = planets
+    system.SetPlanets(planets)
     allok = system.CheckUniquePlanetsNamesOK(planets)
     print('System planet names are OK: {}'.format(allok))
     
@@ -354,11 +354,11 @@ def MakeTertiary(cw, ch, printstep):
     # the Suns of the binary system
     Sun1 = cPlanet('Sun1', 0, X0, Y0, Z0, 1.*kSunMass, 12.*kms, 5*kAU, theta, -pi/2, ROOT.kRed, 20, 0.3)
     Sun2 = cPlanet('Sun2', 1, X0, Y0, Z0, 1.*kSunMass, 10.*kms, 5*kAU, theta, +pi/2, ROOT.kBlue, 20, 0.3)
-    Sun3 = cPlanet('Sun3', 1, X0, Y0, Z0, 1.*kSunMass, 2.*kms, 1.*kAU, theta, pi, ROOT.kBlack, 20, 0.3)
+    Sun3 = cPlanet('Sun3', 1, X0, Y0, Z0, 1.*kSunMass, 2.*kms, 1.*kAU, theta, pi, ROOT.kWhite, 20, 0.3)
 
     planets = [Sun1, Sun2, Sun3]
 
-    system.planets = planets
+    system.SetPlanets(planets)
     allok = system.CheckUniquePlanetsNamesOK(planets)
     print('System planet names are OK: {}'.format(allok))
     
@@ -495,8 +495,8 @@ def main(argv):
     # STEERING !
     cw = 800
     ch = 800
-    printstep = 1000
-    Nsteps = 10000
+    printstep = 10000
+    Nsteps = 40000
     dt = 0.1*kday
     
     systems = [ MakeSolarSystem(cw, ch, printstep),
@@ -513,7 +513,7 @@ def main(argv):
             system.DrawTracks()
 
     # more steps for the tertiry system:
-    for istep in range(Nsteps, 2*Nsteps):
+    for istep in range(Nsteps, 29*Nsteps):
         for system in systems[-1:]:
             MovePlanets(system, dt)
             system.DrawTracks()
