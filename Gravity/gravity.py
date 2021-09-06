@@ -4,7 +4,7 @@
 # na pocest meho ucitele doc. RNDr. Jiri Boka, CSc.
 
 # todo: odtransfrmovat teziste?
-# draw 1AU
+# draw 1AU;-)
 
 
 from __future__ import print_function
@@ -16,6 +16,20 @@ import os, sys, getopt
 cans = []
 stuff = []
 
+########################################################################################
+
+kday = 24*3600. # seconds
+kAU = 149597871e3 # m
+kEarthMass = 5.972e24 # kg
+kSunMass = 1.989e30 # kgso
+kSunName = 'Sun'
+kms = 1000. # 1 km/s = 1000 m/s
+# grav. const
+kappa = 6.67408e-11 # m3 kg-1 s-2
+
+# 3D world:)
+kdim = 3
+kepsilon = 1.e-2*kAU
 
 #########################################
 
@@ -44,34 +58,21 @@ def MakeDigitStr(i, digits = 4):
 
 ########################################################################################
 
-kday = 24*3600. # seconds
-kAU = 149597871e3 # m
-kEarthMass = 5.972e24 # kg
-kSunMass = 1.989e30 # kg
-kms = 1000. # 1 km/s = 1000 m/s
-# grav. const
-kappa = 6.67408e-11 # m3 kg-1 s-2
-
-# 3D world:
-kdim = 3
-
-kepsilon = 1.e-2*kAU
-
-kSunName = 'Sun'
-
-
-########################################################################################
-
 # planets holder, to make sure they have unique ID etc;-)
 class cSystem:
-    def __init__(self, name, x0, y0, z0, SF, i = 0, j = 0, cw = 400, ch = 400, printstep = 1000):
+    def __init__(self, name, x0, y0, z0, SF, i = 0, j = 0, cw = 800, ch = 800, printstep = 1000, bgc = ROOT.kBlack, txtc = ROOT.kWhite):
         self.name = name
         self.X0 = x0
         self.Y0 = y0
         self.Z0 = z0
         self.SF = SF
+        self.bgc = bgc
+        self.txtc = ROOT.kWhite
         self.planets = []
         self.can = ROOT.TCanvas(name, name, i, j, cw, ch)
+        self.scaleLine = ROOT.TObject()
+        self.can.SetFillColor(self.bgc)
+        self.leg = ROOT.TLegend(0.88, 0.02, 0.98, 0.20)
         self.can.Draw()
         self.iteration = 0
         self.printstep = printstep
@@ -103,7 +104,7 @@ class cSystem:
         self.can.cd()
         
         # TODO:
-        # in the future: keep only finie numer of lines
+        # in the future: keep only finite numer of lines
         # so shift them after some time
         # draw last few dashed
         # draw first few thicker
@@ -119,7 +120,34 @@ class cSystem:
         if planet.name != kSunName:
             planet.Draw(self.SF)
         return
-
+    
+    # set planets and draw the universe:
+    def SetPlanets(self, planets):
+        self.planets = planets
+        for p in self.planets:
+            m = p.MakeMarker(self.SF)
+            m.SetMarkerSize(1)
+            self.leg.AddEntry(m, p.name, 'P')
+        self.leg.SetFillColor(self.bgc)
+        self.leg.SetTextColor(self.txtc)
+        self.leg.Draw()
+        dx = -0.45
+        dy = -0.45
+        lx1,ly1,lx2,ly2 = self.X0/self.SF  + 1.*kAU/self.SF + dx, self.Y0/self.SF + dy, self.X0/self.SF + dx, self.Y0/self.SF + dy
+        print('1AU lines coors: ', lx1,ly1,lx2,ly2)
+        self.scaleLine = ROOT.TLine(lx1,ly1,lx2,ly2)
+        self.scaleLine.SetLineColor(self.txtc)
+        self.scaleLine.SetLineWidth(2)
+        self.scaleLine.SetLineStyle(1)
+        self.scaleLine.SetNDC()
+        self.scaleLine.Draw()
+        ddy = 0.01
+        self.AUtxt = ROOT.TLatex(lx2,ly1 + ddy, '1 AU')
+        self.AUtxt.SetNDC()
+        self.AUtxt.SetTextSize(0.03)
+        self.AUtxt.SetTextColor(self.txtc)
+        self.AUtxt.Draw()
+    
     def DrawTracks(self):
         for planet in self.planets:
             self.DrawPlanetTrack(planet)
@@ -186,12 +214,17 @@ class cPlanet:
                                                                                self.v[0]/kms, self.v[1]/kms, self.v[2]/kms) )
         return
 
-    def Draw(self, SF):
-        self.markers.append(ROOT.TMarker( self.x[0]/SF, self.x[1]/SF, self.mst) )
-        mark = self.markers[-1]
+    def MakeMarker(self, SF):
+        mark = ROOT.TMarker(self.x[0]/SF, self.x[1]/SF, self.mst)
         mark.SetMarkerSize(self.msz)
         mark.SetMarkerColor(self.mcol)
         mark.SetNDC()
+        self.markers.append(mark)
+        return mark
+    
+    def Draw(self, SF):
+        self.MakeMarker(SF)
+        mark = self.markers[-1]
         mark.Draw()
         
     def Archive(self):
@@ -223,19 +256,19 @@ class cPlanet:
 # https://nssdc.gsfc.nasa.gov/planetary/factsheet/
 # https://nssdc.gsfc.nasa.gov/planetary/factsheet/planet_table_ratio.html
 
-def MakeSolarSystem():
+def MakeSolarSystem(cw, ch, printstep):
 
     # phi's are random
     # theta is 0
 
-    relSF = 5.
+    relSF = 7 # 40 ,120, 7...
     SF = relSF * kAU
     
     X0 = relSF/2.*kAU
     Y0 = relSF/2.*kAU
     Z0 = 0.0*kAU
     
-    system = cSystem("Solar", X0, Y0, Z0, SF, 0, 0)
+    system = cSystem("Solar", X0, Y0, Z0, SF, 0, 0, cw, ch, printstep)
     
     theta = pi/2.
     
@@ -244,23 +277,26 @@ def MakeSolarSystem():
     Sun.Draw(SF)
     
     # inner:
-    Mercury = cPlanet('Mercury', 1, X0, Y0, Z0, 0.0553*kEarthMass, 47.4*kms, 0.387*kAU, theta,  pi/4, ROOT.kBlack, 20)
+    Mercury = cPlanet('Mercury', 1, X0, Y0, Z0, 0.0553*kEarthMass, 47.4*kms, 0.387*kAU, theta,  pi/4, ROOT.kWhite, 20)
     Venus   = cPlanet('Venus',   2, X0, Y0, Z0, 0.815*kEarthMass,  35.0*kms,  0.723*kAU, theta, -pi/4, ROOT.kOrange, 20)
     Earth   = cPlanet('Earth',   3, X0, Y0, Z0,       kEarthMass,  29.8*kms,  1.000*kAU, theta,  pi/4, ROOT.kGreen+2, 20)
     Mars    = cPlanet('Mars',    4, X0, Y0, Z0, 0.107*kEarthMass,  24.1*kms,  1.520*kAU, theta, -pi/2, ROOT.kRed+1, 20)
 
-    DoomsDay  = cPlanet('DoomsDay',    -1, X0, Y0, Z0, 0.5*kEarthMass,  40.*kms,  0.8*kAU, theta, 3*pi/2, ROOT.kGray+1, 20)
+    DoomsDay  = cPlanet('DoomsDay',    -1, X0, Y0, Z0, 0.5*kEarthMass,  42.*kms,  0.8*kAU, theta, 3*pi/2, ROOT.kGray+1, 20)
 
     # outer:
     Jupiter = cPlanet('Jupiter', 5, X0, Y0, Z0, 317.8*kEarthMass, 13.1*kms,  5.20*kAU, theta,  pi/3, ROOT.kPink, 20)
     Saturn  = cPlanet('Saturn',  6, X0, Y0, Z0,  95.2*kEarthMass,  9.7*kms,    9.58*kAU, theta, -pi/3, ROOT.kMagenta, 20)
     Uranus  = cPlanet('Uranus',  7, X0, Y0, Z0,  14.5*kEarthMass,  6.8*kms, 19.20*kAU, theta,  pi,   ROOT.kBlue, 20)
     Neptune = cPlanet('Neptune', 8, X0, Y0, Z0,  17.1*kEarthMass,  5.4*kms, 30.05*kAU, theta, -pi,   ROOT.kCyan, 20)
-    
-    #planets = [Sun, Mercury, Venus, Earth, Mars, DoomsDay]
-    planets = [Sun, Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, Neptune, DoomsDay]
+    Pluto = cPlanet('Pluto',     9, X0, Y0, Z0,  0.0025*kEarthMass,4.7*kms, 39.48*kAU, theta, -pi,   ROOT.kCyan+2, 20)
 
-    system.planets = planets
+    #planets = [Sun, Earth]
+    #planets = [Sun, Earth, DoomsDay, Jupiter]
+    #planets = [Sun, Mercury, Venus, Earth, Mars, DoomsDay]
+    planets = [Sun, Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, Neptune, DoomsDay, Pluto]
+
+    system.SetPlanets(planets)
     allok = system.CheckUniquePlanetsNamesOK(planets)
     print('System planet names are OK: {}'.format(allok))
     
@@ -268,19 +304,19 @@ def MakeSolarSystem():
 
 
 ########################################################################################
-def MakeBinary():
+def MakeBinary(cw, ch, printstep):
 
     # phi's are random
     # theta is 0
 
-    relSF = 3.
+    relSF = 2.
     SF = relSF * kAU
     
     X0 = relSF/2.*kAU
     Y0 = relSF/2.*kAU
     Z0 = 0.0*kAU
     
-    system = cSystem("Binary", X0, Y0, Z0, SF, 400, 0)
+    system = cSystem("Binary", X0, Y0, Z0, SF, 400, 0, cw, ch, printstep)
     
     theta = pi/2.
     
@@ -299,7 +335,7 @@ def MakeBinary():
 
 
 ########################################################################################
-def MakeTertiary():
+def MakeTertiary(cw, ch, printstep):
 
     # phi's are random
     # theta is 0
@@ -311,14 +347,14 @@ def MakeTertiary():
     Y0 = relSF/2.*kAU
     Z0 = 0.0*kAU
     
-    system = cSystem("Tertiary", X0, Y0, Z0, SF, 800, 0)
+    system = cSystem("Tertiary", X0, Y0, Z0, SF, 800, 0, cw, ch, printstep)
     
     theta = pi/2.
     
     # the Suns of the binary system
     Sun1 = cPlanet('Sun1', 0, X0, Y0, Z0, 1.*kSunMass, 12.*kms, 5*kAU, theta, -pi/2, ROOT.kRed, 20, 0.3)
-    Sun2 = cPlanet('Sun2', 1, X0, Y0, Z0, 1.*kSunMass, 12.*kms, 5*kAU, theta, +pi/2, ROOT.kBlue, 20, 0.3)
-    Sun3 = cPlanet('Sun2', 1, X0, Y0, Z0, 1.*kSunMass, 2.*kms, 1.*kAU, theta, pi, ROOT.kBlack, 20, 0.3)
+    Sun2 = cPlanet('Sun2', 1, X0, Y0, Z0, 1.*kSunMass, 10.*kms, 5*kAU, theta, +pi/2, ROOT.kBlue, 20, 0.3)
+    Sun3 = cPlanet('Sun3', 1, X0, Y0, Z0, 1.*kSunMass, 2.*kms, 1.*kAU, theta, pi, ROOT.kBlack, 20, 0.3)
 
     planets = [Sun1, Sun2, Sun3]
 
@@ -327,8 +363,6 @@ def MakeTertiary():
     print('System planet names are OK: {}'.format(allok))
     
     return system
-
-
 
 
 ########################################################################################        
@@ -458,20 +492,28 @@ def main(argv):
     print('*** Settings:')
     print('tag={:}, batch={:}'.format(gTag, gBatch))
 
-    systems = [ MakeSolarSystem(), MakeBinary(), MakeTertiary() ]
+    # STEERING !
+    cw = 800
+    ch = 800
+    printstep = 1000
+    Nsteps = 10000
+    dt = 0.1*kday
+    
+    systems = [ MakeSolarSystem(cw, ch, printstep),
+                #MakeBinary(cw, ch, printstep),
+                #MakeTertiary(cw, ch, printstep)
+    ]
 
     for system in systems:
         system.Print()
 
-    Nsteps = 10000
-    dt = 0.1*kday
     for istep in range(0, Nsteps):
         for system in systems:
             MovePlanets(system, dt)
             system.DrawTracks()
 
     # more steps for the tertiry system:
-    for istep in range(Nsteps, 10*Nsteps):
+    for istep in range(Nsteps, 2*Nsteps):
         for system in systems[-1:]:
             MovePlanets(system, dt)
             system.DrawTracks()
