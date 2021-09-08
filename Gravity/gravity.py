@@ -4,7 +4,6 @@
 # na pocest meho ucitele doc. RNDr. Jiri Boka, CSc.
 
 # todo: odtransfrmovat teziste?
-# draw 1AU;-)
 
 
 from __future__ import print_function
@@ -19,6 +18,7 @@ stuff = []
 ########################################################################################
 
 kday = 24*3600. # seconds
+kyear = 31556952. # seconds; http://www.kylesconverter.com/time/years-to-seconds
 kAU = 149597871e3 # m
 kEarthMass = 5.972e24 # kg
 kSunMass = 1.989e30 # kgso
@@ -66,18 +66,23 @@ class cSystem:
         self.Y0 = y0
         self.Z0 = z0
         self.SF = SF
+
+        self.time = 0.
+        
         self.bgc = bgc
         self.txtc = ROOT.kWhite
+        
         self.planets = []
         self.can = ROOT.TCanvas(name, name, i, j, cw, ch)
         self.scaleLine = ROOT.TObject()
         self.can.SetFillColor(self.bgc)
         self.leg = ROOT.TLegend(0.88, 0.02, 0.98, 0.20)
-        self.can.Draw()
+        
         self.iteration = 0
         self.printstep = printstep
-    def Inc(self):
+    def Inc(self, dt):
         self.iteration = self.iteration + 1
+        self.time = self.time + dt
     def CheckUniquePlanetsNamesOK(self, planets):
         ip1 = -1
         for p1 in self.planets:
@@ -124,6 +129,23 @@ class cSystem:
     # set planets and draw the universe:
     def SetPlanets(self, planets):
         self.planets = planets
+        return
+
+    def DrawTimer(self):
+        stime = ''
+        if self.time < kyear:
+            stime = '{:.0f} days'.format(self.time / kday)
+        else:
+            stime = '{:.1f} years'.format(self.time / kyear)
+        dx = -0.47
+        dy = 0.45
+        self.timer = ROOT.TLatex(self.X0/self.SF + dx, self.Y0/self.SF + dy, stime)
+        self.timer.SetTextColor(self.txtc)
+        self.timer.SetTextSize(0.03)
+        self.timer.Draw()
+    
+    def DrawUniverse(self):
+        self.can.Draw()
         for p in self.planets:
             m = p.MakeMarker(self.SF)
             m.SetMarkerSize(1)
@@ -131,9 +153,9 @@ class cSystem:
         self.leg.SetFillColor(self.bgc)
         self.leg.SetTextColor(self.txtc)
         self.leg.Draw()
-        dx = -0.45
+        dx = 0.45
         dy = -0.45
-        lx1,ly1,lx2,ly2 = self.X0/self.SF  + 1.*kAU/self.SF + dx, self.Y0/self.SF + dy, self.X0/self.SF + dx, self.Y0/self.SF + dy
+        lx1,ly1,lx2,ly2 = self.X0/self.SF  + 1.*kAU/self.SF - dx, self.Y0/self.SF + dy, self.X0/self.SF - dx, self.Y0/self.SF + dy
         print('1AU lines coors: ', lx1,ly1,lx2,ly2)
         self.scaleLine = ROOT.TLine(lx1,ly1,lx2,ly2)
         self.scaleLine.SetLineColor(self.txtc)
@@ -147,12 +169,14 @@ class cSystem:
         self.AUtxt.SetTextSize(0.03)
         self.AUtxt.SetTextColor(self.txtc)
         self.AUtxt.Draw()
+        self.DrawTimer()
     
     def DrawTracks(self):
         for planet in self.planets:
             self.DrawPlanetTrack(planet)
         if self.iteration % self.printstep == 0:
             self.can.Print(self.name + '{}.png'.format(MakeDigitStr(self.iteration, 4)))
+        self.DrawTimer()
         return
 
 
@@ -261,7 +285,7 @@ def MakeSolarSystem(cw, ch, printstep):
     # phi's are random
     # theta is 0
 
-    relSF = 120 # 40 ,120, 7...
+    relSF = 7 #120 # 40 ,120, 7...
     SF = relSF * kAU
     
     X0 = relSF/2.*kAU
@@ -282,7 +306,7 @@ def MakeSolarSystem(cw, ch, printstep):
     Earth   = cPlanet('Earth',   3, X0, Y0, Z0,       kEarthMass,  29.8*kms,  1.000*kAU, theta,  pi/4, ROOT.kGreen+2, 20)
     Mars    = cPlanet('Mars',    4, X0, Y0, Z0, 0.107*kEarthMass,  24.1*kms,  1.520*kAU, theta, -pi/2, ROOT.kRed+1, 20)
 
-    DoomsDay  = cPlanet('DoomsDay',    -1, X0, Y0, Z0, 0.5*kEarthMass,  42.*kms,  0.8*kAU, theta, 3*pi/2, ROOT.kGray+1, 20)
+    DoomsDay  = cPlanet('Dooms Day',    -1, X0, Y0, Z0, 0.5*kEarthMass,  42.*kms,  0.8*kAU, theta, 3*pi/2, ROOT.kGray+1, 20)
 
     # outer:
     Jupiter = cPlanet('Jupiter', 5, X0, Y0, Z0, 317.8*kEarthMass, 13.1*kms,  5.20*kAU, theta,  pi/3, ROOT.kPink, 20)
@@ -445,7 +469,7 @@ def MovePlanets(system, dt, debug = 0):
         MakeStep(planet, system, dt)
         if debug:
             planet.Print()
-    system.Inc()
+    system.Inc(dt)
     #print('iteration: {}'.format(system.iteration))
 
 ########################################################################################
@@ -493,19 +517,20 @@ def main(argv):
     print('tag={:}, batch={:}'.format(gTag, gBatch))
 
     # STEERING !
-    cw = 800
-    ch = 800
-    printstep = 10000
-    Nsteps = 40000
+    cw = 798
+    ch = 799
+    printstep = 100
+    Nsteps = 12000
     dt = 0.1*kday
     
     systems = [ MakeSolarSystem(cw, ch, printstep),
-                MakeBinary(cw, ch, printstep),
-                MakeTertiary(cw, ch, printstep)
+                #MakeBinary(cw, ch, printstep),
+                #MakeTertiary(cw, ch, printstep)
     ]
 
     for system in systems:
         system.Print()
+        system.DrawUniverse()
 
     for istep in range(0, Nsteps):
         for system in systems:
@@ -513,7 +538,7 @@ def main(argv):
             system.DrawTracks()
 
     # more steps for the tertiry system:
-    for istep in range(Nsteps, 2*Nsteps):
+    for istep in range(Nsteps, 1*Nsteps):
         for system in systems[-1:]:
             MovePlanets(system, dt)
             system.DrawTracks()
