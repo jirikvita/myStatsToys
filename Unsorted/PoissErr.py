@@ -15,15 +15,15 @@ def sig0(k, delta, up):
     return fact
     
 k = 5
-print sig(k, 1., 1)
-print sig(k, 1., -1)
+print(sig(k, 1., 1))
+print(sig(k, 1., -1))
 
-print k+sig(k, 1., 1)
-print k-sig(k, 1., -1)
+print(k+sig(k, 1., 1))
+print(k-sig(k, 1., -1))
 
-print
-print sig0(k, 1., 1)
-print sig0(k, 1., -1)
+print()
+print(sig0(k, 1., 1))
+print(sig0(k, 1., -1))
 
-print k+sig0(k, 1., 1)
-print k-sig0(k, 1., -1)
+print(k+sig0(k, 1., 1))
+print(k-sig0(k, 1., -1))

@@ -96,7 +96,7 @@ def MakeCov(h2):
         maver = maver / n
         aver.append(maver)
 
-    print 'Aver: ', aver
+    print('Aver: ', aver)
     cvals = []
     # compute 1/nx sum(val-aver)
     for j in range(1,h2.GetYaxis().GetNbins()+1):

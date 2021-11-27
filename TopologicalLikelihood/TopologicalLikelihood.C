@@ -323,7 +323,7 @@ void TopologicalLikelihood(TString configname = "config.config")
   TH1D* likelihood_sum_h = (TH1D*) likelihood_sig_h -> Clone("likelihood_sum");
   likelihood_sum_h -> Add(likelihood_bkg_h);
   likelihood_sum_h -> SetLineColor(SumCol);
-  likelihood_sum_h -> SetFillColor(SumCol);
+  likelihood_sum_h -> SetFillColorAlpha(SumCol);
   likelihood_sum_h -> SetFillStyle(SumFill);
   //  likelihood_sum_h -> SetFillColor(106);
   likelihood_sum_h -> SetStats(0);

@@ -3,8 +3,8 @@
 # jiri kvita, 15.1.2018
 # illustrational purposes only;)
 
-from myAll import *
-
+#from myAll import *
+import ROOT
 stuff = []
 
 tmin = 0.
@@ -20,7 +20,7 @@ tstat0.SetLineColor(ROOT.kRed)
 tstat0.SetLineStyle(1)
 tstat0.SetLineWidth(2)
 tstat0.SetNpx(200)
-print tstat0.Integral(tmin, tmax)
+print(tstat0.Integral(tmin, tmax))
 
 # hashed from tc to tmax:
 tstat0_tc = ROOT.TF1('tstat0_tc', '[0]*(x-[2])*(x-[3])*exp(-[1]*(x-[1]))', tobs, tmax)
@@ -46,7 +46,7 @@ tstat1.SetLineColor(ROOT.kBlue)
 tstat1.SetLineStyle(2)
 tstat1.SetNpx(200)
 tstat1.SetLineWidth(2)
-print tstat1.Integral(tmin, tmax)
+print(tstat1.Integral(tmin, tmax))
 
 # hashed from tmin to tc
 tstat1_tc = ROOT.TF1('tstat1_tc', '[0]*(x-[2])*(x-[3])*exp(-[1]*([3]-x+[2]))', tmin, tc)
@@ -57,7 +57,7 @@ tstat1_tc.SetFillColor(tstat1.GetLineColor())
 tstat1_tc.SetLineColor(tstat1.GetLineColor())
 
 name = 'HypoDemo'
-can = nextCan.nextTCanvas(name, name, 0, 0, 1200,800)
+can = ROOT.TCanvas(name, name, 0, 0, 1200,800)
 #can.Divide(2,2)
 #can.cd(1)
 

@@ -1,8 +1,8 @@
 void can2_add6ptcl()
 {
 //=========Macro generated from canvas: can2/can2
-//=========  (Wed Nov  6 19:26:06 2019) by ROOT version 6.14/04
-   TCanvas *can2 = new TCanvas("can2", "can2",643,64,600,600);
+//=========  (Sat Nov 27 19:53:07 2021) by ROOT version 6.24/06
+   TCanvas *can2 = new TCanvas("can2", "can2",650,64,600,600);
    can2->SetHighLightColor(2);
    can2->Range(-7.5,4.498014e+07,7.5,4.514383e+07);
    can2->SetFillColor(0);
@@ -554,21 +554,16 @@ void can2_add6ptcl()
    histo__1->SetMarkerStyle(20);
    histo__1->SetMarkerSize(0.7);
    histo__1->GetXaxis()->SetLabelFont(42);
-   histo__1->GetXaxis()->SetLabelSize(0.035);
-   histo__1->GetXaxis()->SetTitleSize(0.035);
+   histo__1->GetXaxis()->SetTitleOffset(1);
    histo__1->GetXaxis()->SetTitleFont(42);
    histo__1->GetYaxis()->SetLabelFont(42);
-   histo__1->GetYaxis()->SetLabelSize(0.035);
-   histo__1->GetYaxis()->SetTitleSize(0.035);
-   histo__1->GetYaxis()->SetTitleOffset(0);
    histo__1->GetYaxis()->SetTitleFont(42);
    histo__1->GetZaxis()->SetLabelFont(42);
-   histo__1->GetZaxis()->SetLabelSize(0.035);
-   histo__1->GetZaxis()->SetTitleSize(0.035);
+   histo__1->GetZaxis()->SetTitleOffset(1);
    histo__1->GetZaxis()->SetTitleFont(42);
    histo__1->Draw("P");
    
-   TPaveText *pt = new TPaveText(0.431723,0.94,0.568277,0.995,"blNDC");
+   TPaveText *pt = new TPaveText(0.4306355,0.94,0.5693645,0.995,"blNDC");
    pt->SetName("title");
    pt->SetBorderSize(0);
    pt->SetFillColor(0);

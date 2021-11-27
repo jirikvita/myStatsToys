@@ -61,7 +61,7 @@ for xline in infile.readlines():
             k = h2names.index(hname)
             h2[k].Fill(int(lline[i]), int(lline[j]))
 
-print 'OK, read %i lines!' % (nl,)
+print('OK, read %i lines!' % (nl,))
 
 
 canname = 'GroupHistos'      
@@ -99,13 +99,13 @@ for phist in phists:
     phist.SetMarkerSize(1)
     phist.Draw("e1hist")
     fun.SetParameter(0, phist.Integral() / (1.*phist.GetNbinsX()) )
-    print'Fitpar set to %f' % (fun.GetParameter(0), )
+    print('Fitpar set to %f' % (fun.GetParameter(0), ))
     phist.Fit('myfun', '0q')
     fun.DrawCopy('same')
     ndf = fun.GetNDF()
     chi2 = fun.GetChisquare()
     if ndf > 0:
-        print 'Chi2/ndf = %f / %i, p0=%f' % ( chi2, ndf, fun.GetParameter(0))
+        print('Chi2/ndf = %f / %i, p0=%f' % ( chi2, ndf, fun.GetParameter(0)))
         chi2ndf = chi2 / ndf
         chi2h.Fill(j, chi2ndf)
         chi2hist.Fill(chi2)
@@ -136,7 +136,7 @@ chi2hist.Fit('chi2fit', '0')
 funchi.Draw('same')
 ndf = funchi.GetNDF()
 chi2 = funchi.GetChisquare()
-print 'Fit of the chi2 shape: chi2/ndf = %f / %i' % ( chi2, ndf,)
+print('Fit of the chi2 shape: chi2/ndf = %f / %i' % ( chi2, ndf,))
 
 
 canname2 = 'ScatterHistos'      

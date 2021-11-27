@@ -62,6 +62,7 @@ def main(argv):
              2018: 1155,
              2019: 996.,
              2020 : 426.,
+             2021 : 0,
     }
     canname = 'ZemanovaSlova'
     can = ROOT.TCanvas(canname, canname)

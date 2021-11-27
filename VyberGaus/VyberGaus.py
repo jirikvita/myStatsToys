@@ -34,7 +34,7 @@ gaus = ROOT.TF1('Gauss', formula, xmin, xmax)
 mu=0.
 sigma=1.
 gaus.SetParameters(Nevt , mu, sigma)
-print 'Integral of the Gauss: %f' % (gaus.Integral(xmin, xmax))
+print('Integral of the Gauss: %f' % (gaus.Integral(xmin, xmax)))
 
 legs = []
 
@@ -60,10 +60,10 @@ for nb in nbins:
     fun.SetParName(2, '#sigma')
     fun.SetLineStyle(2)
     histo.Fit(fun, '0')
-    print 'Integral of the fitted Gauss: %f' % (fun.Integral(xmin, xmax))
+    print('Integral of the fitted Gauss: %f' % (fun.Integral(xmin, xmax)))
 
     hist.append(histo)
-    print 'Histogram entries: %f' % (histo.GetEntries(), )
+    print('Histogram entries: %f' % (histo.GetEntries(), ))
 
     histo.Draw()
     gaus.DrawCopy('same')

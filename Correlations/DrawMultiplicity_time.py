@@ -5,7 +5,7 @@ import sys, os
 
 # Jiri Kvita June 22nd 2016, March 23rd 2017
 
-from myAll import *
+#from myAll import *
 from MakeCorrTools import *
 
 N = 16
@@ -23,21 +23,21 @@ infilename = 'all_jeskyneII.txt'
 pngtag='Multiplicity_time'
 frametag = '10min window'
 
-print sys.argv
+print(sys.argv)
 if len(sys.argv) > 1:
     infilename = sys.argv[1]
-    print 'OK, will try to read user defined file %s' % (infilename,)
+    print('OK, will try to read user defined file %s' % (infilename,))
 if len(sys.argv) > 2:
     pngtag = sys.argv[2]
-    print 'OK, accepting user defined tag for pictures names %s' % (pngtag,)
+    print('OK, accepting user defined tag for pictures names %s' % (pngtag,))
 if len(sys.argv) > 3:
     frametag = sys.argv[3]
-    print 'OK, accepting user defined tag for pictures names %s' % (frametag,)
+    print('OK, accepting user defined tag for pictures names %s' % (frametag,))
 
 
 
 
-infile = open(infilename, 'read')
+infile = open(infilename, 'r')
 Tags = []
 cnt = 0
 Data = {}
@@ -75,7 +75,7 @@ bins=770
 
 histos = []
 ranges=[ [bins, 0, emax], [bins, 0, emax], [bins, 0, emax], [bins, 0, emax], [200, 0, emax], [bins, 0, emax], [bins, 0, emax], [bins, 0, emax]]
-print len(FlipData)
+print(len(FlipData))
 for i in range(0, len(FlipData)):
     histo = MakeSpectrum(FlipData, i, ranges[i])
     histos.append(histo)
@@ -84,7 +84,7 @@ for i in range(0, len(FlipData)):
 #############################
 # Draw:
 
-can = nextCan.nextTCanvas(pngtag, pngtag, 0, 0, 1000, 1000)
+can = ROOT.TCanvas(pngtag, pngtag, 0, 0, 1000, 1000)
 objs.append(can)
 #can.Divide(3,1)
 

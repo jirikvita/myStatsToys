@@ -3,7 +3,7 @@
 import ROOT
 import sys, os
 
-from myAll import *
+#from myAll import *
 from MakeCorrTools import *
 
 N = 16
@@ -44,7 +44,7 @@ spotreba = [ [ 'Zdarilova', [11, 7, 5.9, 6.4, 8.2, 3.9, 5.35, 7.07, 7.18, 5.6, 7
 
 # print lengths:
 for item in spotreba:
-    print item[0], len(item[1])
+    print(item[0], len(item[1]))
 
 # divide first by 2:
 for item in spotreba:
@@ -59,7 +59,7 @@ for im in range(0,len(spotreba[0][1])):
         sum = sum + spotreba[iu][1][im]
     spotreba[-2][1].append(sum)
 
-print spotreba
+print(spotreba)
 
 #Compute the diff
 diff = []
@@ -69,9 +69,9 @@ for im in range(0,len(spotreba[0][1])):
     idiff = hlavni - sum
     diff.append(idiff)
 spotreba.append(['Rozdil', diff])
-print diff
+print(diff)
 
-print spotreba
+print(spotreba)
 
 histo = Make2D(spotreba, len(spotreba)-4, 'Spotreba', 'mesice 2015')
 histoAll = Make2D(spotreba, len(spotreba), 'SpotrebaAll')
@@ -88,7 +88,7 @@ for i in range(0, len(spotreba)):
 #############################
 # Draw:
 
-can = nextCan.nextTCanvas('Voda', 'Voda', 0, 0, 1000, 1000)
+can = ROOT.TCanvas('Voda', 'Voda', 0, 0, 1000, 1000)
 objs.append(can)
 can.Divide(2,2)
 can.cd(1)
@@ -96,7 +96,7 @@ can.cd(1)
 histo.Draw("colz")
 
 can.cd(2)
-leg = nextCan.nextLeg(0.75, 0.17, 0.98, 0.90)
+leg = ROOT.TLegend(0.75, 0.17, 0.98, 0.90)
 tmp = ROOT.TH2D('tmp', 'tmp;mesice 2015', 14, 0, 14, 100, 0, 15.)
 tmp.SetStats(0)
 objs.append(tmp)

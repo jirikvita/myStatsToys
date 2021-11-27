@@ -47,7 +47,7 @@ events = 10000
 
 for i in range(0,events):
     if (i % 1000) == 0:
-        print "Processing %i" % (i,)
+        print("Processing %i" % (i,))
     pt1 = genHist.GetRandom()
     pt2 = pt1
 
@@ -78,5 +78,6 @@ ROOT.gPad.SetLogy()
 ROOT.gPad.SetGridx()
 Ratio.Draw("colz")
 
+can.Update()
 
 ROOT.gApplication.Run()

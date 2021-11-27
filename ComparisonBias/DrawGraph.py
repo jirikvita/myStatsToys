@@ -2,10 +2,13 @@
 
 # jiri kvita, 24.3.2017
 
-from myAll import *
-
+#from myAll import *
+import ROOT
 #filename = ''
 #rfile = ROOT.TFile(filename, 'read')
+
+
+# people writing down rnadom numbers, the next one is usually larger if first was also large? Check;)
 
 data = [ [89, 85], [26, 89], [79, 85], [92, 78], [26, 80], [53, 53], [19, 82], [99, 84], [59, 78],
          [85, 80], [45, 68], [80, 70], [19, 69], [78, 89], [11, 75], [16, 80], [7, 75], [56, 73],
@@ -23,7 +26,7 @@ for point in data:
     j=j+1
 
 name='BiasCorr'
-can = nextCan.nextTCanvas(name, name, 0, 0, 1200, 800)
+can = ROOT.TCanvas(name, name, 0, 0, 1200, 800)
 can.Divide(2,1)
 can.cd(1)
 gr.SetMarkerStyle(20)
@@ -34,8 +37,8 @@ gr.Draw('AP')
 can.cd(2)
 histo.Draw('colz')
 val = histo.GetCorrelationFactor()
-print 'Number of people responded  : %i' % (len(data),)
-print 'Correlation                 : %f' % (val,)
+print('Number of people responded  : %i' % (len(data),))
+print('Correlation                 : %f' % (val,))
 
 ROOT.gPad.SetGridx() ; ROOT.gPad.SetGridy()
 

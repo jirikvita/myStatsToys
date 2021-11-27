@@ -96,12 +96,12 @@ def main(argv):
     print('Nbins: {}'.format(nbins))
     h1 = ROOT.TH1D(hname, hname, nbins, x1, x2)
     stuff.append(h1)
-    Nrq = cc*nbins/iRep
+    Nrq = int(cc*nbins/iRep)
     # percentae of additionally generated events
     ptcl = 6 # 6
     additional = int(ptcl/100.*Nrq)
     print('Generating {} events...'.format(iRep*Nrq))
-    for i in xrange(0, iRep):
+    for i in range(0, iRep):
         print('Round {}/{}...'.format(i+1, iRep))
         h1.FillRandom('myfun', Nrq+additional)
     can2.cd()

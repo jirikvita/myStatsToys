@@ -3,7 +3,8 @@
 import ROOT
 import sys, os
 
-from myAll import *
+#from myAll import *
+stuff = []
 from MakeCorrTools import *
 
 N = 16
@@ -20,25 +21,25 @@ labels = ["Frame", "All", "Dot",  "Small blob",  "Curly track", "Heavy blob", "H
 # read data
 #
 # infilename = '/home/qitek/cernbox/TimePix/ToSort/LetNY_400x30s/txt/rate.txt'
-infilename = '/home/qitek/cernbox/TimePix/ToSort/NY_rate.txt'
+infilename = '/home/qitek/cernbox/./TimePix/Spectra/NY_rate.txt'
 pngtag='abg_extended'
 frametag = '30s window'
 
-print sys.argv
+print(sys.argv)
 if len(sys.argv) > 1:
     infilename = sys.argv[1]
-    print 'OK, will try to read user defined file %s' % (infilename,)
+    print('OK, will try to read user defined file %s' % (infilename,))
 if len(sys.argv) > 2:
     pngtag = sys.argv[2]
-    print 'OK, accepting user defined tag for pictures names %s' % (pngtag,)
+    print('OK, accepting user defined tag for pictures names %s' % (pngtag,))
 if len(sys.argv) > 3:
     frametag = sys.argv[3]
-    print 'OK, accepting user defined tag for pictures names %s' % (frametag,)
+    print('OK, accepting user defined tag for pictures names %s' % (frametag,))
 
 
 
 
-infile = open(infilename, 'read')
+infile = open(infilename, 'r')
 Tags = []
 cnt = 0
 Data = {}
@@ -60,7 +61,7 @@ for line in infile.readlines():
         i = i+1
     cnt = cnt+1
 
-print Data
+print(Data)
 FlipData = []
 N = 0
 ymax = -1e6
@@ -88,7 +89,7 @@ for i in range(0, len(FlipData)):
 #############################
 # Draw:
 
-can = nextCan.nextTCanvas(pngtag, pngtag, 0, 0, 1000, 1000)
+can = ROOT.TCanvas(pngtag, pngtag, 0, 0, 1000, 1000)
 objs.append(can)
 can.Divide(2,2)
 can.cd(1)
@@ -96,7 +97,8 @@ can.cd(1)
 histo.Draw("colz")
 
 can.cd(2)
-leg = nextCan.nextLeg(0.45, 0.70, 0.65, 0.88)
+leg = ROOT.TLegend(0.45, 0.70, 0.65, 0.88)
+stuff.append([can, leg])
 tmp = ROOT.TH2D('tmp', 'tmp;%s;' % (frametag,), N, 0, N, 100, 0, ymax)
 tmp.SetStats(0)
 objs.append(tmp)
@@ -128,7 +130,7 @@ for i in range(0, len(FlipData)):
             sc = MakeScatterGraph(FlipData, i, j)
             scatter.append(sc)
 
-can2 = nextCan.nextTCanvas(pngtag + '_scat', pngtag + '_scat', 0, 0, 1000, 1000)
+can2 = ROOT.TCanvas(pngtag + '_scat', pngtag + '_scat', 0, 0, 1000, 1000)
 nx = int(math.sqrt(len(FlipData)*len(FlipData)/2.))
 can2.Divide(nx,nx)
 isc = 1

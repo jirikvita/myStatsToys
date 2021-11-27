@@ -5,9 +5,9 @@ import sys, os
 
 # Jiri Kvita June 22nd 2016
 
-from myAll import *
+#from myAll import *
 from MakeCorrTools import *
-
+stuff = []
 N = 16
 col = [ROOT.kRed, ROOT.kBlue, ROOT.kBlack]
         
@@ -23,21 +23,21 @@ infilename = 'abg_jeskyne.txt'
 pngtag='ABG'
 frametag = '10min window'
 
-print sys.argv
+print(sys.argv)
 if len(sys.argv) > 1:
     infilename = sys.argv[1]
-    print 'OK, will try to read user defined file %s' % (infilename,)
+    print('OK, will try to read user defined file %s' % (infilename,))
 if len(sys.argv) > 2:
     pngtag = sys.argv[2]
-    print 'OK, accepting user defined tag for pictures names %s' % (pngtag,)
+    print('OK, accepting user defined tag for pictures names %s' % (pngtag,))
 if len(sys.argv) > 3:
     frametag = sys.argv[3]
-    print 'OK, accepting user defined tag for pictures names %s' % (frametag,)
+    print('OK, accepting user defined tag for pictures names %s' % (frametag,))
 
 
 
 
-infile = open(infilename, 'read')
+infile = open(infilename, 'r')
 Tags = []
 cnt = 0
 Data = {}
@@ -55,7 +55,7 @@ for line in infile.readlines():
             i = i+1
     cnt = cnt+1
 
-print Data
+print(Data)
 FlipData = []
 N = 0
 ymax = -1e6
@@ -80,21 +80,22 @@ for i in range(0, len(FlipData)):
 #############################
 # Draw:
 
-can = nextCan.nextTCanvas(pngtag, pngtag, 0, 0, 1000, 1000)
+can = ROOT.TCanvas(pngtag, pngtag, 0, 0, 1000, 1000)
 objs.append(can)
 can.Divide(2,2)
 can.cd(1)
 #ROOT.gPad.SetGridx() ; ROOT.gPad.SetGridy()
 histo.Draw("colz")
 
-can2 = nextCan.nextTCanvas(pngtag + '_scat', pngtag + '_scat', 0, 0, 1000, 1000)
+can2 = ROOT.TCanvas(pngtag + '_scat', pngtag + '_scat', 0, 0, 1000, 1000)
 nx = int(math.sqrt(len(FlipData)*len(FlipData)/2.))
 can2.Divide(nx,nx)
 
 #canMulti = nextCan.nextTCanvas('Multi' + pngtag, 'Multi' + pngtag, 0, 0, 1000, 1000)
 #canMulti.cd()
 can2.cd(4)
-leg = nextCan.nextLeg(0.45, 0.70, 0.65, 0.88)
+leg = ROOT.TLegend(0.45, 0.70, 0.65, 0.88)
+stuff.append([can, can2, leg])
 tmp = ROOT.TH2D('tmp', 'tmp;%s;' % (frametag,), N, 0, N, 100, 0, ymax)
 tmp.SetStats(0)
 objs.append(tmp)

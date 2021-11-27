@@ -28,9 +28,9 @@ nc=3
 
 nub = 1.3
 alfa = 1. - Sum(nub,0,nc-1)
-print alfa
+print(alfa)
 
 nus = 2
 beta = Sum(nub+nus,0,nc-1)
-print beta
-print 1.-beta
+print(beta)
+print(1.-beta)

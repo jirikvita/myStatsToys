@@ -193,5 +193,6 @@ for U in Us:
     xlines = DrawLines(xs, u0, a, b, y1+0.4, y2+0.4, SF, showrate)
     Lines.append(xlines)
     showrate = showrate + 1
-        
+
+can.Update()
 gApplication.Run()

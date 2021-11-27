@@ -5,7 +5,7 @@ import sys, os
 
 # Jiri Kvita June 22nd 2016, March 23rd 2017
 
-from myAll import *
+#from myAll import *
 from MakeCorrTools import *
 
 N = 16
@@ -23,21 +23,21 @@ infilename = 'ene_jeskyneII.txt'
 pngtag='All_Spectra'
 frametag = '10min window'
 
-print sys.argv
+print(sys.argv)
 if len(sys.argv) > 1:
     infilename = sys.argv[1]
-    print 'OK, will try to read user defined file %s' % (infilename,)
+    print('OK, will try to read user defined file %s' % (infilename,))
 if len(sys.argv) > 2:
     pngtag = sys.argv[2]
-    print 'OK, accepting user defined tag for pictures names %s' % (pngtag,)
+    print('OK, accepting user defined tag for pictures names %s' % (pngtag,))
 if len(sys.argv) > 3:
     frametag = sys.argv[3]
-    print 'OK, accepting user defined tag for pictures names %s' % (frametag,)
+    print('OK, accepting user defined tag for pictures names %s' % (frametag,))
 
 
 
 
-infile = open(infilename, 'read')
+infile = open(infilename, 'r')
 Tags = []
 cnt = 0
 Data = {}
@@ -71,7 +71,7 @@ bins=100
 
 histos = []
 ranges=[ [bins, 0, emax], [bins, 0, emax], [bins, 0, emax], [bins, 0, emax], [200, 0, emax], [bins, 0, emax], [bins, 0, emax], [bins, 0, emax]]
-print len(FlipData)
+print(len(FlipData))
 for i in range(0, len(FlipData)):
     histo = MakeSpectrum(FlipData, i, ranges[i])
     histos.append(histo)
@@ -85,7 +85,7 @@ ROOT.gStyle.SetPadTopMargin(0.05)
 ROOT.gStyle.SetPadRightMargin(0.05)
 
 
-can = nextCan.nextTCanvas(pngtag, pngtag, 0, 0, 850, 800)
+can = ROOT.TCanvas(pngtag, pngtag, 0, 0, 850, 800)
 objs.append(can)
 #can.Divide(3,1)
 

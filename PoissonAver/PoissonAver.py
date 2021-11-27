@@ -47,7 +47,7 @@ nExps = [500, 100, 50, 10, 5]
 leg = TLegend(0.45, 0.5, 0.89, 0.87)
 
 for nExp in nExps:
-   print 'Running nexp=%i' % (nExp,)
+   print('Running nexp=%i' % (nExp,))
    histo = GetRatioOverToys(Mu, nToy, nExp)
    histo.SetStats(0)
    histos.append(histo)

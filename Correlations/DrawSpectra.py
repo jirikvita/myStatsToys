@@ -5,7 +5,7 @@ import sys, os
 
 # Jiri Kvita June 22nd 2016, March 23rd 2017
 
-from myAll import *
+#from myAll import *
 from MakeCorrTools import *
 
 N = 16
@@ -22,6 +22,8 @@ TagDef = ['All',  'Alpha', 'Beta', 'Gama', 'Other']
 # EXTENDED:
 #TagExt  =[  'All',    'Dots',    'SmallBlobs',      'CurlyTracks',     'HeavyBlobs',      'HeavyTracks',     'StraightTracks']
 
+# example:
+# ./DrawSpectra.py CDGMEX_ene3.txt
 
 
 #########################################
@@ -38,22 +40,22 @@ exttag = 'default'
 Tag = TagDef
 nx,ny = 3,1
 
-print sys.argv
+print(sys.argv)
 if len(sys.argv) > 1:
     infilenames = sys.argv[1]
-    print 'OK, will try to read user defined input file %s' % (infilenames,)
+    print('OK, will try to read user defined input file %s' % (infilenames,))
 if len(sys.argv) > 2:
     pngtag = sys.argv[2]
-    print 'OK, accepting user defined tag for pictures names %s' % (pngtag,)
+    print('OK, accepting user defined tag for pictures names %s' % (pngtag,))
 if len(sys.argv) > 3:
     frametag = sys.argv[3]
-    print 'OK, accepting user defined tag for frametag %s' % (frametag,)
+    print('OK, accepting user defined tag for frametag %s' % (frametag,))
 if len(sys.argv) > 4:
     exttag = sys.argv[4]
-    print 'OK, accepting user defined tag for default/extedned! %s' % (exttag,)
+    print('OK, accepting user defined tag for default/extedned! %s' % (exttag,))
 
 if exttag.find('ext') >= 0:
-    print 'Switching from default analysis type to extended!'
+    print('Switching from default analysis type to extended!')
     Tag = TagExt
     nx,ny = 3,2
 
@@ -61,7 +63,7 @@ if exttag.find('ext') >= 0:
     
 Infilenames = []
 if infilenames.find(' ') > 0:
-    print 'OK, we think you proveded a file list!'
+    print('OK, we think you proveded a file list!')
     Infilenames = infilenames.split()
 else:
     Infilenames.append(infilenames)
@@ -70,8 +72,8 @@ ifile = -1
 Data = {}
 Tags = []
 for infilename in Infilenames:
-    print 'Reading file %s' % (infilename,)
-    infile = open(infilename, 'read')
+    print('Reading file %s' % (infilename,))
+    infile = open(infilename, 'r')
     ifile = ifile+1
     cnt = 0
     for line in infile.readlines():
@@ -113,7 +115,7 @@ if exttag.find('ext') >= 0:
              [100, 0, emax], [100, 0, emax], [100, 0, emax]  ]
 
 
-print len(FlipData)
+print(len(FlipData))
 for i in range(0, len(FlipData)):
     histo = MakeSpectrum(FlipData, i, ranges[i])
     histos.append(histo)
@@ -121,14 +123,14 @@ for i in range(0, len(FlipData)):
 #############################
 # Draw:
 
-can = nextCan.nextTCanvas(pngtag, pngtag, 0, 0, 1200, 500)
+can = ROOT.TCanvas(pngtag, pngtag, 0, 0, 1200, 500)
 objs.append(can)
 can.Divide(nx,ny)
 
 j=1
 logy = [1, 1, 1, 1, 1, 1, 1, 1]
 for histo in histos:
-    print 'hname: ', histo.GetName()
+    print('hname: ', histo.GetName())
     if histo.GetName().find('All') >= 0 or histo.GetName().find('Other') >= 0 or histo.GetName().find('Energy') >= 0:
         continue
     can.cd(j)

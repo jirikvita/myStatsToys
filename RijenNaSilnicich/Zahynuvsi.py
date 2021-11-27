@@ -72,11 +72,11 @@ gr.Draw('P')
 chi2 = fitfun.GetChisquare()
 ndf = fitfun.GetNDF()
 if ndf > 0:
-    print 'chi2/ndf = %f / %i = %f' % (chi2, ndf, chi2/ndf, )
+    print('chi2/ndf = %f / %i = %f' % (chi2, ndf, chi2/ndf, ))
     for ip in range(0, fitfun.GetNpar()):
-        print 'par%i=%f error=%f relerr=%f' % (ip, fitfun.GetParameter(ip), fitfun.GetParError(ip), fitfun.GetParError(ip) / abs(fitfun.GetParameter(ip)) )
+        print('par%i=%f error=%f relerr=%f' % (ip, fitfun.GetParameter(ip), fitfun.GetParError(ip), fitfun.GetParError(ip) / abs(fitfun.GetParameter(ip)) ))
 
-    print 'Setting parameters for the fit error band!'
+    print('Setting parameters for the fit error band!')
     fitfunDown.SetParameters( fitfun.GetParameter(0),  fitfun.GetParameter(1),  fitfun.GetParError(0),  fitfun.GetParError(1) )
     fitfunUp.SetParameters(   fitfun.GetParameter(0),  fitfun.GetParameter(1),  fitfun.GetParError(0),  fitfun.GetParError(1) )
 

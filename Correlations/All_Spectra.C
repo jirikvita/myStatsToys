@@ -1,18 +1,15 @@
 void All_Spectra()
 {
 //=========Macro generated from canvas: All_Spectra/All_Spectra
-//=========  (Sun Jun 10 11:40:28 2018) by ROOT version6.08/04
-   TCanvas *All_Spectra = new TCanvas("All_Spectra", "All_Spectra",0,50,858,808);
-   gStyle->SetOptTitle(0);
+//=========  (Sat Nov 27 19:09:46 2021) by ROOT version 6.24/06
+   TCanvas *All_Spectra = new TCanvas("All_Spectra", "All_Spectra",0,64,850,800);
    All_Spectra->SetHighLightColor(2);
-   All_Spectra->Range(-2437.5,-13959.4,13812.5,79103.27);
+   All_Spectra->Range(-1529.412,-8758.84,13764.71,78829.56);
    All_Spectra->SetFillColor(0);
    All_Spectra->SetBorderMode(0);
    All_Spectra->SetBorderSize(2);
-   All_Spectra->SetLeftMargin(0.15);
    All_Spectra->SetRightMargin(0.05);
    All_Spectra->SetTopMargin(0.05);
-   All_Spectra->SetBottomMargin(0.15);
    All_Spectra->SetFrameBorderMode(0);
    All_Spectra->SetFrameBorderMode(0);
    
@@ -232,20 +229,25 @@ void All_Spectra()
    ptcls->SetMarkerStyle(20);
    ptcls->GetXaxis()->SetTitle("E [keV]");
    ptcls->GetXaxis()->SetLabelFont(42);
-   ptcls->GetXaxis()->SetLabelSize(0.035);
-   ptcls->GetXaxis()->SetTitleSize(0.035);
+   ptcls->GetXaxis()->SetTitleOffset(1);
    ptcls->GetXaxis()->SetTitleFont(42);
    ptcls->GetYaxis()->SetTitle("Events");
    ptcls->GetYaxis()->SetLabelFont(42);
-   ptcls->GetYaxis()->SetLabelSize(0.035);
-   ptcls->GetYaxis()->SetTitleSize(0.035);
    ptcls->GetYaxis()->SetTitleOffset(2.2);
    ptcls->GetYaxis()->SetTitleFont(42);
    ptcls->GetZaxis()->SetLabelFont(42);
-   ptcls->GetZaxis()->SetLabelSize(0.035);
-   ptcls->GetZaxis()->SetTitleSize(0.035);
+   ptcls->GetZaxis()->SetTitleOffset(1);
    ptcls->GetZaxis()->SetTitleFont(42);
    ptcls->Draw("colz");
+   
+   TPaveText *pt = new TPaveText(0.4357547,0.9346907,0.5642453,0.995,"blNDC");
+   pt->SetName("title");
+   pt->SetBorderSize(0);
+   pt->SetFillColor(0);
+   pt->SetFillStyle(0);
+   pt->SetTextFont(42);
+   TText *pt_LaTex = pt->AddText("ptcls");
+   pt->Draw();
    All_Spectra->Modified();
    All_Spectra->cd();
    All_Spectra->SetSelected(All_Spectra);

@@ -113,5 +113,5 @@ def MakeSignificantDiff1D(h1,h2, doAbs = False, doDiff = False):
 
     if 0:
         for binx in range(1,nx+1):
-            print('(%f,%f)=%f' % (histo.GetBinLowEdge(binx), histo.GetBinLowEdge(binx) + histo.GetBinWidth(binx), histo.GetBinContent(binx) ))
+            print(('(%f,%f)=%f' % (histo.GetBinLowEdge(binx), histo.GetBinLowEdge(binx) + histo.GetBinWidth(binx), histo.GetBinContent(binx) )))
     return histo

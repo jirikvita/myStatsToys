@@ -2,7 +2,7 @@
 
 import ROOT, sys, os, math
 
-import nextCan
+#import nextCan
 import myPyStyle
 import myHistoTools
 
@@ -25,26 +25,26 @@ Data = [0, 3, 4, 4, 7, 3,
 sum = 0
 for i in Data:
     sum = sum + i
-print 'Sum of all runners: %i' %(sum,)
+print('Sum of all runners: %i' %(sum,))
 
 t0 = 2*60+5
 t1 = 6*60+50
 delta = 5
 
 
-Times = [t0 + x*delta for x in range(0, (t1 - t0)/delta + 1) ]
+Times = [t0 + x*delta for x in range(0, int ((t1 - t0)/delta + 1) ) ]
 
-histo0 = nextCan.nextH1("raw", "raw;x;y", len(Data), 0, len(Data))
-histo1 = nextCan.nextH1("data", "data;x;y", (t1-t0)/delta, t0, t1)
-histo2 = nextCan.nextH1("dataErr", "data;x;y", (t1-t0)/delta, t0, t1)
-histo3 = nextCan.nextH1("PragueMarathon2014", "PragueMarathon2014;minutes;runners", (t1-t0)/delta, t0, t1)
+histo0 = ROOT.TH1D("raw", "raw;x;y", len(Data), 0, len(Data))
+histo1 = ROOT.TH1D("data", "data;x;y", int((t1-t0)/delta), t0, t1)
+histo2 = ROOT.TH1D("dataErr", "data;x;y", int((t1-t0)/delta), t0, t1)
+histo3 = ROOT.TH1D("PragueMarathon2014", "PragueMarathon2014;minutes;runners", int( (t1-t0)/delta ), t0, t1)
 
 histo2.SetMarkerSize(1)
 histo2.SetMarkerStyle(20)
 histo3.SetMarkerSize(1)
 histo3.SetMarkerStyle(20)
 
-can = nextCan.nextTCanvas("Run", "Run", 0, 0, 1900, 1200)
+can = ROOT.TCanvas("Run", "Run", 0, 0, 1900, 1200)
 can.Divide(3,2)
 
 j = 0

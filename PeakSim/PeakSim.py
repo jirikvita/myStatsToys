@@ -63,7 +63,7 @@ ROOT.gStyle.SetOptFit(111)
 for ngen in Ngen:
     j=j+1
     tag = GetNumTag(j)
-    print '=== Processing %i' % (ngen,) 
+    print('=== Processing %i' % (ngen,)) 
     hname = 'histo_%i' % (ngen,)
     tmphist = ROOT.TH1D(hname, hname, nbins, x1, x2)
     tmphist.Sumw2()
@@ -84,23 +84,23 @@ for ngen in Ngen:
     # testgamma = gamma
     testgamma = 1.
     for m in testmass:
-        print 'Testing mass  %f' % (m,)
+        print('Testing mass  %f' % (m,))
         fitfun.SetParameters(0.8*integral, alfa, 0.2*integral, m, testgamma)
         hist.Fit(fitfun, 'Q')
         hist.Fit(fitfun, 'Q')
         chi2 = fitfun.GetChisquare()
-        print '  m=%f, chi2=%f' % (m, chi2, )
+        print('  m=%f, chi2=%f' % (m, chi2, ))
         if chi2 < bestchi2:
             bestchi2 = chi2
             bestmass = m
-    print '  *** bestchi2=%f' % (bestchi2,)
+    print('  *** bestchi2=%f' % (bestchi2,))
     fitfun.SetParameters(0.8*integral, alfa, 0.2*integral, bestmass, testgamma)
     hist.Fit(fitfun, 'Q')
     hist.Fit(fitfun)      
     hist.Draw("e1" + sameopt)
     # hlist.append(hist)
     # sameopt = 'same'
-    print tag
+    print(tag)
     can.Print("gif/%s_%s.gif" % (canname,tag))
 
 anim='anim.gif'
