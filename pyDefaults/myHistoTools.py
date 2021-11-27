@@ -1,6 +1,5 @@
 #!/usr/bin/python
 
-
 import math
 import ROOT
 
@@ -38,7 +37,7 @@ def PrintBinContent(histo):
     line=''
     for binx in range(0,nx+2):
         line = '%s, %4.7f' % (line, histo.GetBinContent(binx),)
-    print line
+    print(line)
 
 def Flip2D(histo):
     flip = histo.Clone(histo.GetName() + "_flip")
@@ -114,5 +113,5 @@ def MakeSignificantDiff1D(h1,h2, doAbs = False, doDiff = False):
 
     if 0:
         for binx in range(1,nx+1):
-            print '(%f,%f)=%f' % (histo.GetBinLowEdge(binx), histo.GetBinLowEdge(binx) + histo.GetBinWidth(binx), histo.GetBinContent(binx) )
+            print('(%f,%f)=%f' % (histo.GetBinLowEdge(binx), histo.GetBinLowEdge(binx) + histo.GetBinWidth(binx), histo.GetBinContent(binx) ))
     return histo

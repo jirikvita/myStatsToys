@@ -1,13 +1,14 @@
 #!/usr/bin/python
 # jk 30.10.2017, 3.11.2017
 
-from __future__ import print_function
+
 
 import ROOT
 import array
 ROOT.gStyle.SetOptTitle(0)
 from math import pi,atan,sqrt
 
+import ctypes
 
 
 # https://en.wikipedia.org/wiki/Multivariate_normal_distribution
@@ -18,8 +19,8 @@ npx = 100
 AddWidth = 0
 
 ### STEERING!!! ###
-Print = False
-#Print = True
+#Print = False
+Print = True
 #SingleExample = True
 SingleExample = False
 
@@ -124,8 +125,8 @@ Rhos = [-0.1, -0.3, -0.5, -0.8, 0.1, 0.3, 0.5, 0.8]
 # define a high intelligency:
 high = 130
 
-xx = ROOT.Double(0.)
-yy = ROOT.Double(0.)
+xx = ctypes.c_double(0.) 
+yy = ctypes.c_double(0.)
 data = array.array('d', 2*[0])
 
 N = 3000
@@ -190,9 +191,9 @@ for rho in Rhos:
                 gen.GetRandom2(xx, yy)
                 #print( 'x={0}, y={1}'.format(xx,yy))
                 gr.SetPoint(i,xx,yy)
-                h2.Fill(xx,yy)
-                data[0] = xx
-                data[1] = yy
+                h2.Fill(xx.value,yy.value)
+                data[0] = xx.value
+                data[1] = yy.value
                 #principal.AddRow(data)
                 
             #print ican

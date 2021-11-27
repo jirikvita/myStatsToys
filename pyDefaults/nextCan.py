@@ -1,7 +1,10 @@
-import commands
-import os
-import tempfile
+#!/usr/bin/python
+
 import ROOT
+#import subprocess
+import os
+#import tempfile
+
 
 # code by Jan Veverka
 # http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/UserCode/JanVeverka/FWLite/Tools/python/canvases.py?view=markup
@@ -92,7 +95,7 @@ def update():
 
 def nextCan(name=None, title=None, xoff = 0, yoff = 0, w=wwidth, h=wheight):
     update()
-    i = len(ROOT.gROOT.GetListOfCanvases())
+    #i = len(ROOT.gROOT.GetListOfCanvases())
     wtopx = 20 * (i % xperiod)
     wtopy = 20 * (i % yperiod)
     
@@ -100,13 +103,13 @@ def nextCan(name=None, title=None, xoff = 0, yoff = 0, w=wwidth, h=wheight):
         title = name
         
     if name:
-        if ROOT.gROOT.GetListOfCanvases().FindObject(name):
-            i = 0
-            while ROOT.gROOT.GetListOfCanvases().FindObject(name + '_%d' % i):
-                i += 1
-            name = name + '_%d' % i
-            if title:
-                title = title + ' %d' % i
+        #if ROOT.gROOT.GetListOfCanvases().FindObject(name):
+        #    i = 0
+        #    while ROOT.gROOT.GetListOfCanvases().FindObject(name + '_%d' % i):
+        #        i += 1
+        #    name = name + '_%d' % i
+        #    if title:
+        #        title = title + ' %d' % i
         c1 = ROOT.TCanvas(name, title)
     else:
         c1 = ROOT.TCanvas()

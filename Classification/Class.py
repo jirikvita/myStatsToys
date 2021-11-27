@@ -2,10 +2,11 @@
 
 # jiri kvita, 29.1.2018
 # illustrational purposes only;)
-
-from myAll import *
+import ROOT
+#from myAll import *
 
 from math import pi
+import ctypes
 
 lines = []
 funs = []
@@ -31,7 +32,7 @@ ROOT.gStyle.SetOptTitle(0)
 
 unit = 400
 name = 'ClassDemo'
-can = nextCan.nextTCanvas(name, name, 0, 0, 3*unit,1*unit)
+can = ROOT.TCanvas(name, name, 0, 0, 3*unit,1*unit)
 can.Divide(3,1)
 
 # probability distribution for the signal
@@ -54,8 +55,8 @@ Nsig = 300
 Nbg = 2*Nsig
 N = [Nsig, Nbg]
 
-xx = ROOT.Double(0.)
-yy = ROOT.Double(0.)
+xx = ctypes.c_double(0.)
+yy = ctypes.c_double(0.)
 
 Data = []
 
@@ -66,8 +67,8 @@ for fun,n,gr,col,mark in zip(funs,N,Grs,cols,marks):
     ig = 0
     for i in range(0,Nsig):
         fun.GetRandom2(xx,yy)
-        gr.SetPoint(ig,xx,yy)
-        data.append([float(xx),float(yy)])
+        gr.SetPoint(ig,xx.value,yy.value)
+        data.append([xx.value, yy.value])
         #print xx,yy
         ig = ig + 1
     gr.SetMarkerColor(col)
@@ -129,8 +130,8 @@ for data in Data:
         mux[id] = mux[id] + x
         muy[id] = muy[id] + y
 
-print mux
-print muy
+print(mux)
+print(muy)
 # normalize:
 id = -1
 for mx in mux:
@@ -140,8 +141,8 @@ id = -1
 for my in muy:
     id = id+1
     muy[id] = my / (1.*len(Data[id]))
-print mux
-print muy
+print(mux)
+print(muy)
 # construct the Fisher discriminant
 Ts = []
 
@@ -178,12 +179,12 @@ for data in Data:
         h_ts[id].Fill(t)
         ig = ig+1
     Ts.append(ts)
-    print ts
+    print(ts)
 
 
 unit = 600
 name = 'FisherDemo'
-canF = nextCan.nextTCanvas(name, name, 0, 0, 2*unit, unit)
+canF = ROOT.TCanvas(name, name, 0, 0, 2*unit, unit)
 canF.Divide(2,1)
 canF.cd(1)
 temp.DrawCopy()

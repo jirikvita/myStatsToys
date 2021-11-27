@@ -5,6 +5,7 @@
 # 5y averages?
 
 from __future__ import print_function
+import ctypes
 
 import numpy as nump
 
@@ -44,9 +45,9 @@ def SetMonthLabels(hh):
 
 ##########################################
 def GetXminmax(gr):
-    y = ROOT.Double(0.)
-    xmin = ROOT.Double(0.)
-    xmax = ROOT.Double(0.)
+    y = ctypes.c_double(0.) 
+    xmin = ctypes.c_double(0.) 
+    xmax = ctypes.c_double(0.) 
     gr.GetPoint(0, xmin, y)
     gr.GetPoint(gr.GetN()-1, xmax, y)
     return xmin, xmax
@@ -56,15 +57,15 @@ def MakeHistoFromGraph(gr):
     # support of only equidistant binning!
     nb = gr.GetN()
     xmin,xmax = GetXminmax(gr)
-    half = 0.5 * (xmax - xmin) / nb
+    half = 0.5 * (xmax.value - xmin.value) / nb
     name = gr.GetName()
     title = gr.GetTitle()
     hh = ROOT.TH1D(name, title, nb, xmin-half, xmax+half)
     for i in range(0, nb):
-        y = ROOT.Double(0.)
-        x = ROOT.Double(0.)
+        y = ctypes.c_double(0.) 
+        x = ctypes.c_double(0.) 
         gr.GetPoint(i, x, y)
-        hh.SetBinContent(i+1, y)
+        hh.SetBinContent(i+1, y.value)
         hh.SetBinError(i+1, gr.GetErrorY(i))
     return hh
 
@@ -72,15 +73,15 @@ def MakeHistoFromGraph(gr):
 def MakeYArrayFromGraph(gr):
     nb = gr.GetN()
     xmin,xmax = GetXminmax(gr)
-    half = 0.5 * (xmax - xmin) / nb
+    half = 0.5 * (xmax.value - xmin.value) / nb
     name = gr.GetName()
     title = gr.GetTitle()
     a = []
     for i in range(0, nb):
-        y = ROOT.Double(0.)
-        x = ROOT.Double(0.)
+        y = ctypes.c_double(0.) 
+        x = ctypes.c_double(0.) 
         gr.GetPoint(i, x, y)
-        a.append(y)
+        a.append(y.value)
     return a
   
 ##########################################
@@ -101,12 +102,12 @@ def MakeFitResiduals(gr, fun):
     xx = 12.
     nb = 24
     hh = ROOT.TH1D(name, name, nb, -xx, xx)
-    x = ROOT.Double(0.)
-    val = ROOT.Double(0.)
+    x = ctypes.c_double(0.) 
+    val = ctypes.c_double(0.) 
     for ip in range(0, gr.GetN()):
         gr.GetPoint(ip, x, val)
-        fitval = fun.Eval(x)
-        diff = fitval - val
+        fitval = fun.Eval(x.value)
+        diff = fitval - val.value
         hh.Fill(diff)
     return hh
 
@@ -154,7 +155,7 @@ def main(argv):
     print('tag={:}, batch={:}'.format(gTag, gBatch))
 
     filename = 'data/O1LYSA01.txt'
-    infile = open(filename, 'read')
+    infile = open(filename, 'r')
     
     debug = 0
     
@@ -266,10 +267,10 @@ def main(argv):
             grxmin, grxmax = GetXminmax(gr)
             fun = ROOT.TF1(funname, '[0] + [1]*x', grxmin, grxmax)
             fun.SetLineColor(year - Year0 + 1 + jmonth)
-            x = ROOT.Double(0.)
-            midpoint = ROOT.Double(0.)
-            gr.GetPoint(gr.GetN()/2, x, midpoint)
-            fun.SetParameters(midpoint, 0.)
+            x = ctypes.c_double(0.) 
+            midpoint = ctypes.c_double(0.) 
+            gr.GetPoint(int(gr.GetN()/2), x, midpoint)
+            fun.SetParameters(midpoint.value, 0.)
             #fun.FixParameter(1, 0.)
             #fcan.cd(igr+1)
             fcan.cd()
@@ -369,10 +370,10 @@ def main(argv):
         funname = 'linfit_{}_{}'.format(gr.GetName(), im)
         grxmin, grxmax = GetXminmax(gr)
         fun = ROOT.TF1(funname, '[0] + [1]*x', grxmin, grxmax)
-        x = ROOT.Double(0.)
-        midpoint = ROOT.Double(0.)
-        gr.GetPoint(gr.GetN()/2, x, midpoint)
-        fun.SetParameters(midpoint, 0.)
+        x = ctypes.c_double(0.) 
+        midpoint = ctypes.c_double(0.) 
+        gr.GetPoint(int(gr.GetN()/2), x, midpoint)
+        fun.SetParameters(midpoint.value, 0.)
         gr.Fit(funname)
         
         text = '{}'.format(dMonths[im+1])

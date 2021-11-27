@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import ROOT
+import ctypes
 
 ROOT.gStyle.SetOptTitle(0)
 
@@ -15,8 +16,8 @@ rho = 0.65
 # define a high intelligency:
 high = 130
 
-xx = ROOT.Double(0.)
-yy = ROOT.Double(0.)
+xx = ctypes.c_double(0.)
+yy = ctypes.c_double(0.)
 
 objs = []
 
@@ -81,11 +82,11 @@ gr.Fit('linfit')
 chi2 = fitfun.GetChisquare()
 ndf = fitfun.GetNDF()
 if ndf > 0:
-    print 'chi2/ndf = %f / %i = %f' % (chi2, ndf, chi2/ndf, )
+    print('chi2/ndf = %f / %i = %f' % (chi2, ndf, chi2/ndf, ))
     for ip in range(0, fitfun.GetNpar()):
-        print 'par%i=%f error=%f' % (ip, fitfun.GetParameter(ip), fitfun.GetParError(ip),)
+        print('par%i=%f error=%f' % (ip, fitfun.GetParameter(ip), fitfun.GetParError(ip),))
 
-    print 'Setting parameters for the fit error band!'
+    print('Setting parameters for the fit error band!')
     fitfunDown.SetParameters( fitfun.GetParameter(0),  fitfun.GetParameter(1),  fitfun.GetParError(0),  fitfun.GetParError(1) )
     fitfunUp.SetParameters(   fitfun.GetParameter(0),  fitfun.GetParameter(1),  fitfun.GetParError(0),  fitfun.GetParError(1) )
     
