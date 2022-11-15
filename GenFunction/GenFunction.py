@@ -29,6 +29,7 @@ def DrawLines(U, u0, u1, u2, y1, y2, SF, showrate):
             ux = u0 + SF*(uvec - u1) / (u2 - u1)
             line = TLine(ux, y1, ux, y2)
             line.SetNDC()
+            line.SetLineColor(kBlue)
             line.Draw()
             lines.append(line)
     return lines
@@ -195,4 +196,6 @@ for U in Us:
     showrate = showrate + 1
 
 can.Update()
+can.Print(can.GetName() + '.pdf')
+can.Print(can.GetName() + '.png')
 gApplication.Run()

@@ -63,8 +63,8 @@ int main() {
 
    // histos
    TH2D *h_hw       = new TH2D("h_hw"    , "People Sample;height [cm]; weight [kg]",
-				60, hmin, hmax,
-				150, wmin, wmax );
+				50, hmin, hmax,
+				100, wmin, wmax );
    TH1D *h_bmi      = new TH1D("h_bmi"   , "BMI; BMI", 
 				100, 15, 50 );
 
@@ -151,23 +151,41 @@ int main() {
 
    // plot
    TCanvas *c = new TCanvas("c", "c", 0, 0, 800, 600);
+   h_hw -> SetStats(0);
    h_hw-> Draw("colz");
    cout << "Correlation coefficient from the TH2: " << h_hw -> GetCorrelationFactor() << endl;
    c-> SaveAs("hw.pdf");
    c-> SaveAs("hw.png");
 
    c-> Clear();
-   h_height-> Draw();
+   //h_height -> SetStats(0);
+   /*
+     h_height -> SetMarkerStyle(20);
+     h_height -> SetMarkerSize(1);
+     h_height -> SetMarkerColor(ROOT.kBlack);
+     h_height -> SetLineColor(ROOT.kBlack);
+     h_height-> Draw("e1 x0");
+   */
+
+   h_height-> SetFillColor(kCyan);
+   h_height-> Draw("hist");
    c-> SaveAs("height.png");
    c-> SaveAs("height.pdf");
 
    c-> Clear();
-   h_weight-> Draw();
+   //h_weight -> SetStats(0);
+   h_weight -> SetFillColor(kYellow);
+   // h_weight-> Draw("e1 x0");
+   h_weight-> Draw("hist");
    c-> SaveAs("weight.png");
    c-> SaveAs("weight.pdf");
 
    c-> Clear();
-   h_bmi-> Draw();
+   //h_bmi -> SetStats(0);
+   h_bmi -> SetFillColor(kMagenta);
+   h_bmi-> Draw("hist");
+   // h_bmi-> Draw("e1 X0");
+   
    c-> SaveAs("bmi.png");
    c-> SaveAs("bmi.pdf");
 

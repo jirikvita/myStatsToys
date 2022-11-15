@@ -22,6 +22,26 @@ def MakeSequence(n = 1024):
     return seq
 
 ##########################################
+def AnalyzeSeq(seq, n1 = 1, n2 = 10):
+    actual = -1
+    n = 0
+    name = 'SeqLengthHist'
+    title = name + ';n;#'
+    h1 = ROOT.TH1D(name, title, n2 - n1, n1, n2)
+    for rnd in seq:
+        j = 0
+        if rnd >= 0.5:
+            j = 1
+        if actual != 1.*j:
+            if n > 0:
+                h1.Fill(n)
+            n = 1
+            actual = 1.*j
+        else:
+            n = n + 1
+    return h1
+
+##########################################
 
 def DrawSeq(can, seq, 
             col0 = ROOT.kBlack, col1 = ROOT.kRed,
@@ -130,19 +150,45 @@ def main(argv):
     print('*** Settings:')
     print('tag={:}, batch={:}'.format(gTag, gBatch))
 
-    canname = 'RndSeq'
+    N = 1024
+    canname = 'RndSeq_{}'.format(N)
     can = ROOT.TCanvas(canname, canname, 0, 0, 1000, 1000)
     cans.append(can)
     
-    N = 1024
+  
     seq = MakeSequence(N)
     print(seq)
     marks = DrawSeq(can, seq)
 
     can.Print(can.GetName() + '.png')
+    can.Print(can.GetName() + '.pdf')
+
+    h1 = AnalyzeSeq(seq)
+    ROOT.gStyle.SetOptTitle(0)
+    h1.SetFillColor(ROOT.kCyan)
+    h1.SetMarkerSize(1)
+    h1.SetMarkerStyle(24)
+    
+
+    canname = 'SeqCounts'
+    can = ROOT.TCanvas(canname, canname, 200, 200, 1000, 1000)
+    cans.append(can)
+    can.cd()
+    h1.SetStats(0)
+    h1.Draw('e1')
+    h1.Draw('hist same')
+    h1.Draw('e1 same')
+    can.RedrawAxis()
+    
+    txt = ROOT.TLatex(0.72, 0.84, '#mu = {:1.2f}'.format(h1.GetMean()))
+    txt.SetNDC()
+    txt.Draw()
+    can.Print(can.GetName() + '.png')
+    can.Print(can.GetName() + '.pdf')
     
     stuff.append(seq)
     stuff.append(marks)
+    stuff.append([h1, txt])
     
     ROOT.gApplication.Run()
     return
