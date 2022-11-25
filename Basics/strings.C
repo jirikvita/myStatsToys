@@ -19,7 +19,9 @@ using std::cout;
 using std::cerr;
 using std::endl;
 
-void strings() {
+void strings()
+
+{
 
 
   int i = 5;

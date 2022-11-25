@@ -6,6 +6,7 @@ stuff = []
 
 fname = 'myfun'
 formula = '[0]*exp(-(x-[1])^2 / (2*[2]^2))'
+
 x1, x2 = -5, 5
 fun = ROOT.TF1(fname, formula, x1, x2)
 fun.SetParameters(1., 0., 2.)
