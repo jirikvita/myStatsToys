@@ -95,7 +95,7 @@ def update():
 
 def nextCan(name=None, title=None, xoff = 0, yoff = 0, w=wwidth, h=wheight):
     update()
-    #i = len(ROOT.gROOT.GetListOfCanvases())
+    i = len(ROOT.gROOT.GetListOfCanvases())
     wtopx = 20 * (i % xperiod)
     wtopy = 20 * (i % yperiod)
     

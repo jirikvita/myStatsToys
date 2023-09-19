@@ -111,9 +111,10 @@ def main(argv):
     #if len(sys.argv) > 1:
     #  foo = sys.argv[1]
 
-    ROOT.gStyle.SetPalette(ROOT.kTemperatureMap)
-    ROOT.gStyle.SetPalette(ROOT.kDarkBodyRadiator)
-    ROOT.gStyle.SetPalette(ROOT.kBlueRedYellow)
+    ROOT.gStyle.SetPalette(1)
+    #ROOT.gStyle.SetPalette(ROOT.kTemperatureMap)
+    #ROOT.gStyle.SetPalette(ROOT.kDarkBodyRadiator)
+    #ROOT.gStyle.SetPalette(ROOT.kBlueRedYellow)
     
     ### https://www.tutorialspoint.com/python/python_command_line_arguments.htm
     ### https://pymotw.com/2/getopt/
@@ -152,16 +153,18 @@ def main(argv):
 
     N = 1024
     canname = 'RndSeq_{}'.format(N)
-    can = ROOT.TCanvas(canname, canname, 0, 0, 1000, 1000)
+    #cw,ch = 200,200
+    cw,ch = 1000,1000
+    can = ROOT.TCanvas(canname, canname, 0, 0, cw, ch)
     cans.append(can)
     
   
     seq = MakeSequence(N)
-    print(seq)
+    #print(seq)
     marks = DrawSeq(can, seq)
 
     can.Print(can.GetName() + '.png')
-    can.Print(can.GetName() + '.pdf')
+    #can.Print(can.GetName() + '.pdf')
 
     h1 = AnalyzeSeq(seq)
     ROOT.gStyle.SetOptTitle(0)
@@ -184,13 +187,14 @@ def main(argv):
     txt.SetNDC()
     txt.Draw()
     can.Print(can.GetName() + '.png')
-    can.Print(can.GetName() + '.pdf')
+    #can.Print(can.GetName() + '.pdf')
     
     stuff.append(seq)
     stuff.append(marks)
     stuff.append([h1, txt])
-    
-    ROOT.gApplication.Run()
+
+    if not gBatch:
+        ROOT.gApplication.Run()
     return
 
 ###################################
