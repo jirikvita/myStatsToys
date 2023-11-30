@@ -3,10 +3,7 @@
 
 # na pocest meho ucitele doc. RNDr. Jiri Boka, CSc.
 
-# todo: odtransfrmovat teziste?
-
-
-from __future__ import print_function
+# todo: odtransformovat teziste?
 
 import ROOT
 from math import sqrt, pow, log, exp, sin, cos, pi, log10, log
@@ -50,7 +47,7 @@ def MakeDigitStr(i, digits = 4):
         n = int(log10(i))
     except ValueError:
         pass
-    if i is 0:
+    if i == 0:
         n = 0
     for i in range(0, digits - n):
         tag = '0' + tag
@@ -175,7 +172,8 @@ class cSystem:
         for planet in self.planets:
             self.DrawPlanetTrack(planet)
         if self.iteration % self.printstep == 0:
-            self.can.Print(self.name + '{}.png'.format(MakeDigitStr(self.iteration, 4)))
+            #    self.can.Print(self.name + '{}.png'.format(MakeDigitStr(self.iteration, 4)))
+            ROOT.gPad.Update()
         self.DrawTimer()
         return
 
@@ -285,7 +283,7 @@ def MakeSolarSystem(cw, ch, printstep):
     # phi's are random
     # theta is 0
 
-    relSF = 7 #120 # 40 ,120, 7...
+    relSF = 25 #120 # 40 ,120, 7...
     SF = relSF * kAU
     
     X0 = relSF/2.*kAU
@@ -299,7 +297,23 @@ def MakeSolarSystem(cw, ch, printstep):
     # the Sun
     Sun = cPlanet(kSunName, 0, X0, Y0, Z0, kSunMass, 0.*kms, 0*kAU, theta, 0., ROOT.kYellow, 20, 4.)
     Sun.Draw(SF)
-    
+
+
+    """
+    Mercury = cPlanet('Mercury', 1, X0, Y0, Z0, 0.0553*kEarthMass, 29.4*kms, 0.387*kAU, theta,  pi/4, ROOT.kWhite, 20)
+    Venus   = cPlanet('Venus',   2, X0, Y0, Z0, 0.815*kEarthMass,  21.8*kms,  0.723*kAU, theta, -pi/4, ROOT.kOrange, 20)
+    Earth   = cPlanet('Earth',   3, X0, Y0, Z0,       kEarthMass,  18.5*kms,  1.000*kAU, theta,  pi/4, ROOT.kGreen+2, 20)
+    Mars    = cPlanet('Mars',    4, X0, Y0, Z0, 0.107*kEarthMass,  15.*kms,  1.520*kAU, theta, -pi/2, ROOT.kRed+1, 20)
+
+    # outer:
+    Jupiter = cPlanet('Jupiter', 5, X0, Y0, Z0, 317.8*kEarthMass, 8.1*kms,  5.20*kAU, theta,  pi/3, ROOT.kPink, 20)
+    Saturn  = cPlanet('Saturn',  6, X0, Y0, Z0,  95.2*kEarthMass,  6.*kms,    9.58*kAU, theta, -pi/3, ROOT.kMagenta, 20)
+    Uranus  = cPlanet('Uranus',  7, X0, Y0, Z0,  14.5*kEarthMass,  4.2*kms, 19.20*kAU, theta,  pi,   ROOT.kBlue, 20)
+    Neptune = cPlanet('Neptune', 8, X0, Y0, Z0,  17.1*kEarthMass,  3.4*kms, 30.05*kAU, theta, -pi,   ROOT.kCyan, 20)
+    Pluto = cPlanet('Pluto',     9, X0, Y0, Z0,  0.0025*kEarthMass,2.9*kms, 39.48*kAU, theta, -pi,   ROOT.kCyan+2, 20)
+    """
+
+        
     # inner:
     Mercury = cPlanet('Mercury', 1, X0, Y0, Z0, 0.0553*kEarthMass, 47.4*kms, 0.387*kAU, theta,  pi/4, ROOT.kWhite, 20)
     Venus   = cPlanet('Venus',   2, X0, Y0, Z0, 0.815*kEarthMass,  35.0*kms,  0.723*kAU, theta, -pi/4, ROOT.kOrange, 20)
@@ -315,9 +329,13 @@ def MakeSolarSystem(cw, ch, printstep):
     Neptune = cPlanet('Neptune', 8, X0, Y0, Z0,  17.1*kEarthMass,  5.4*kms, 30.05*kAU, theta, -pi,   ROOT.kCyan, 20)
     Pluto = cPlanet('Pluto',     9, X0, Y0, Z0,  0.0025*kEarthMass,4.7*kms, 39.48*kAU, theta, -pi,   ROOT.kCyan+2, 20)
 
+    
+
     #planets = [Sun, Earth]
     #planets = [Sun, Earth, DoomsDay, Jupiter]
     #planets = [Sun, Mercury, Venus, Earth, Mars, DoomsDay]
+    #planets = [Sun, Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, Neptune, Pluto]
+
     planets = [Sun, Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, Neptune, DoomsDay, Pluto]
 
     system.SetPlanets(planets)
@@ -390,17 +408,21 @@ def MakeTertiary(cw, ch, printstep):
 
 
 ########################################################################################        
+# beware, some physics here;-)
 
 def GetForce(p1, p2, debug = 0):
+    # force
     f = [0., 0., 0.]
+    # R^2
     dR2 = 0.
+    # vector R
     vect = [0., 0., 0.]
     for i in range(0,kdim):
         dR2 = dR2 + pow(p1.x[i] - p2.x[i], 2)
         vect[i] = -p1.x[i] + p2.x[i]
     if dR2 > 0:
         # todo: make sure the attractive force;-)
-        # F ~ 1/dR^2, direct: F ~ R / dR^3, dR^3 = dR2^(3/2)
+        # F ~ 1/dR^2, direction: F ~ R / dR^3, dR^3 = dR2^(3/2)
         if debug:
             print('dR: AU', sqrt(dR2) / kAU)
             print('vect: {}, {}, {} AU'.format(vect[0]/kAU, vect[1]/kAU, vect[2]/kAU))
@@ -444,9 +466,13 @@ def MakeStep(planet, system, dt, debug = 0):
             print('   dp{} = {}'.format(i, dp[i]))
         # dx = v*dt
         ### CORE PHYSICS
-        planet.x[i] = planet.x[i] +  planet.v[i]*dt + dp[i] / planet.mass * dt
-        ### CORE PHYSICS
+        ### TODO!!!
+        #planet.x[i] = planet.x[i] + planet.v[i]*dt + dp[i]*dt/planet.mass
+        #planet.v[i] = planet.v[i] + dp[i]/planet.mass
+        # better"
         planet.v[i] = planet.v[i] + dp[i] / planet.mass
+        planet.x[i] = planet.x[i] +  planet.v[i]*dt
+
     ###!!! planet.RecomputePolar()
     # and if use above, remove next line!
     planet.Archive()
@@ -520,8 +546,8 @@ def main(argv):
     cw = 798
     ch = 799
     printstep = 100
-    Nsteps = 12000
-    dt = 0.1*kday
+    dt = 0.1*kday #0.1*kday
+    Nsteps = 30000 # 12000
     
     systems = [ MakeSolarSystem(cw, ch, printstep),
                 #MakeBinary(cw, ch, printstep),

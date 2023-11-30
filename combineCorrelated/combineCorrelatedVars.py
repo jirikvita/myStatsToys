@@ -10,7 +10,6 @@ from random import gauss
 cans = []
 stuff = []
 
-
 class var:
     def __init__(self, name, x1, x2, val, sigmas):
         self.name = name
@@ -30,6 +29,7 @@ def MakeHists(vars, nb = 100):
         name = var.name
         title = var.name
         hists[name] = ROOT.TH1D(name, title, nb, var.x1, var.x2)
+        hists[name].GetXaxis().SetTitle(name)
     return hists
 
 def adjustStats(h):
@@ -52,15 +52,16 @@ def MakeRatioToys(w1, Ntoys = 100000):
     # σtt = 242.9 ± 1.7 (stat.) ± 5.5 (exp.+theo.) ± 5.1 (lumi.) pb = 242.9 ± 7.7 (tot.) pb
     # extrapolated: 242.9/1000 nb ∗ 208 ∗ (236.497 pb)/(224.56 pb)
 
-    
-  
-
     pb = 1.e-3
     nb = 1.
         
     # weights to split corr and uncorr systs
     # their sum in quadrature should be 1.
-    w2 = sqrt(1. - pow(w1,2))
+    w2 = 0.
+    if w1 == 0.:
+        w2 = 1.
+    elif w1 > 0 and w1 < 1.:
+        w2 = sqrt(1. - pow(w1,2))
     
     # pPb
     x1, x2 = 30.*nb, 80.*nb # nb
@@ -70,7 +71,8 @@ def MakeRatioToys(w1, Ntoys = 100000):
     systUncorr = nb*4.5 * w2
     lumi = 1.5*nb
     x0 = 57.9*nb
-    X = var('pPb', x1, x2, x0, [stat, systCorr, systUncorr, lumi])
+    # pPb
+    X = var('x', x1, x2, x0, [stat, systCorr, systUncorr, lumi])
     
     # the pp value:
     ppstat = 1.7*pb 
@@ -80,11 +82,12 @@ def MakeRatioToys(w1, Ntoys = 100000):
     pplumi = pb*5.1
     y0 = 242.2*pb
     y1,y2 = 200.*pb, 300.*pb
-    Y = var('pp', y1, y2, y0, [ppstat, ppsystCorr, ppsystUncorr, pplumi])       
+    # pp
+    Y = var('y', y1, y2, y0, [ppstat, ppsystCorr, ppsystUncorr, pplumi])       
 
     A = 208
     ExtrapolationC = A*236.497/224.56
-    Z = var('ratio', 0.5, 1.5, x0/(y0*ExtrapolationC), [])
+    Z = var('z=x/y', 0.5, 1.5, x0/(y0*ExtrapolationC), [])
     
     #create histos for x, y and z
     Vars = [X, Y, Z]
@@ -136,6 +139,7 @@ def MakeRatioToys(w1, Ntoys = 100000):
     txt1.SetNDC()
     
     width = Hists[Z.name].GetStdDev()
+    
     # analytical error propagation:
     print('*** For the analytical part:')
     print(X.val, X.systCorr,  X.systUncorr, X.stat, X.lumi)
@@ -143,9 +147,9 @@ def MakeRatioToys(w1, Ntoys = 100000):
     rho = 1.
     sigmaZsq = -2.*rho*X.systCorr*Y.systCorr/X.val/Y.val
     print(sigmaZsq)
-    sigmaZsq = sigmaZsq + pow(X.systUncorr/X.val,2) + pow(X.stat/X.val,2) + pow(X.lumi/X.val,2) 
+    sigmaZsq = sigmaZsq + pow(X.systUncorr/X.val,2) + pow(X.stat/X.val,2) + pow(X.lumi/X.val,2) + pow(X.systCorr/X.val,2) 
     print(sigmaZsq)
-    sigmaZsq = sigmaZsq + pow(Y.systUncorr/Y.val,2) + pow(Y.stat/Y.val,2) + pow(Y.lumi/Y.val,2) 
+    sigmaZsq = sigmaZsq + pow(Y.systUncorr/Y.val,2) + pow(Y.stat/Y.val,2) + pow(Y.lumi/Y.val,2) + pow(Y.systCorr/Y.val,2)
     print(sigmaZsq)
     print(width, sigmaZsq)
     sigmaZ = 0.
@@ -159,7 +163,7 @@ def MakeRatioToys(w1, Ntoys = 100000):
     txt1.Draw()
     txt2.Draw()
     can.Update()
-    tag = '_w1_{:1.1f}_w2_{:1.1f}'.format(w1,w2).replace('.','p')
+    tag = '_w1_{:1.2f}_w2_{:1.2f}'.format(w1,w2).replace('.','p')
     can.Print(can.GetName() + tag + '.png')
     can.Print(can.GetName() + tag + '.pdf')
     werr = Hists[Z.name].GetStdDevError()
@@ -177,7 +181,7 @@ def main(argv):
     grAnalytic = ROOT.TGraph()
     Hists = []
     Cans = []
-    N = 10000
+    N = 100000
     for j in range(0,n):
         w1 = j/(1.*n-1)
         can, hists, width, werr, sigmaZ = MakeRatioToys(w1, N)
@@ -191,19 +195,32 @@ def main(argv):
     can = ROOT.TCanvas(canname, canname, 100, 100, 1000, 800)
     
     can.cd()
-    gr.SetMarkerStyle(20)
-    gr.SetMarkerSize(1)
+    can.SetGridy(1)
+    can.SetGridx(1)
+    gr.SetMarkerStyle(24)
+    gr.SetMarkerSize(2)
     gr.SetMarkerColor(ROOT.kBlue)
     
-    grAnalytic.SetMarkerStyle(20)
-    grAnalytic.SetMarkerSize(1)
+    grAnalytic.SetMarkerStyle(22)
+    grAnalytic.SetMarkerSize(2)
     grAnalytic.SetMarkerColor(ROOT.kBlack)
     
     gr.Draw('AP')
     gr.GetXaxis().SetTitle('w_{corr}')
+    gr.GetYaxis().SetTitle('#sigma_{z}')
     grAnalytic.Draw('P')
+
+    leg = ROOT.TLegend(0.55, 0.75, 0.88, 0.88)
+    leg.SetBorderSize(0)
+    leg.AddEntry(gr, 'toy MC #sigma_{z}', 'P')
+    leg.AddEntry(grAnalytic, 'analytical #sigma_{z}', 'P')
+    leg.Draw()
+    ROOT.gPad.SetLeftMargin(0.15)
+    stuff.append(leg)
     
     can.Update()
+    can.Print(can.GetName() + '.png')
+    can.Print(can.GetName() + '.pdf')
     
     ROOT.gApplication.Run()
 if __name__ == "__main__":
