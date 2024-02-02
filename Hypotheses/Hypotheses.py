@@ -1,4 +1,5 @@
-#!/usr/bin/python
+#!/snap/bin/pyroot
+##/usr/bin/python
 
 # jiri kvita, 15.1.2018
 # illustrational purposes only;)
@@ -11,6 +12,8 @@ tmin = 0.
 tmax = 10.
 tc = 5.2
 tobs = 5.8
+
+ROOT.gStyle.SetOptTitle(0)
 
 # probability distribution for the test statistics given H_0 is true:
 tstat0 = ROOT.TF1('tstat0', '[0]*(x-[2])*(x-[3])*exp(-[1]*(x-[1]))', tmin, tmax)

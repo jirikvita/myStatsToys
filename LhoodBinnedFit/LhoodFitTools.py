@@ -42,11 +42,11 @@ def getNegLogLhood(mu):
 
 class MyFunction( ROOT.TPyMultiGenFunction ):
     def __init__( self ):
-        print "CREATED"
+        print("CREATED")
         ROOT.TPyMultiGenFunction.__init__( self, self )
 
     def NDim( self ):
-        print 'PYTHON NDim called'
+        print('PYTHON NDim called')
         return gN
 
     def DoEval(self, args):
@@ -82,12 +82,12 @@ def minimizeLhood(step, mumin, mumax):
 
     # get the minimized parameter:
     if status == 0:
-        print 'minimizeLhood :: SUCCESSFUL MINIMIZATION! ;-)'
+        print('minimizeLhood :: SUCCESSFUL MINIMIZATION! ;-)')
         mu =  minimizer.X()[0]
         muerr = minimizer.Errors()[0]
         #print('minimizeLhood :: Lhood fit result: mu={} +/- {}'.format(mu, muerr))
     else:
-        print 'minimizeLhood :: FAILED MINIMIZATION! :-('
+        print('minimizeLhood :: FAILED MINIMIZATION! :-(')
         mu = kBadMu
     return mu, muerr
 

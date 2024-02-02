@@ -95,6 +95,7 @@ void PrepareHistos(TF1 **&templates, TH1D **&histos, int ntemplates,
    histos[i] = new TH1D(name, title, 
 			bins, templates[i] -> GetXmin(), templates[i] -> GetXmax());
    histos[i] -> SetLineColor(color);
+   histos[i] -> SetFillColorAlpha(color, 0.33);
    histos[i] -> SetLineStyle(lstyle);
    histos[i] -> Sumw2();
    histos[i] -> SetStats(0);
@@ -254,9 +255,11 @@ void TopologicalLikelihood(TString configname = "config.config")
   TH1D *likelihood_sig_h = new TH1D("likelihood_sig", "Likelihood;Likelihood", lhood_bins, lhood_min, lhood_max);
   TH1D *likelihood_bkg_h = new TH1D("likelihood_bkg", "Likelihood;Likelihood", lhood_bins, lhood_min, lhood_max);
   likelihood_sig_h -> SetLineColor(SigCol);
+  likelihood_sig_h -> SetFillColorAlpha(SigCol, 0.33);
   likelihood_sig_h -> SetLineStyle(SigLineStyle);
   likelihood_sig_h -> SetLineWidth(hlinewidth);
   likelihood_bkg_h -> SetLineColor(BkgCol);
+  likelihood_bkg_h -> SetFillColorAlpha(BkgCol, 0.33);
   likelihood_bkg_h -> SetLineStyle(BkgLineStyle);
   likelihood_bkg_h -> SetLineWidth(hlinewidth);
   likelihood_data_h -> SetLineColor(DataCol);
@@ -323,8 +326,9 @@ void TopologicalLikelihood(TString configname = "config.config")
   TH1D* likelihood_sum_h = (TH1D*) likelihood_sig_h -> Clone("likelihood_sum");
   likelihood_sum_h -> Add(likelihood_bkg_h);
   likelihood_sum_h -> SetLineColor(SumCol);
-  likelihood_sum_h -> SetFillColorAlpha(SumCol);
-  likelihood_sum_h -> SetFillStyle(SumFill);
+  likelihood_sum_h -> SetLineWidth (2);
+  //likelihood_sum_h -> SetFillColorAlpha(SumCol, 0.33);
+  likelihood_sum_h -> SetFillStyle(0); // SumFill);
   //  likelihood_sum_h -> SetFillColor(106);
   likelihood_sum_h -> SetStats(0);
 
@@ -341,9 +345,9 @@ void TopologicalLikelihood(TString configname = "config.config")
   TLegend *leg = new TLegend(0.5, 0.5, 0.85, 0.8);
   leg -> SetBorderSize(0);
   //  leg -> SetFillColor(0);
-  leg -> AddEntry(likelihood_sig_h, "Simulated Signal", "L");
-  leg -> AddEntry(likelihood_bkg_h, "Simulated Background", "L"); 
-  leg -> AddEntry(likelihood_sum_h, "Summed Prediction", "F"); 
+  leg -> AddEntry(likelihood_sig_h, "Simulated Signal", "F");
+  leg -> AddEntry(likelihood_bkg_h, "Simulated Background", "F"); 
+  leg -> AddEntry(likelihood_sum_h, "Summed Prediction", "L"); 
   leg -> AddEntry(likelihood_data_h, "Pseudo-Data", "P");
   leg -> Draw();
 
