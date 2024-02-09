@@ -76,11 +76,15 @@ def main(argv):
     hDs = MakeHds(nb, nd, rnd)
 
     # background
-    nus = [nd/10, nd/3.5, nd/5, nd/10]
+    nus = [nd/10, nd/3.5, nd/5, nd/10,
+           #10
+           ]
     hBs = MakeHistos('bg', nus, ROOT.kBlue-6, n2, -0.1)
 
     # s+b:
-    nus = [nd/5, nd/2, nd*0.65, 0.9*nd]
+    nus = [nd/5, nd/2, nd*0.65, 0.9*nd,
+           #18
+    ]
     hSs = MakeHistos('sb', nus, ROOT.kRed-9, n2, +0.1)
 
     canname = 'poissonH0H1'
