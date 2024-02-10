@@ -26,7 +26,7 @@ def AnalyzeSeq(seq, n1 = 1, n2 = 10):
     actual = -1
     n = 0
     name = 'SeqLengthHist'
-    title = name + ';n;#'
+    title = name + ';n;cases'
     h1 = ROOT.TH1D(name, title, n2 - n1, n1, n2)
     for rnd in seq:
         j = 0
@@ -44,7 +44,7 @@ def AnalyzeSeq(seq, n1 = 1, n2 = 10):
 ##########################################
 
 def DrawSeq(can, seq, 
-            col0 = ROOT.kBlack, col1 = ROOT.kRed,
+            col0 = ROOT.kBlue, col1 = ROOT.kGreen+2,
             #useBinaryCols = False,
             useBinaryCols = True,
             smallerDelta = 0.,
@@ -164,34 +164,39 @@ def main(argv):
     marks = DrawSeq(can, seq)
 
     can.Print(can.GetName() + '.png')
-    #can.Print(can.GetName() + '.pdf')
+    can.Print(can.GetName() + '.pdf')
 
     h1 = AnalyzeSeq(seq)
     ROOT.gStyle.SetOptTitle(0)
-    h1.SetFillColor(ROOT.kCyan)
-    h1.SetMarkerSize(1)
-    h1.SetMarkerStyle(24)
-    
+    h1.SetFillColorAlpha(ROOT.kRed,0.4)
+    h1.SetMarkerSize(0) #1.6)
+    h1.SetMarkerStyle(20)
+    h1.SetMaximum(1.1*h1.GetMaximum())
 
     canname = 'SeqCounts'
     can = ROOT.TCanvas(canname, canname, 200, 200, 1000, 1000)
     cans.append(can)
     can.cd()
     h1.SetStats(0)
-    h1.Draw('e1')
-    h1.Draw('hist same')
-    h1.Draw('e1 same')
+    #h1.Draw('e1')
+    hh1 = h1.DrawCopy('hist')
+    #h1.Draw('hist same')
+    h1.SetFillColor(ROOT.kBlack)
+    h1.SetFillStyle(3354)
+    h1.SetLineWidth(2)
+    h1.Draw('e2 same')
     can.RedrawAxis()
     
     txt = ROOT.TLatex(0.72, 0.84, '#mu = {:1.2f}'.format(h1.GetMean()))
     txt.SetNDC()
     txt.Draw()
+    txt.SetTextSize(0.04)
     can.Print(can.GetName() + '.png')
-    #can.Print(can.GetName() + '.pdf')
+    can.Print(can.GetName() + '.pdf')
     
     stuff.append(seq)
     stuff.append(marks)
-    stuff.append([h1, txt])
+    stuff.append([hh1, h1, txt])
 
     if not gBatch:
         ROOT.gApplication.Run()
