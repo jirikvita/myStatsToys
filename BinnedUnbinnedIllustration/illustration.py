@@ -98,16 +98,21 @@ def main(argv):
     ROOT.gStyle.SetOptTitle(0)
 
     h1.Draw('e1 x0')
-    fun.Draw('same')
+
     #h1.Fit(fun)
     for line in lines:
         line.Draw()
     
     
     can.Update()
+    can.Print('BinnedUnbinnedIllustration_nofun.png')
+    can.Print('BinnedUnbinnedIllustration_nofun.pdf')
+
+    fun.Draw('same')
+    can.Update()
     can.Print('BinnedUnbinnedIllustration.png')
     can.Print('BinnedUnbinnedIllustration.pdf')
-
+    
     stuff.append([can, fun, h1, line])
     ROOT.gApplication.Run()
     return
