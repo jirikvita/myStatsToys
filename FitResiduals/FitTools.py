@@ -58,8 +58,13 @@ def MakeVerticalLines(xs, y1, y2, col, ls = 2):
         line.SetLineStyle(ls)
         lines.append(line)
     return lines
+#########################################################
+
 
 #########################################################
+#########################################################
+#########################################################
+
 def DrawHistFitResidualsSignif(h1, fun, can):
     #spad1,spad2,spad_inset = MakePadsStack(can, 'centre', 0.40, 0., 0., 0.)
     pads, inset = MakeMultiSubPads(can,  [0.60, 0.20, 0.20], 0.0,0.07, 0.4, 0.15)
@@ -90,7 +95,7 @@ def DrawHistFitResidualsSignif(h1, fun, can):
     ratio.SetMaximum(y2)
     ratio.GetXaxis().SetLabelSize(0.12)
     ratio.GetYaxis().SetLabelSize(0.12)
-    ratio.GetYaxis().SetTitle('data / fit ')
+    ratio.GetYaxis().SetTitle('Data / fit ')
     ratio.GetYaxis().SetTitleOffset(0.35)
     ratio.GetYaxis().SetTitleSize(0.12)
 

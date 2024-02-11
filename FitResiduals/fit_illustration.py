@@ -22,7 +22,7 @@ def main(argv):
 
     hname = 'histo_h'
     nb = 100
-    h1 = ROOT.TH1D(hname, hname, nb, x1, x2)
+    h1 = ROOT.TH1D(hname, hname + ';;Events', nb, x1, x2)
 
     Nmax = 400 # for drawing lines
     N = 10000
