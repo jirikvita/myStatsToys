@@ -12,6 +12,17 @@ Ltex = []
 _h = []
 
 #########################################################
+
+def MakeVerticalLines(xs, y1, y2, col, ls = 2):
+    lines = []
+    for x in xs:
+        line = ROOT.TLine(x, y1, x, y2)
+        line.SetLineColor(col)
+        line.SetLineStyle(ls)
+        lines.append(line)
+    return lines
+
+#########################################################
 def adjustStats(h):
     ROOT.gPad.Update()
     #st = h.GetListOfFunctions().FindObject("stats")
@@ -322,10 +333,10 @@ def MakeMultiSubPads(can, ratios, PadSeparation = 0.0, UpperPadTopMargin = 0.07,
         pad.Draw()
         pads.append(pad)
   
-    xx = 0.45
-    width = 0.44
-    height = 0.47
-    yy = 0.45
+    xx = 0.5
+    width = 0.39
+    height = 0.42
+    yy = 0.5
     pad_inset = ROOT.TPad("pad_inset" + tag,"pad_inset" + tag,xx, yy, xx + width, yy + height);
     pad_inset.SetTopMargin(0.05);
     pad_inset.SetRightMargin(0.05);

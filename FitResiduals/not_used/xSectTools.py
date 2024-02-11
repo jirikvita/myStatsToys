@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # jk 2020
 
-from __future__ import print_function
+#from __future__ import print_function
 
 import ROOT
 
@@ -200,7 +200,7 @@ def DrawFitSignificance(fit, hdata, hxmin, hxmax, yMin, yMax, stuff, iplot = 0, 
             
         signifh = hdata.Clone(hdata.GetName() + '_signif{}'.format(iplot))
         signifh.Reset()
-        pullh = ROOT.TH1D(hdata.GetName() + '_pull', ';fit pull;bins', 30, -3.5, 3.5)
+        pullh = ROOT.TH1D(hdata.GetName() + '_pull', ';fit pull;bins', 35, -3.5, 3.5)
         for i in range(1,hdata.GetXaxis().GetNbins()+1):
             hval = hdata.GetBinContent(i) - fit.Eval(hdata.GetBinCenter(i))
             herr = hdata.GetBinError(i)
