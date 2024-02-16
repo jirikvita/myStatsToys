@@ -40,7 +40,7 @@ LIBCPPFILES  = $(wildcard $(SRCDIR)/*.$(SOURCEPAT))
 PRGCPPFILES  = $(wildcard $(PRGDIR)/*.$(EXEPAT))
 
 #targets
-LIBNAME = MyProject
+LIBNAME = runAnalysis
 LIB     = $(LIBDIR)/lib$(LIBNAME).a
 LIBOBJS = $(subst $(SRCDIR),$(LIBOBJSDIR),$(subst .$(SOURCEPAT),.o,$(LIBCPPFILES)))
 BINS    = $(subst $(PRGDIR),$(BINDIR),$(subst .$(EXEPAT),,$(PRGCPPFILES)))

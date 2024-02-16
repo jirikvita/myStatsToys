@@ -51,6 +51,8 @@ def drawBW2D(argv):
   nb = 90
   npx1d = 1000
   npx2d = 100
+
+  axes = ';m_{1} [GeV];m_{2} [GeV];Events'
   
   ####################################################
   # relativistic 2D
@@ -61,7 +63,7 @@ def drawBW2D(argv):
   #nonrelbw2.Draw("surf")
   nonrelbw2.SetNpx(npx2d)
   nonrelbw2.SetNpy(npx2d)
-  nonrelhh2 = ROOT.TH2D("2DnonrelBW", "2D non-rel. Breit-Wigner", nb, m1, m2, nb, m1, m2)
+  nonrelhh2 = ROOT.TH2D("2DnonrelBW", "2D non-rel. Breit-Wigner" + axes, nb, m1, m2, nb, m1, m2)
   nonrelhh2.FillRandom("nonrelbw2", Nevts)
   # nonrelhh2.SetStats(0)
 
@@ -82,7 +84,7 @@ def drawBW2D(argv):
   #relbw2.Draw("surf")
   relbw2.SetNpx(npx2d)
   relbw2.SetNpy(npx2d)
-  relhh2 = ROOT.TH2D("2DBW", "2D relat. Breit-Wigner", nb, m1, m2, nb, m1, m2)
+  relhh2 = ROOT.TH2D("2DBW", "2D relat. Breit-Wigner" + axes, nb, m1, m2, nb, m1, m2)
   relhh2.FillRandom("relbw2", Nevts)
   # relhh2.SetStats(0)
 
@@ -102,7 +104,7 @@ def drawBW2D(argv):
   #voigt2.Draw("surf")
   voigt2.SetNpx(npx2d)
   voigt2.SetNpy(npx2d)
-  voigthh2 = ROOT.TH2D("2DnonrelVoigt", "2D non-rel. Breit-Wigner", nb, m1, m2, nb, m1, m2)
+  voigthh2 = ROOT.TH2D("2DnonrelVoigt", "2D non-rel. Breit-Wigner" + axes, nb, m1, m2, nb, m1, m2)
   voigthh2.FillRandom("voigt2", Nevts)
   # voigthh2.SetStats(0)
 
@@ -111,8 +113,6 @@ def drawBW2D(argv):
   voigthh2.Draw("colz")
   st2 = adjustStats(voigthh2)
   ROOT.gPad.Update()
-  
-
 
   
   ####################################################
@@ -127,7 +127,7 @@ def drawBW2D(argv):
   #g2.Draw("surf")
   g2.SetNpx(npx2d)
   g2.SetNpy(npx2d)
-  gg2 = ROOT.TH2D("2DG", "2D Gauss", nb, m1, m2, nb, m1, m2)
+  gg2 = ROOT.TH2D("2DG", "2D Gauss" + axes, nb, m1, m2, nb, m1, m2)
   gg2.FillRandom("g2", Nevts)
   # gg2.SetStats(0)
   gg2.Draw("colz")
@@ -138,8 +138,8 @@ def drawBW2D(argv):
   # 1D cmp
   
   cname = "BWGaussCmp"
-  canbw2 = ROOT.TCanvas(cname, cname)
-  canbw2.cd()
+  can1 = ROOT.TCanvas(cname, cname)
+  can1.cd()
 
   # non-relativistic BW:
   nonrelBW = ROOT.TF1("relBW", "1/TMath::Pi() * [1]/2 / ( (x-[0])^2 + [1]^2/4 )", m1, m2)
@@ -172,16 +172,38 @@ def drawBW2D(argv):
   
   
   G.Draw("")
+  G.GetXaxis().SetTitle('m [GeV]')
   relBW.Draw("same")
   nonrelBW.Draw("same")
   V.Draw("same")
+
+  leg = ROOT.TLegend(0.15, 0.55, 0.45, 0.88)
+  leg.SetBorderSize(0)
+  leg.AddEntry(G, 'Gauss', 'L')
+  leg.AddEntry(nonrelBW, 'Nerelat. B.-W.', 'L')
+  leg.AddEntry(relBW, 'Relat. B.-W.', 'L')
+  leg.AddEntry(V, 'Voigt', 'L')
+  leg.Draw()
+  
+  can1.cd()
+  can1.Print(can1.GetName() + '_lin.png')
+  can1.Print(can1.GetName() + '_lin.pdf')
+  G.SetMinimum(1e-5)
+  can1.SetLogy(1)
+  can1.Print(can1.GetName() + '_log.png')
+  can1.Print(can1.GetName() + '_log.pdf')
   
   ROOT.gPad.Update()
 
+  cans = [relcan, nonrelcan, voigtcan, cang2]
+  for can in cans:
+      can.Print(can.GetName() + '.png')
+      can.Print(can.GetName() + '.pdf')
   
   stuff.append([nonrelBW, relBW, G, V,
-                nonrelcan, relcan, voigtcan, cang2, canbw2,
+                nonrelcan, relcan, voigtcan, cang2, can1,
                 nonrelbw2, relbw2, g2, gg2,
+                leg,
                 nonrelhh2, relhh2, voigthh2, st0, st1, st2, st3])
   
 
