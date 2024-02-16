@@ -32,15 +32,22 @@ void channelReadClass::Loop()
    if (fChain == 0) return;
 
    Long64_t nentries = fChain->GetEntries();
+   Long64_t nbytes = 0, nb = 0;
+
+   // user:
    TString name = "peakVoltage";
    TString title = name + ";voltage;counts;";
    TH1D *h_peakVoltage = new TH1D(name, title, 100, 0, 2);
-   Long64_t nbytes = 0, nb = 0;
+
+   // Event loop!
+   
    for (Long64_t jentry=0; jentry<nentries;jentry++) {
       Long64_t ientry = LoadTree(jentry);
       if (ientry < 0) break;
       nb = fChain->GetEntry(jentry);   nbytes += nb;
       // if (Cut(ientry) < 0) continue;
+
+      // user:
       if (this -> nPeaks > 0)
 	h_peakVoltage -> Fill(this -> PeakVoltage[0]);
    }

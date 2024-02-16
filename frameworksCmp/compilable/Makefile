@@ -49,10 +49,10 @@ LIBDEPS = $(subst $(SRCDIR),$(DEPSDIR),$(LIBCPPFILES:.$(SOURCEPAT)=.d))
 BINDEPS = $(subst $(PRGDIR),$(DEPSDIR),$(PRGCPPFILES:.$(EXEPAT)=.d))
 
 #tools
-CPP = g++ -std=c++11
-LD  = g++ -std=c++11
+CPP = g++ -std=c++17
+LD  = g++ -std=c++17
 AR  = ar
-DEP = g++ -std=c++11
+DEP = g++ -std=c++17
 
 #flags
 #CPPBASEFLAGS = -c -Wall -Werror -ansi -pedantic -I$(INCDIR)
@@ -89,7 +89,7 @@ ROOTLDFLAGS  = $(shell root-config --libs)
 EXTRALIBSPATH=
 # "$(shell echo ${delphespath})/libDelphes.so"
 
-CPPFLAGS = $(CPPDBGFLAGS) $(CPPPROFLAGS) $(CPPOPTFLAGS) $(CPPBASEFLAGS) $(ROOTCPPFLAGS) -std=c++11
+CPPFLAGS = $(CPPDBGFLAGS) $(CPPPROFLAGS) $(CPPOPTFLAGS) $(CPPBASEFLAGS) $(ROOTCPPFLAGS) -std=c++17
 
 ARFLAGS = -rc
 
