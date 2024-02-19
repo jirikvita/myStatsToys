@@ -14,28 +14,41 @@ stuff = []
 def getPiGuesstimate(Nevts, storePoints = False):
     Nin = 0
     Nall = 0
-    xs = []
-    ys = []
+    xsin = []
+    ysin = []
+    xsout = []
+    ysout = []
     for i in range(0, Nevts):
         x = uniform(0,1)
         y = uniform(0,1)
         if x*x + y*y < 1:
             Nin = Nin + 1
+            if storePoints:
+                xsin.append(x)
+                ysin.append(y)
+        else:
+            if storePoints:
+                xsout.append(x)
+                ysout.append(y)
+
         Nall = Nall + 1
-        if storePoints:
-            xs.append(x)
-            ys.append(y)
-    return 4*Nin / (1.*Nall), xs, ys
+    return 4*Nin / (1.*Nall), xsin, ysin, xsout, ysout
+
 ##########################################
-def PlotPoint(x, y):
-     plt.scatter(x, y, s = 3)
+def PlotPoint(xs, ys):
+     cols = ['blue', 'black']
+     i = -1
+     for x,y in zip(xs,ys):
+         i = i + 1
+         plt.scatter(x, y, s = 3, color=cols[i])
      plt.title('Arrows for pi')
+         
      # Define the circle parameters
      circle_center = (0, 0)  # Center of the circle
      circle_radius = 1       # Radius of the circle
 
      # Plot the circle_radius
-     quarter_circle = patches.Arc(circle_center, 2*circle_radius, 2*circle_radius, angle=0, theta1=0, theta2=90, color='r', label='')
+     quarter_circle = patches.Arc(circle_center, 2*circle_radius, 2*circle_radius, angle=0, theta1=0, theta2=90, color='red', label='')
      plt.gca().add_patch(quarter_circle)  # Add the quarter circle to the current axes
 
      # full circle:
@@ -59,17 +72,20 @@ def main(argv):
    
     Xs = []
     Ys = []
+    #Nevts = [ int(pow(10,i)) for i in range(1,10)]
     Nevts = [ int(pow(10,i)) for i in range(1,6)]
     for Nevt in Nevts:
         storePoints = Nevt == 1000
-        pihat, xs, ys = getPiGuesstimate(Nevt, storePoints)
-        print(f'Using N={Nevt}, the pi guess is {pihat:1.4f}')
-        if len(xs) > 0:
-            Xs.append(xs)
-            Ys.append(ys)
-
+        pihat, xsin, ysin, xsout, ysout = getPiGuesstimate(Nevt, storePoints)
+        print(f'Using N={Nevt}, the pi guess is {pihat:1.6f}')
+        if len(xsin) > 0:
+            Xs.append(xsin)
+            Ys.append(ysin)
+            Xs.append(xsout)
+            Ys.append(ysout)
+    #print(Xs[1],Ys[1])
     if len(Xs) > 0:
-        PlotPoint(Xs[0], Ys[0])
+        PlotPoint(Xs, Ys)
 
 
     # ROOT.gApplication.Run()
