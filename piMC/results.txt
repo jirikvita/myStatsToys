@@ -1,0 +1,8 @@
+Using N=10, the pi guess is 3.2000
+Using N=100, the pi guess is 3.2800
+Using N=1000, the pi guess is 3.2120
+Using N=10000, the pi guess is 3.0956
+Using N=100000, the pi guess is 3.1334
+Using N=1000000, the pi guess is 3.1423
+Using N=10000000, the pi guess is 3.1410
+Using N=100000000, the pi guess is 3.1415

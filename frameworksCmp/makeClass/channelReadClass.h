@@ -21,14 +21,16 @@ public :
 
 // Fixed size dimensions of array or collections stored in the TTree if any.
 
+  const int MaxNpeaks = 100;
+  
    // Declaration of leaf types
    Double_t        Pedestal;
    Double_t        PedestalSigma;
    Int_t           nPeaks;
-   Double_t        PeakVoltage[22];   //[nPeaks]
-   Double_t        PeakTime[22];   //[nPeaks]
-   Double_t        SignalTime[22];   //[nPeaks]
-   Double_t        IntCharge[22];   //[nPeaks]
+   Double_t        PeakVoltage[MaxNpeaks];   //[nPeaks]
+   Double_t        PeakTime[MaxNpeaks];   //[nPeaks]
+   Double_t        SignalTime[MaxNpeaks];   //[nPeaks]
+   Double_t        IntCharge[MaxNpeaks];   //[nPeaks]
    UInt_t          timeStamp;
    UInt_t          triggerTime;
 
