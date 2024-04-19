@@ -35,7 +35,7 @@ def getPiGuesstimate(Nevts, storePoints = False):
     return 4*Nin / (1.*Nall), xsin, ysin, xsout, ysout
 
 ##########################################
-def PlotPoint(xs, ys):
+def PlotPoint(xs, ys, pis):
      cols = ['blue', 'black']
      i = -1
      for x,y in zip(xs,ys):
@@ -65,6 +65,10 @@ def PlotPoint(xs, ys):
      plt.savefig('plot.pdf')
      
      plt.show()
+
+     plt.scatter(range(0,len(pis)), pis)
+     plt.show()
+     
      return
 ##########################################
 # https://www.tutorialspoint.com/python/python_command_line_arguments.htm
@@ -72,11 +76,13 @@ def main(argv):
    
     Xs = []
     Ys = []
+    Pis = []
     #Nevts = [ int(pow(10,i)) for i in range(1,10)]
-    Nevts = [ int(pow(10,i)) for i in range(1,6)]
+    Nevts = [ int(pow(10,i)) for i in range(1,10)]
     for Nevt in Nevts:
         storePoints = Nevt == 1000
         pihat, xsin, ysin, xsout, ysout = getPiGuesstimate(Nevt, storePoints)
+        Pis.append(pihat)
         print(f'Using N={Nevt}, the pi guess is {pihat:1.6f}')
         if len(xsin) > 0:
             Xs.append(xsin)
@@ -85,8 +91,7 @@ def main(argv):
             Ys.append(ysout)
     #print(Xs[1],Ys[1])
     if len(Xs) > 0:
-        PlotPoint(Xs, Ys)
-
+        PlotPoint(Xs, Ys, Pis)
 
     # ROOT.gApplication.Run()
     return
