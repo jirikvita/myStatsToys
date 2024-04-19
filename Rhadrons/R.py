@@ -2,12 +2,25 @@
 # was: #!/usr/bin/python3
 # Pá 19. dubna 2024, 15:47:53 CEST
 
+
+# https://pdg.lbl.gov/2018/hadronic-xsections/hadron.html
+
 import ROOT
 from math import sqrt, pow, log, exp
 import os, sys, getopt
 
 cans = []
 stuff = []
+
+##########################################
+
+def makeYline(x1, x2, y, c):
+    l = ROOT.TLine(x1, y, x2, y)
+    l.SetLineColor(c)
+    l.SetLineStyle(2)
+    l.SetLineWidth(2)
+    l.Draw()
+    return l
 
 ##########################################
 # https://www.tutorialspoint.com/python/python_command_line_arguments.htm
@@ -71,12 +84,24 @@ def main(argv):
     gr.GetXaxis().SetTitle('E_{c.m.} [GeV]')
     gr.GetYaxis().SetTitle('R')
     gr.GetXaxis().SetMoreLogLabels()
-    gr.GetXaxis().SetRangeUser(.2, 2e2)
+    x1,x2 = .2, 2e2
+    gr.GetXaxis().SetRangeUser(x1,x2)
     gr.GetYaxis().SetRangeUser(1e-2, 1e4)
     ROOT.gPad.SetLogy(1)
     ROOT.gPad.SetLogx(1)
     ROOT.gPad.SetGridx(1)
     ROOT.gPad.SetGridy(1)
+
+    ys = [1*4/9. + 2*1/9., # u,d,
+          2*4/9. + 2*1/9., # u,d,s,c
+          2*4/9. + 3*1/9.,# u,d,s,c,b
+          ]
+    lines = []
+    cols = [ROOT.kRed, ROOT.kGreen+2, ROOT.kBlack]
+    for c,y in zip(cols,ys):
+        lines.append(makeYline(x1, x2, 3.*y, c))
+
+    
     ROOT.gPad.Update()
     can.Print(can.GetName() + '.pdf')
     can.Print(can.GetName() + '.C')
