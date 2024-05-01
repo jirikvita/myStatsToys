@@ -14,13 +14,22 @@ stuff = []
 
 ##########################################
 
-def makeYline(x1, x2, y, c):
+def makeYline(x1, x2, y, c, lst = 2):
     l = ROOT.TLine(x1, y, x2, y)
     l.SetLineColor(c)
-    l.SetLineStyle(2)
+    l.SetLineStyle(lst)
     l.SetLineWidth(2)
     l.Draw()
     return l
+
+def makeXline(x, y1, y2, c, lst = 1):
+    l = ROOT.TLine(x, y1, x, y2)
+    l.SetLineColor(c)
+    l.SetLineStyle(lst)
+    l.SetLineWidth(2)
+    l.Draw()
+    return l
+
 
 ##########################################
 # https://www.tutorialspoint.com/python/python_command_line_arguments.htm
@@ -84,9 +93,10 @@ def main(argv):
     gr.GetXaxis().SetTitle('E_{c.m.} [GeV]')
     gr.GetYaxis().SetTitle('R')
     gr.GetXaxis().SetMoreLogLabels()
-    x1,x2 = .2, 2e2
+    x1,x2 = 0.2, 2e2
     gr.GetXaxis().SetRangeUser(x1,x2)
-    gr.GetYaxis().SetRangeUser(1e-2, 1e4)
+    y1,y2 = 1e-2, 1e4
+    gr.GetYaxis().SetRangeUser(y1,y2)
     ROOT.gPad.SetLogy(1)
     ROOT.gPad.SetLogx(1)
     ROOT.gPad.SetGridx(1)
@@ -97,10 +107,15 @@ def main(argv):
           2*4/9. + 3*1/9.,# u,d,s,c,b
           ]
     lines = []
-    cols = [ROOT.kRed, ROOT.kGreen+2, ROOT.kBlack]
+    cols = [ROOT.kBlue-2, ROOT.kGreen+2, ROOT.kBlack]
     for c,y in zip(cols,ys):
-        lines.append(makeYline(x1, x2, 3.*y, c))
+        lines.append(makeYline(x1, x2, 3.*y, ROOT.kGreen+2))
 
+    #      omega, phi, J/psi, Upsilon(1S), Upsilon(4S), Z
+    ms = [ 0.78265, 1.019461, 3.097, 9.460, 10.735,  91.1876]
+    c = ROOT.kRed
+    for m in ms:
+        lines.append(makeXline(m, y1, y2, c, 2))
     
     ROOT.gPad.Update()
     can.Print(can.GetName() + '.pdf')
