@@ -19,8 +19,18 @@ class mypoint():
     def __init__(self, x, y):
         self.x = x
         self.y = y
+    #def __init__(self, point):
+    #    self.x = point.x
+    #    self.y = point.y
     def __add__(self, other):
         return mypoint(self.x + other.x, self.y + other.y)
+    def __sub__(self, other):
+        return mypoint(self.x - other.x, self.y - other.y)
+    def __truediv__(self, denum):
+        if isinstance(denum, float):
+            if abs(denum) > kEpsilon:
+                self.x = self.x / denum
+                self.y = self.y / denum
     def Divide(self, denum):
         if abs(denum) > kEpsilon:
             self.x = self.x / denum
@@ -55,13 +65,6 @@ def MakeThreeSetOfMidPoints(points):
 ##########################################
 def DrawTriangle(points, nLevels, level, tid):
     lines = []
-    """
-    lines.append(ROOT.TLine(0.2, 0.2, 0.8, 0.8))
-    lines[-1].SetNDC()
-    lines[-1].SetLineColor(ROOT.kBlue)
-    lines[-1].SetLineStyle(1)
-    lines[-1].SetLineWidth(2)
-    """
     for i in range(0, len(points)):
         for j in range(0, len(points)):
             if j >= i:
@@ -75,9 +78,17 @@ def DrawTriangle(points, nLevels, level, tid):
             dc = 0
             #if level == 1:
             #    dc = tid
-            line.SetLineColor(ROOT.kBlue + dc)
+            #ci = ROOT.TColor.GetFreeColorIndex()
+            #color = ROOT.TColor(ci, (points[i].x + points[i].y)/2, 
+            #                    (points[j].x + points[j].y)/2,
+            #                    abs(points[i].x - points[i].y)/2)
+            color = ROOT.TColor()
+            #cc = color.GetColor( int(256*(points[i].x + points[i].y)/2), int(256*(points[j].x + points[j].y)/2), int(256*abs(points[i].x + points[i].y)/4))                              
+            #cc = color.GetColor( int(256*(points[i].x)/2), int(256*(points[j].x + points[j].y)/2), int(256*abs(points[i].x + points[i].y)/2))
+            cc = color.GetColor( int(256*(1. - points[i].x)) - 10, int(256*(points[i].x + points[i].y)/2) - 10, int(256*abs(1. - points[i].y/2)) - 10)
+            line.SetLineColor(cc)
             line.SetLineStyle(1)
-            line.SetLineWidth(2)
+            line.SetLineWidth(1) # 1
             line.Draw()
             allstuff.append(line)
     #print('these lines ', lines)
@@ -120,7 +131,7 @@ def main(argv):
     
 
     canname = 'Sierpinski'
-    cw, ch = 1400, 1000
+    cw, ch = 1550, 1200
     can = ROOT.TCanvas(canname, canname, 0, 0, cw, ch)
     cans.append(can)
     can.cd()
