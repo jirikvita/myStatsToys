@@ -11,6 +11,9 @@ from random import uniform
 #from matplotlib import pyplot as plt
 #import matplotlib.patches as patches
 
+def sqr(x):
+    return x*x
+
 
 stuff = []
 ##########################################
@@ -75,16 +78,16 @@ def main(argv):
     Nevt = 5000
 
     # tt, LHC
-    #sthr = sqrt(2*172.5)
-    #s = sqrt(13.6e3)
+    #sthr = sqr(2*172.5)
+    #s = sqr(13.6e3)
 
     # tt, Tevatron
-    #sthr = sqrt(2*172.5)
-    #s = sqrt(1.96e3)
+    #sthr = sqr(2*172.5)
+    #s = sqr(1.96e3)
 
     # ttH
-    sthr = sqrt(2*172.5 + 125.)
-    s = sqrt(13.6e3)
+    sthr = sqr(2*172.5 + 125.)
+    s = sqr(13.6e3)
 
     storePoints = True
     
