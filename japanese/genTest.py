@@ -31,13 +31,24 @@ hiragana = { 'a' : '\u3042', 'i' : '\u3044', 'e' : '\u3048', 'u' : '\u3046', 'o'
              
              'ga' : '\u304C', 'gi' : '\u304E', 'ge' : '\u3052', 'gu' : '\u3050', 'go' : '\u3054',
              'za' : '\u3056', 'ji' : '\u3058', 'ze' : '\u305C', 'zu' : '\u305A', 'zo' : '\u305E',
-             'da' : '\u3060', 'Ji' : '\u3062', 'de' : '\u3067', 'Zu' : '\u3066', 'do' : '\u3069',
+             'da' : '\u3060', 'Ji' : '\u3062', 'de' : '\u3067', 'Zu' : '\u3065', 'do' : '\u3069',
 
              
              
             }
 
-    
+###########################################################
+def checkUniqUnicode(hiragana):
+    vals = {}
+    for key,val in hiragana.items():
+        if not val in vals:
+            vals[val] = 1
+        else:
+            vals[val] = vals[val] + 1
+    for val,count in vals.items():
+        if count > 1:
+            print(f'ERROR: multiple unicode used for {val}!')
+
 ###########################################################
 
 def toFill(used):
@@ -89,10 +100,8 @@ def getTest(syllabs, indent = 5):
 ###########################################################
 
 def main(argv):
+    checkUniqUnicode(hiragana)
     getTest(syllabs)
-
-
-    
     return
 
 ###########################################################
