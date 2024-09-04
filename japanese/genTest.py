@@ -20,6 +20,7 @@ syllabs = [ 'a', 'i', 'e', 'u', 'o',
 
 #https://en.wikipedia.org/wiki/Hiragana_(Unicode_block)
 #    print('\u3041')
+# TO FINISH ;-)
 
 hiragana = { 'a' : '\u3042', 'i' : '\u3044', 'e' : '\u3048', 'u' : '\u3046', 'o' : '\u304A',
              
@@ -28,7 +29,7 @@ hiragana = { 'a' : '\u3042', 'i' : '\u3044', 'e' : '\u3048', 'u' : '\u3046', 'o'
              'ta' : '\u305F', 'chi' : '\u3061', 'te' : '\u3066', 'tsu' : '\u3064', 'to' : '\u3068',
              'na' : '\u306A', 'ni' : '\u306B', 'ne' : '\u306D', 'nu' : '\u306C', 'no' : '\u306E',
              
-             'ga' : '\u304C', 'gi' : '\u304E', 'ge' : '\u3053', 'gu' : '\u3050', 'go' : '\u3054',
+             'ga' : '\u304C', 'gi' : '\u304E', 'ge' : '\u3052', 'gu' : '\u3050', 'go' : '\u3054',
              'za' : '\u3056', 'ji' : '\u3058', 'ze' : '\u305C', 'zu' : '\u305A', 'zo' : '\u305E',
              'da' : '\u3060', 'Ji' : '\u3062', 'de' : '\u3067', 'Zu' : '\u3066', 'do' : '\u3069',
 
@@ -72,16 +73,17 @@ def getTest(syllabs, indent = 5):
                 endl = '\n'
             print(f'{syl:3}', end = endl)
     print('------------------------------------------------')
-    print('Hit a key for solution')
+    print('Hit a key for solution -- when ready! ;-)')
     a = input()
     print('Solution:')
+    print('------------------------------------------------')
     n = 0
     for syl in test:
         n = n + 1
         endl = ' '
         if n % indent == 0:
             endl = '\n'
-        print(f'{hiragana[syl]}', end = endl)
+        print(f'{hiragana[syl]:2}', end = endl)
     print('------------------------------------------------')
 
 ###########################################################
