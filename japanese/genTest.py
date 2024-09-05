@@ -4,38 +4,58 @@ import random, sys, os, math
 
 ###########################################################
 
-syllabs = [ 'a', 'i', 'e', 'u', 'o',
+syllabs = [ 'a', 'i', 'u', 'e', 'o',
             
-            'ka', 'ki', 'ke', 'ku', 'ko',
-            'sa', 'shi', 'se', 'su', 'so',
-            'ta', 'chi', 'te', 'tsu', 'to',
-            'na', 'ni', 'ne', 'nu', 'no',
+            'ka', 'ki', 'ku', 'ke', 'ko',
+            'sa', 'shi', 'su', 'se', 'so',
+            'ta', 'chi', 'tsu', 'te', 'to',
+            'na', 'ni', 'nu', 'ne', 'no',
+            'ha', 'hi', 'fu', 'he', 'ho',
             
-            'ga', 'gi', 'ge', 'gu', 'go',
-            'za', 'ji', 'ze', 'zu', 'zo',
-            #'da', 'Ji', 'de', 'Zu', 'do',
+            #'ma', 'mi', 'mu', 'me', 'mo',
+            #'ya', 'yu', 'yo',
+            #'ra', 'ri', 'ru', 're', 'ro',
+            #'wa', 'wa',
+            #'n',
+            
+            #'ga', 'gi', 'gu', 'ge', 'go',
+            #'za', 'ji', 'zu', 'ze', 'zo',
+            
+            ##'da', 'Ji', 'Ze', 'de', 'do',
             
             ]
 
 
-#https://en.wikipedia.org/wiki/Hiragana_(Unicode_block)
+# https://en.wikipedia.org/wiki/Hiragana_(Unicode_block)
 #    print('\u3041')
 # TO FINISH ;-)
 
-hiragana = { 'a' : '\u3042', 'i' : '\u3044', 'e' : '\u3048', 'u' : '\u3046', 'o' : '\u304A',
+hiragana = { 'a' : '\u3042', 'i' : '\u3044',  'u' : '\u3046', 'e' : '\u3048', 'o' : '\u304A',
              
-             'ka' : '\u304B', 'ki' : '\u304D', 'ke' : '\u3051', 'ku' : '\u304F', 'ko' : '\u3053',
-             'sa' : '\u3055', 'shi' : '\u3057', 'se' : '\u305B', 'su' : '\u3059', 'so' : '\u305D',
-             'ta' : '\u305F', 'chi' : '\u3061', 'te' : '\u3066', 'tsu' : '\u3064', 'to' : '\u3068',
-             'na' : '\u306A', 'ni' : '\u306B', 'ne' : '\u306D', 'nu' : '\u306C', 'no' : '\u306E',
+             'ka' : '\u304B', 'ki' : '\u304D', 'ku' : '\u304F', 'ke' : '\u3051', 'ko' : '\u3053',
+             'sa' : '\u3055', 'shi' : '\u3057', 'su' : '\u3059', 'se' : '\u305B', 'so' : '\u305D',
+             'ta' : '\u305F', 'chi' : '\u3061', 'tsu' : '\u3064', 'te' : '\u3066', 'to' : '\u3068',
+             'na' : '\u306A', 'ni' : '\u306B', 'nu' : '\u306C', 'ne' : '\u306D', 'no' : '\u306E',
+             'ha' : '\u306F', 'hi' : '\u3072', 'fu' : '\u3075', 'he' : '\u3078', 'ho' : '\u307B',
+
+             'ma' : '\u307E', 'mi' : '\u307F', 'mu' : '\u3080', 'me' : '\u3081', 'mo' : '\u3082',
+             'ya' : '\u3084', 'yu' : '\u3086', 'yo' : '\u3088',
+             'ra' : '\u3089', 'ri' : '\u308A', 'ru' : '\u308B', 're' : '\u308C', 'ro' : '\u308D',
+             'wa' : '\u308F', 'wo' : '\u3092', 'n' : '\u3093',
+
+
              
-             'ga' : '\u304C', 'gi' : '\u304E', 'ge' : '\u3052', 'gu' : '\u3050', 'go' : '\u3054',
-             'za' : '\u3056', 'ji' : '\u3058', 'ze' : '\u305C', 'zu' : '\u305A', 'zo' : '\u305E',
-             'da' : '\u3060', 'Ji' : '\u3062', 'de' : '\u3067', 'Zu' : '\u3065', 'do' : '\u3069',
+             'ga' : '\u304C', 'gi' : '\u304E', 'gu' : '\u3050', 'ge' : '\u3052', 'go' : '\u3054',
+             'za' : '\u3056', 'ji' : '\u3058', 'zu' : '\u305A', 'ze' : '\u305C', 'zo' : '\u305E',
+             'da' : '\u3060', 'Ji' : '\u3062', 'Zu' : '\u3065', 'de' : '\u3067', 'do' : '\u3069',
 
              
              
             }
+
+# https://en.wikipedia.org/wiki/Katakana_(Unicode_block)
+# katakana {
+# }
 
 ###########################################################
 def checkUniqUnicode(hiragana):
