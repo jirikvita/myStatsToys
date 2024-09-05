@@ -397,18 +397,18 @@ def MakeTertiary(cw, ch, printstep):
     
     # the Suns of the binary system
     # spiralling, shot away:
-    Sun1 = cPlanet('Sun1', 0, X0, Y0, Z0, 1.*kSunMass, 12.*kms, 5*kAU, theta, -pi/2, ROOT.kRed, 20, 0.3)
-    Sun2 = cPlanet('Sun2', 1, X0, Y0, Z0, 1.*kSunMass, 10.*kms, 5*kAU, theta, +pi/2, ROOT.kBlue, 20, 0.3)
-    Sun3 = cPlanet('Sun3', 2, X0, Y0, Z0, 1.*kSunMass, 2.*kms, 1.*kAU, theta, pi, ROOT.kWhite, 20, 0.3)
+    #Sun1 = cPlanet('Sun1', 0, X0, Y0, Z0, 1.*kSunMass, 12.*kms, 5*kAU, theta, -pi/2, ROOT.kRed, 20, 0.3)
+    #Sun2 = cPlanet('Sun2', 1, X0, Y0, Z0, 1.*kSunMass, 10.*kms, 5*kAU, theta, +pi/2, ROOT.kBlue, 20, 0.3)
+    #Sun3 = cPlanet('Sun3', 2, X0, Y0, Z0, 1.*kSunMass, 2.*kms, 1.*kAU, theta, pi, ROOT.kWhite, 20, 0.3)
     
     #Sun1 = cPlanet('Sun1', 0, X0, Y0, Z0, 1.*kSunMass, 12.*kms, 5*kAU, theta, -pi/2, ROOT.kRed, 20, 0.3)
     #Sun2 = cPlanet('Sun2', 1, X0, Y0, Z0, 1.1*kSunMass, 10.*kms, 3*kAU, theta, +pi/2, ROOT.kBlue, 20, 0.3)
     #Sun3 = cPlanet('Sun3', 2, X0, Y0, Z0, 1.*kSunMass, 2.*kms, 1.*kAU, theta, pi, ROOT.kWhite, 20, 0.3)
 
     # 1% change:
-    #Sun1 = cPlanet('Sun1', 0, X0, Y0, Z0, 1.*kSunMass, 12.*kms, 5*kAU, theta, -pi/2, ROOT.kRed, 20, 0.3)
-    #Sun2 = cPlanet('Sun2', 1, X0, Y0, Z0, 1.1*kSunMass, 10.*kms, 3.01*kAU, theta, +pi/2, ROOT.kBlue, 20, 0.3)
-    #Sun3 = cPlanet('Sun3', 2, X0, Y0, Z0, 1.*kSunMass, 2.*kms, 1.*kAU, theta, pi, ROOT.kWhite, 20, 0.3)
+    Sun1 = cPlanet('Sun1', 0, X0, Y0, Z0, 1.*kSunMass, 12.*kms, 5*kAU, theta, -pi/2, ROOT.kRed, 20, 0.3)
+    Sun2 = cPlanet('Sun2', 1, X0, Y0, Z0, 1.1*kSunMass, 10.*kms, 3.01*kAU, theta, +pi/2, ROOT.kBlue, 20, 0.3)
+    Sun3 = cPlanet('Sun3', 2, X0, Y0, Z0, 1.*kSunMass, 2.*kms, 1.*kAU, theta, pi, ROOT.kWhite, 20, 0.3)
 
     #Sun1 = cPlanet('Sun1', 0, X0, Y0, Z0, 2.*kSunMass, 24.*kms, 5*kAU, theta, -pi/2, ROOT.kRed, 20, 0.3)
     #Sun2 = cPlanet('Sun2', 1, X0, Y0, Z0, 2.*kSunMass, 18.*kms, 3.0*kAU, theta, +pi/2, ROOT.kBlue, 20, 0.3)
@@ -420,9 +420,9 @@ def MakeTertiary(cw, ch, printstep):
     #Sun3 = cPlanet('Sun3', 2, X0, Y0, Z0, 2.*kSunMass, 14.*kms, 3.*kAU, theta, 0*pi, ROOT.kWhite, 20, 0.3)
 
     # different masses
-    Sun1 = cPlanet('Sun1', 0, X0, Y0, Z0, 2.1*kSunMass, 14.*kms, 3*kAU, theta, -2*pi/3, ROOT.kRed, 20, 0.3)
-    Sun2 = cPlanet('Sun2', 1, X0, Y0, Z0, 2.*kSunMass, 14.*kms, 3.*kAU, theta, +2*pi/3, ROOT.kBlue, 20, 0.3)
-    Sun3 = cPlanet('Sun3', 2, X0, Y0, Z0, 1.9*kSunMass, 14.*kms, 3.*kAU, theta, 0*pi, ROOT.kWhite, 20, 0.3)
+    #Sun1 = cPlanet('Sun1', 0, X0, Y0, Z0, 2.1*kSunMass, 14.*kms, 3*kAU, theta, -2*pi/3, ROOT.kRed, 20, 0.3)
+    #Sun2 = cPlanet('Sun2', 1, X0, Y0, Z0, 2.*kSunMass, 14.*kms, 3.*kAU, theta, +2*pi/3, ROOT.kBlue, 20, 0.3)
+    #Sun3 = cPlanet('Sun3', 2, X0, Y0, Z0, 1.9*kSunMass, 14.*kms, 3.*kAU, theta, 0*pi, ROOT.kWhite, 20, 0.3)
 
     # quasi stable
     #Sun1 = cPlanet('Sun1', 0, X0, Y0, Z0, 2.*kSunMass, 18.*kms, 3.*kAU, theta, -2*pi/3, ROOT.kRed, 20, 0.3)
@@ -581,9 +581,9 @@ def main(argv):
     dt = 0.05*kday #0.1*kday
     Nsteps = 3*30000 # 12000
     
-    systems = [ #MakeSolarSystem(cw, ch, printstep),
+    systems = [ MakeSolarSystem(cw, ch, printstep),
                 #MakeBinary(cw, ch, printstep),
-                MakeTertiary(cw, ch, printstep)
+                #MakeTertiary(cw, ch, printstep)
     ]
 
     for system in systems:
