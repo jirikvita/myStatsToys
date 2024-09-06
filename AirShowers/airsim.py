@@ -23,8 +23,8 @@ class cworld():
         self.can = None
         self.x0 = 0.02
         self.y0 = 0.5
-        self.xscale = 0.0009
-        self.yscale = 0.0014
+        self.xscale = 0.0007
+        self.yscale = 0.0024
         self.SFy = 0.3 # for separating particles in y for drawing; using rad./int. lengths
         self.deltaY = 0.7 # particles fork visual factor
         return
@@ -89,10 +89,11 @@ def splitParticle(world, part, randomizeY = 1, verbose = 0):
     rnd2 = 0.
 
     deltaY = world.deltaY
-    dy1, dy2, dy3, dy4 = deltaY, -deltaY, (1. - deltaY), -deltaY
+    # dy1, dy2, dy3, dy4 = deltaY, -deltaY, (1. - deltaY), -deltaY
+    dy1, dy2, dy3, dy4 = 0, 0, 0, 0
     if randomizeY:
-        rnd1 = random.random() / 2
-        rnd2 = random.random() / 2
+        rnd1 = getRndSign()*random.random() / 2
+        rnd2 = getRndSign()*random.random() / 2
     if verbose:
         print(f' ...trying {part.pid}')
     if part.pid == 'e' and part.E > gECEM:
@@ -125,8 +126,9 @@ def splitParticle(world, part, randomizeY = 1, verbose = 0):
         E1 = part.E / 3. # TBF, to be randomized, swapped...
         E2 = part.E / 3. # TBF
         E3 = part.E / 3. # TBF
-        dy1, dy2 = (1. - deltaY), deltaY
-        dy3, dy4 = -(1. - deltaY), -deltaY
+        #dy1, dy2 = (1. - deltaY), deltaY
+        #dy3, dy4 = -(1. - deltaY), -deltaY
+        dy3, dy4 = 0, 0
         newps = []
         newps.append( cpart(E1, 'pi', x, y, y + (dy1 + rnd1)*SFy*gLength[pid], gen+1, False) )
         newps.append( cpart(E2, 'pi', x, y, y + (dy2 + rnd2)*SFy*gLength[pid], gen+1, False) )
@@ -134,8 +136,8 @@ def splitParticle(world, part, randomizeY = 1, verbose = 0):
         rnd3 = 0.
         rnd4 = 0.
         if randomizeY:
-            rnd3 = random.random() / 3
-            rnd4 = random.random() / 3
+            rnd3 = getRndSign()*random.random() / 3
+            rnd4 = getRndSign()*random.random() / 3
         newps.append( cpart(E3/2, 'gamma', x, y, y + (dy3 + rnd3)*SFy*gLength[pid], gen+1, False) )
         newps.append( cpart(E3/2, 'gamma', x, y, y + (dy4 + rnd4)*SFy*gLength[pid], gen+1, False) )
         part.xend = x # terminate the parent particle
@@ -176,7 +178,7 @@ def Simulate(world, E0, randomizeY):
     nMax = 1e8
     while newnp != np and np < nMax: # producing particles
         istep = istep + 1
-        print(f'step: {istep} newnp: {newnp}')
+        print(f'step: {istep:3} newnp: {newnp}')
         particles = PerformInteractionStep(world, particles, randomizeY)
         np = 1*newnp
         newnp = len(particles)
@@ -188,17 +190,38 @@ def DrawResults(world, particles):
     can = world.Draw()
     can.cd()
     print('Drawing particles...')
+    drawn = 0
+    Ncut = 2e6
+    NmaxDraw = 4e6 # must be bigger than Ncut!
+    drawFrac = 0.1
+    partialDraw = len(particles) > Ncut
+    ipart = 0
     for part in particles:
-        line = part.Draw(world)
-        #print('E: ', part.E)
-        lines.append(line)
-    return can, lines
+        ipart = ipart + 1
+        if ipart % 1000000 == 0:
+            print(f'{ipart} / {len(particles)}, drawn: {drawn}')
+        if drawn < NmaxDraw:
+            if drawn < Ncut or (drawn >= Ncut and random.random() < drawFrac):
+                line = part.Draw(world)
+                drawn = drawn + 1
+                #print('E: ', part.E)
+                lines.append(line)
+    return can, lines, partialDraw
 
 ##########################################
 # https://www.tutorialspoint.com/python/python_command_line_arguments.htm
 def main(argv):
-    #if len(sys.argv) > 1:
     #  foo = sys.argv[1]
+
+    E = 100 # GeV
+    if len(sys.argv) > 1:
+        Ereq = int(sys.argv[1])
+        if Ereq <= 1000000 and Ereq >= 30:
+            print(f'Using custom energy E={Ereq} GeV')
+            E = Ereq
+        else:
+            print(f'Wrong custom energy E={Ereq} GeV, using default E={E} GeV')
+            
     
     gBatch = False
 
@@ -207,24 +230,26 @@ def main(argv):
 
     print('*** Settings:')
     print('batch={:}'.format(gBatch))
- 
-    #E0 = 1.*gTeV #1e14*geV
-    E0 = 100*gTeV #1e14*geV
-    # randomizeY = True
-    randomizeY = False
+
+    ##############################
+    ##############################
+    ##############################
+    E0 = E*gGeV #1e14*geV
+    randomizeY = True
+    #randomizeY = False
  
     ROOT.gStyle.SetOptTitle(0)
     
     world = cworld()
     particles = Simulate(world, E0, randomizeY)
     world.genmax = getMaxGen(particles)
-    can, lines = DrawResults(world, particles)
+    can, lines, partialDraw = DrawResults(world, particles)
 
 
     print(f'Drawn lines: {len(lines)}')
     primary = particles[0]
     # draw label
-    txt = ROOT.TLatex(0.05, 0.95, 'Primary {} E={:1.1f} TeV'.format(glabel[primary.pid], E0/1000.))
+    txt = ROOT.TLatex(0.05, 0.95, 'Primary: {}; E={:1.1f} TeV, particles: {:1.2f}M, depth={:1.0f}'.format(glabel[primary.pid], E0/1000., len(particles) / 1e6, world.genmax))
     txt.SetNDC()
     txt.Draw()
 
@@ -238,6 +263,12 @@ def main(argv):
     x1 = 0
     x2 = last.x*1.25
     print('x1, x2: ', x1, x2)
+
+    tag = '_{}_E{:1.0f}GeV'.format(primary.pid, E0)
+    if partialDraw:
+        tag = tag + '_partialDraw'
+    outfile = ROOT.TFile('histos' + tag + '.root', 'recreate')
+    
     h1Nx = ROOT.TH1D(hname, htitle, nb, x1, x2)
     for part in particles:
         #if part.xend != None and part.x != None:
@@ -253,7 +284,7 @@ def main(argv):
     stuff.append(txt)
     can.Update()
 
-    tag = '_{}_E{:1.0f}GeV'.format(primary.pid, E0)
+    print('Printing to png and pdf...')
     can.Print(can.GetName() + tag + '.pdf')
     can.Print(can.GetName() + tag + '.png')
 
@@ -263,8 +294,10 @@ def main(argv):
     stuff.append([can, statcan, lines])
 
     print('DONE!')
+    outfile.Write()
     
     ROOT.gApplication.Run()
+    outfile.Close()
     return
 
 ###################################
