@@ -9,7 +9,8 @@ from math import sqrt, pow, log, exp
 import os, sys, getopt
 import random
 from math import pow, log, exp, sqrt
-
+from numpy.random import exponential as exponential
+    
 from utils import *
 from consts import *
 
@@ -23,8 +24,8 @@ class cworld():
         self.can = None
         self.x0 = 0.02
         self.y0 = 0.5
-        self.xscale = 0.0007
-        self.yscale = 0.0024
+        self.xscale = 0.00035
+        self.yscale = 0.003
         self.SFy = 0.3 # for separating particles in y for drawing; using rad./int. lengths
         self.deltaY = 0.7 # particles fork visual factor
         return
@@ -78,7 +79,7 @@ class cpart:
 #    return x + gX0[part.pid]
 
 ##########################################
-def splitParticle(world, part, randomizeY = 1, verbose = 0):
+def splitParticle(world, part, randomizeY = 1, halfSteps = False, verbose = 0):
     if part.interacted:
         return []
     gen = part.gen
@@ -89,18 +90,23 @@ def splitParticle(world, part, randomizeY = 1, verbose = 0):
     rnd2 = 0.
 
     deltaY = world.deltaY
-    # dy1, dy2, dy3, dy4 = deltaY, -deltaY, (1. - deltaY), -deltaY
-    dy1, dy2, dy3, dy4 = 0, 0, 0, 0
+    dy1, dy2, dy3, dy4 = deltaY, -deltaY, (1. - deltaY), -deltaY
     if randomizeY:
-        rnd1 = getRndSign()*random.random() / 2
-        rnd2 = getRndSign()*random.random() / 2
+        dy1, dy2, dy3, dy4 = 0, 0, 0, 0
+        rnd1 = 1
+        while (rnd1 + rnd2) > 0.1:
+            rnd1 = getRndSign()*random.random() / 2
+            rnd2 = getRndSign()*random.random() / 2
     if verbose:
         print(f' ...trying {part.pid}')
     if part.pid == 'e' and part.E > gECEM:
         if verbose:
             print('  ...performing brehms!')
         # new interaction position:
-        x = part.x + gLength[part.pid]*log(2)
+        if halfSteps:
+            x = part.x + gLength[part.pid]*log(2)
+        else:
+            x = part.x + exponential(gLength[part.pid])
         E1 = part.E / 2. # TBF, to be randomized, swapped...
         E2 = part.E / 2. # TBF
         p1 = cpart(E1, 'gamma', x, y, y + (dy1 + rnd1)*SFy*gLength[pid], gen+1, False)
@@ -111,7 +117,10 @@ def splitParticle(world, part, randomizeY = 1, verbose = 0):
     elif part.pid == 'gamma' and part.E > gECpair:
         if verbose:
             print('  ...performing conversion!')
-        x = part.x + gLength[part.pid]*log(2)
+        if halfSteps:
+            x = part.x + gLength[part.pid]*log(2)
+        else:
+            x = part.x + exponential(gLength[part.pid])
         E1 = part.E / 2. # TBF, to be randomized, swapped...
         E2 = part.E / 2. # TBF
         p1 = cpart(E1, 'e', x, y, y + (dy1 + rnd1)*SFy*gLength[pid], gen+1, False)
@@ -120,7 +129,10 @@ def splitParticle(world, part, randomizeY = 1, verbose = 0):
         part.interacted = True
         return [p1, p2]
     elif part.pid == 'pi' and part.E > ECpiThr:
-        x = part.x + gLength[part.pid]*log(2)
+        if halfSteps:
+            x = part.x + gLength[part.pid]*log(2)
+        else:
+            x = part.x + exponential(gLength[part.pid])
         if verbose:
             print('  ...performing pion production!')
         E1 = part.E / 3. # TBF, to be randomized, swapped...
@@ -130,14 +142,18 @@ def splitParticle(world, part, randomizeY = 1, verbose = 0):
         #dy3, dy4 = -(1. - deltaY), -deltaY
         dy3, dy4 = 0, 0
         newps = []
-        newps.append( cpart(E1, 'pi', x, y, y + (dy1 + rnd1)*SFy*gLength[pid], gen+1, False) )
-        newps.append( cpart(E2, 'pi', x, y, y + (dy2 + rnd2)*SFy*gLength[pid], gen+1, False) )
-        # p0 --> gamma gamma:
         rnd3 = 0.
         rnd4 = 0.
         if randomizeY:
-            rnd3 = getRndSign()*random.random() / 3
-            rnd4 = getRndSign()*random.random() / 3
+            while (rnd1 + rnd2 + rnd3 + rnd4) > 0.1:
+                rnd1 = getRndSign()*random.random() / 3
+                rnd2 = getRndSign()*random.random() / 3
+                rnd3 = getRndSign()*random.random() / 3
+                rnd4 = getRndSign()*random.random() / 3
+
+        newps.append( cpart(E1, 'pi', x, y, y + (dy1 + rnd1)*SFy*gLength[pid], gen+1, False) )
+        newps.append( cpart(E2, 'pi', x, y, y + (dy2 + rnd2)*SFy*gLength[pid], gen+1, False) )
+        # p0 --> gamma gamma:
         newps.append( cpart(E3/2, 'gamma', x, y, y + (dy3 + rnd3)*SFy*gLength[pid], gen+1, False) )
         newps.append( cpart(E3/2, 'gamma', x, y, y + (dy4 + rnd4)*SFy*gLength[pid], gen+1, False) )
         part.xend = x # terminate the parent particle
@@ -221,9 +237,14 @@ def main(argv):
             E = Ereq
         else:
             print(f'Wrong custom energy E={Ereq} GeV, using default E={E} GeV')
-            
-    
-    gBatch = False
+
+    iteration = 0
+    if len(sys.argv) > 2:
+        req_iteration = int(sys.argv[2])
+        if req_iteration >= 0 and req_iteration < 1000:
+            print(f'OK, using user-define iteration {req_iteration}')
+            iteration = req_iteration
+    gBatch = True
 
     if gBatch:
         ROOT.gROOT.SetBatch(1)
@@ -257,24 +278,30 @@ def main(argv):
     last = particles[jmax]
     
     # fill histogrammes
-    hname = 'h1Nx'
+
+    tag = '_{}_E{:1.0f}GeV'.format(primary.pid, E0)
+    gtag = tag + ''
+    if partialDraw:
+        gtag = gtag + '_partialDraw'
+    opt = 'recreate'
+    if iteration > 0:
+        opt = 'update'
+        
+    hname = f'h1Nx_{iteration}'
     htitle = ';x[g/cm^{2}];N'
     nb = 40
     x1 = 0
     x2 = last.x*1.25
     print('x1, x2: ', x1, x2)
 
-    tag = '_{}_E{:1.0f}GeV'.format(primary.pid, E0)
-    if partialDraw:
-        tag = tag + '_partialDraw'
-    outfile = ROOT.TFile('histos' + tag + '.root', 'recreate')
+    outfile = ROOT.TFile('histos' + tag + '.root', opt)
     
     h1Nx = ROOT.TH1D(hname, htitle, nb, x1, x2)
     for part in particles:
         #if part.xend != None and part.x != None:
         #    h1Nx.Fill( 0.5*(part.xend - part.x) )
         #elif part.x != None:
-        h1Nx.Fill(part.x)
+        h1Nx.Fill(part.x - primary.xend)
 
     canname = 'AirStats'
     statcan = ROOT.TCanvas(canname, canname, 1225, 0, 700, 600)
@@ -285,8 +312,8 @@ def main(argv):
     can.Update()
 
     print('Printing to png and pdf...')
-    can.Print(can.GetName() + tag + '.pdf')
-    can.Print(can.GetName() + tag + '.png')
+    can.Print(can.GetName() + gtag + '.pdf')
+    can.Print(can.GetName() + gtag + '.png')
 
     statcan.Print(statcan.GetName() + tag + '.pdf')
     statcan.Print(statcan.GetName() + tag + '.png')
@@ -295,8 +322,10 @@ def main(argv):
 
     print('DONE!')
     outfile.Write()
+
+    if not gBatch:
+        ROOT.gApplication.Run()
     
-    ROOT.gApplication.Run()
     outfile.Close()
     return
 
