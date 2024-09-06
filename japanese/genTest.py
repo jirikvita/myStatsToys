@@ -21,7 +21,10 @@ syllabs = [ 'a', 'i', 'u', 'e', 'o',
             #'ga', 'gi', 'gu', 'ge', 'go',
             #'za', 'ji', 'zu', 'ze', 'zo',
             
-            ##'da', 'Ji', 'Ze', 'de', 'do',
+            #'da', 'Ji', 'Ze', 'de', 'do',
+            #'ba', 'bi', 'bu', 'be', 'bo',
+            #'pa', 'pi', 'pu', 'pe', 'po',
+            
             
             ]
 
