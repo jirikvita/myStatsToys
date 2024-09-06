@@ -4,6 +4,10 @@
 # Po 19. srpna 2024, 17:50:37 CEST
 # 5.9.2024
 
+# TODO
+# decay pions to muons
+# add neutrinos?
+
 import ROOT
 from math import sqrt, pow, log, exp
 import os, sys, getopt
@@ -50,7 +54,7 @@ class cpart:
         self.gen = gen # generation
         self.interacted = interacted
         
-    def Draw(self, world, verbose = 0):
+    def Draw(self, world, halfSteps, verbose = 0):
         if verbose:
             print(f'Drawing particle {self.pid} of generation {self.gen}...')
         xscale, yscale, x0, y0, SFy = world.xscale, world.yscale, world.x0, world.y0, world.SFy
@@ -58,7 +62,11 @@ class cpart:
         y1 = self.yend
         if x1 == None:
             # unterminated particle, possible end of shower
-            x1 = self.x + gLength[self.pid]
+            if halfSteps:
+                x1 = self.x + gLength[self.pid]
+            else:
+                x1 = self.x + exponential(gLength[self.pid])
+
         X1, Y1, X2, Y2 = x0 + xscale*self.x, y0 + yscale*self.y, x0 + xscale*x1, y0 + yscale*y1
         if verbose:
             print(f'   ...coors: {X1:1.3f}, {Y1:1.3f}, {X2:1.3f}, {Y2:1.3f}')
@@ -79,7 +87,7 @@ class cpart:
 #    return x + gX0[part.pid]
 
 ##########################################
-def splitParticle(world, part, randomizeY = 1, halfSteps = False, verbose = 0):
+def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
     if part.interacted:
         return []
     gen = part.gen
@@ -164,19 +172,19 @@ def splitParticle(world, part, randomizeY = 1, halfSteps = False, verbose = 0):
     return []
 
 ##########################################
-def PerformInteractionStep(world, particles, randomizeY, verbose = 0):
+def PerformInteractionStep(world, particles, randomizeY, halfSteps, verbose = 0):
     newparticles = []
     for p in particles:
         if verbose:
             print(f'...making {p.pid} interact...')
-        newparts = splitParticle(world, p, randomizeY)
+        newparts = splitParticle(world, p, randomizeY, halfSteps)
         for newp in newparts:
             newparticles.append(newp)
     particles.extend(newparticles)
     return particles
     
 ##########################################
-def Simulate(world, E0, randomizeY):
+def Simulate(world, E0, randomizeY, halfSteps):
     particles = []
 
     primary = 'pi'
@@ -195,13 +203,13 @@ def Simulate(world, E0, randomizeY):
     while newnp != np and np < nMax: # producing particles
         istep = istep + 1
         print(f'step: {istep:3} newnp: {newnp}')
-        particles = PerformInteractionStep(world, particles, randomizeY)
+        particles = PerformInteractionStep(world, particles, randomizeY, halfSteps)
         np = 1*newnp
         newnp = len(particles)
     return particles
 
 ##########################################
-def DrawResults(world, particles):
+def DrawResults(world, particles, halfSteps):
     lines = []
     can = world.Draw()
     can.cd()
@@ -218,7 +226,7 @@ def DrawResults(world, particles):
             print(f'{ipart} / {len(particles)}, drawn: {drawn}')
         if drawn < NmaxDraw:
             if drawn < Ncut or (drawn >= Ncut and random.random() < drawFrac):
-                line = part.Draw(world)
+                line = part.Draw(world, halfSteps)
                 drawn = drawn + 1
                 #print('E: ', part.E)
                 lines.append(line)
@@ -244,11 +252,25 @@ def main(argv):
         if req_iteration >= 0 and req_iteration < 1000:
             print(f'OK, using user-define iteration {req_iteration}')
             iteration = req_iteration
-    gBatch = True
 
+    gBatch = False
+    if len(sys.argv) > 3:
+        reqBatch = int(sys.argv[3])
+        if reqBatch > 0:
+            print(f'OK, using user-define batch mode {reqBatch}')
+            gBatch = True
+        
     if gBatch:
         ROOT.gROOT.SetBatch(1)
 
+    doDraw = True
+    if len(sys.argv) > 4:
+        reqDraw = int(sys.argv[4])
+        if reqDraw == 0:
+            print(f'OK, using user-define draw mode {reqDraw}')
+            doDraw = reqDraw
+        
+        
     print('*** Settings:')
     print('batch={:}'.format(gBatch))
 
@@ -258,44 +280,34 @@ def main(argv):
     E0 = E*gGeV #1e14*geV
     randomizeY = True
     #randomizeY = False
- 
+    halfSteps = False
     ROOT.gStyle.SetOptTitle(0)
     
     world = cworld()
-    particles = Simulate(world, E0, randomizeY)
+    particles = Simulate(world, E0, randomizeY, halfSteps)
     world.genmax = getMaxGen(particles)
-    can, lines, partialDraw = DrawResults(world, particles)
-
-
-    print(f'Drawn lines: {len(lines)}')
     primary = particles[0]
-    # draw label
-    txt = ROOT.TLatex(0.05, 0.95, 'Primary: {}; E={:1.1f} TeV, particles: {:1.2f}M, depth={:1.0f}'.format(glabel[primary.pid], E0/1000., len(particles) / 1e6, world.genmax))
-    txt.SetNDC()
-    txt.Draw()
 
     jmax,maxx = getMaxX(particles)
     last = particles[jmax]
     
     # fill histogrammes
-
     tag = '_{}_E{:1.0f}GeV'.format(primary.pid, E0)
+    rtag = tag + ''
+    tag = tag + '_iter{}'.format(iteration)
     gtag = tag + ''
-    if partialDraw:
-        gtag = gtag + '_partialDraw'
-    opt = 'recreate'
+
+    ropt = 'recreate'
     if iteration > 0:
-        opt = 'update'
-        
+        ropt = 'update'
+
     hname = f'h1Nx_{iteration}'
     htitle = ';x[g/cm^{2}];N'
     nb = 40
     x1 = 0
     x2 = last.x*1.25
-    print('x1, x2: ', x1, x2)
-
-    outfile = ROOT.TFile('histos' + tag + '.root', opt)
-    
+    #print('x1, x2: ', x1, x2)
+    outfile = ROOT.TFile('histos' + rtag + '.root', ropt)   
     h1Nx = ROOT.TH1D(hname, htitle, nb, x1, x2)
     for part in particles:
         #if part.xend != None and part.x != None:
@@ -303,30 +315,45 @@ def main(argv):
         #elif part.x != None:
         h1Nx.Fill(part.x - primary.xend)
 
-    canname = 'AirStats'
-    statcan = ROOT.TCanvas(canname, canname, 1225, 0, 700, 600)
-    statcan.cd()
-    h1Nx.Draw('hist')
+    if doDraw:
+        can, lines, partialDraw = DrawResults(world, particles, halfSteps)
+        if partialDraw:
+            gtag = gtag + '_partialDraw'
+        print(f'Drawn lines: {len(lines)}')
+        # draw label
+        txt = ROOT.TLatex(0.05, 0.95, 'Primary: {}; E={:1.1f} TeV, particles: {:1.2f}M, depth={:1.0f}'.format(glabel[primary.pid], E0/1000., len(particles) / 1e6, world.genmax))
+        txt.SetNDC()
+        txt.Draw()
+
+        canname = 'AirStats'
+        statcan = ROOT.TCanvas(canname, canname, 1225, 0, 700, 600)
+        statcan.cd()
+        h1Nx.Draw('hist')
+
+        stuff.append(txt)
+        can.Update()
+
+        print('Printing to png and pdf...')
+        can.Print(can.GetName() + gtag + '.pdf')
+        can.Print(can.GetName() + gtag + '.png')
+
+        statcan.Print(statcan.GetName() + tag + '.pdf')
+        statcan.Print(statcan.GetName() + tag + '.png')
+
+        stuff.append([can, statcan, lines])
+
+        print('DONE!')
+
     
-    stuff.append(txt)
-    can.Update()
-
-    print('Printing to png and pdf...')
-    can.Print(can.GetName() + gtag + '.pdf')
-    can.Print(can.GetName() + gtag + '.png')
-
-    statcan.Print(statcan.GetName() + tag + '.pdf')
-    statcan.Print(statcan.GetName() + tag + '.png')
-
-    stuff.append([can, statcan, lines])
-
-    print('DONE!')
     outfile.Write()
-
-    if not gBatch:
-        ROOT.gApplication.Run()
-    
     outfile.Close()
+
+    if doDraw and not gBatch:
+        ROOT.gApplication.Run()
+
+    
+    print('...returning and kiling oneself!')
+    os.system('killall -9 airsim.py')
     return
 
 ###################################
