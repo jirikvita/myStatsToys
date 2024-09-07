@@ -34,6 +34,7 @@ class cworld():
         self.yscale = 0.0035
         self.SFy = 0.3 # for separating particles in y for drawing; using rad./int. lengths
         self.deltaY = 0.7 # particles fork visual factor
+        self.rndSF = 4. # SF for random number division in vertical split
         return
     
     def Draw(self):
@@ -95,31 +96,35 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
     gen = part.gen
     y = part.yend
     pid = part.pid
+    length = gLength[part.pid]
+    
     SFy = world.SFy
     rnd1 = 0.
     rnd2 = 0.
-
+    rndSF = world.rndSF
+    
     deltaY = world.deltaY
     dy1, dy2, dy3, dy4 = deltaY, -deltaY, (1. - deltaY), -deltaY
     if randomizeY:
         dy1, dy2, dy3, dy4 = 0, 0, 0, 0
         #rnd1 = 1
         #while abs(rnd1 + rnd2) > 0.01:
-        #    rnd1 = getRndSign()*random.random() / 4.
-        #    rnd2 = getRndSign()*random.random() / 4.
-        rnd1 = getRndSign()*random.random() / 4.
+        #    rnd1 = getRndSign()*random.random() / rndSF
+        #    rnd2 = getRndSign()*random.random() / rndSF
+        rnd1 = getRndSign()*random.random() / rndSF
         rnd2 = -rnd1
     if verbose:
         print(f' ...trying {part.pid}')
+
+    # Electrons:
     if part.pid == 'e' and part.E > gECEM:
         if verbose:
             print('  ...performing brehms!')
         # new interaction position:
         xi = 0.5
         if halfSteps:
-            x = part.x + gLength[part.pid]*log(2)
+            x = part.x + length*log(2)
         else:
-            length = gLength[part.pid]
             dx = exponential(length)
             x = part.x + dx
             xi = exp(-dx / length)
@@ -130,17 +135,22 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
         part.xend = x # terminate the parent particle
         part.interacted = True
         return [p1, p2]
+
+    # Photons
     elif part.pid == 'gamma' and part.E > gECpair:
         if verbose:
             print('  ...performing conversion!')
         xi = 0.5
         if halfSteps:
-            x = part.x + gLength[part.pid]*log(2)
+            x = part.x + length*log(2)
         else:
-            length = gLength[part.pid]
             dx = exponential(length)
             x = part.x + dx
             xi = exp(-dx / length)
+            # TODO: xi as a random number drawn from distribution
+            # C*(1 - 4/3*x*(1-x)), C = 9/7?
+            # TF1 b("b", "9./7.5*(1 - 4/3*x*(1-x))", 0, 1);
+
         E1 = xi*part.E
         E2 = (1-xi)*part.E
         p1 = cpart(E1, 'e', x, y, y + (dy1 + rnd1)*SFy*gLength[pid], gen+1, False)
@@ -152,9 +162,8 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
         xi = 1/3.
         chi = 0.
         if halfSteps:
-            x = part.x + gLength[part.pid]*log(2)
+            x = part.x + length*log(2)
         else:
-            length = gLength[part.pid]
             dx = exponential(length)
             xi = exp(-dx / length)
             x = part.x + dx
@@ -174,17 +183,19 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
         rnd4 = 0.
         if randomizeY:
             #while abs(rnd1 + rnd2 + rnd3 + rnd4) > 0.01:
-            #    rnd1 = getRndSign()*random.random() / 4
-            #    rnd2 = getRndSign()*random.random() / 4
-            #    rnd3 = getRndSign()*random.random() / 4
-            #    rnd4 = getRndSign()*random.random() / 4
-            rnd3 = getRndSign()*random.random() / 4
+            #    rnd1 = getRndSign()*random.random() / rndSF
+            #    rnd2 = getRndSign()*random.random() / rndSF
+            #    rnd3 = getRndSign()*random.random() / rndSF
+            #    rnd4 = getRndSign()*random.random() / rndSF
+            rnd3 = getRndSign()*random.random() / rndSF
             rnd4 = -rnd4
 
         newps.append( cpart(E1, 'pi', x, y, y + (dy1 + rnd1)*SFy*gLength[pid], gen+1, False) )
         newps.append( cpart(E2, 'pi', x, y, y + (dy2 + rnd2)*SFy*gLength[pid], gen+1, False) )
         # p0 --> gamma gamma:
         zeta = random.random()
+        # TODO: zeta as a random number drawn from distribution
+        # C*(1 - 4/3*x*(1-x)), C = 9/7?
         newps.append( cpart(zeta*E3, 'gamma', x, y, y + (dy3 + rnd3)*SFy*gLength[pid], gen+1, False) )
         newps.append( cpart((1-zeta)*E3, 'gamma', x, y, y + (dy4 + rnd4)*SFy*gLength[pid], gen+1, False) )
         part.xend = x # terminate the parent particle
@@ -227,7 +238,7 @@ def Simulate(world, E0, randomizeY, halfSteps):
     nMax = 1e8
     while newnp != np and np < nMax: # producing particles
         istep = istep + 1
-        print(f'step: {istep:3} actual particles count: {newnp}')
+        print(f'step: {istep:3} actual particles count: {newnp:10,}')
         particles = PerformInteractionStep(world, particles, randomizeY, halfSteps)
         np = 1*newnp
         newnp = len(particles)
@@ -248,7 +259,7 @@ def DrawResults(world, particles, halfSteps):
     for part in particles:
         ipart = ipart + 1
         if ipart % 1000000 == 0:
-            print(f'{ipart} / {len(particles)}, drawn: {drawn}')
+            print(f'{ipart:10,} / {len(particles):10,}, drawn: {drawn:10,}')
         if drawn < NmaxDraw:
             if drawn < Ncut or (drawn >= Ncut and random.random() < drawFrac):
                 line = part.Draw(world, halfSteps)
@@ -345,7 +356,7 @@ def main(argv):
         can, lines, partialDraw = DrawResults(world, particles, halfSteps)
         if partialDraw:
             gtag = gtag + '_partialDraw'
-        print(f'Drawn lines: {len(lines)}')
+        print(f'Drawn lines: {len(lines):10,}')
         # draw label
         txt = ROOT.TLatex(0.05, 0.95, 'Primary: {}; E={:1.1f} TeV, particles: {:1.2f}M, depth={:1.0f}'.format(glabel[primary.pid], E0/1000., len(particles) / 1e6, world.genmax))
         txt.SetNDC()
