@@ -5,6 +5,7 @@
 # 5.9.2024
 
 # TODO
+# enable possibility of separate particle histograms
 # decay pions to muons
 # add neutrinos?
 # finish Xmax error in plotting
@@ -32,9 +33,12 @@ class cworld():
         self.y0 = 0.
         self.xscale = 0.00015
         self.yscale = 0.0035
-        self.SFy = 0.3 # for separating particles in y for drawing; using rad./int. lengths
+        self.SFy = 0.3    # for separating particles in y for drawing; using rad./int. lengths
         self.deltaY = 0.7 # particles fork visual factor
-        self.rndSF = 4. # SF for random number division in vertical split
+        self.rndSF = 4.   # SF for random number division in vertical split
+
+        self.x1, self.x2 = 0., 4000. #g/cm2  #self.xscale*50
+
         return
     
     def Draw(self):
@@ -43,22 +47,23 @@ class cworld():
         self.can = ROOT.TCanvas(canname, canname, 0, 0, 1200, 600)
         self.can.Draw()
         self.can.cd()
-        x1, x2 = 0., 4000. #self.xscale*50
+        
         ny = 5
         nb = 1000
         y1, y2 = -100, 100
-        self.h2 = ROOT.TH2D("worldhisto", ";x[g/cm^{2}];y[arb.];", nb, x1, x2, nb, y1, y2)
+        self.h2 = ROOT.TH2D("worldhisto", ";x[g/cm^{2}];y[arb.];", nb, self.x1, self.x2, nb, y1, y2)
         self.h2.SetStats(0)
         self.h2.GetYaxis().SetAxisColor(ROOT.kWhite)
         self.h2.GetYaxis().SetLabelColor(ROOT.kWhite)
         self.h2.GetYaxis().SetTitleColor(ROOT.kWhite)
+
         self.h2.Draw()
         return self.can, self.h2
 
 ##########################################
 class cpart:
     
-    def __init__(self, E, pid, x, y, yend, gen, interacted):
+    def __init__(self, E, pid, x, y, yend, gen): #, interacted):
         self.E = E
         self.pid = pid
         self.x = x # position where born
@@ -66,7 +71,7 @@ class cpart:
         self.xend = None # end position
         self.yend = yend # end position
         self.gen = gen # generation
-        self.interacted = interacted
+        #self.interacted = interacted
         
     def Draw(self, world, halfSteps, verbose = 0):
         if verbose:
@@ -103,8 +108,8 @@ class cpart:
 
 ##########################################
 def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
-    if part.interacted:
-        return []
+    #if part.interacted:
+    #    return []
     gen = part.gen
     y = part.yend
     pid = part.pid
@@ -138,10 +143,10 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
             xi = exp(-dx / length)
         E1 = xi*part.E
         E2 = (1-xi)*part.E
-        p1 = cpart(E1, 'gamma', x, y, y + (dy1 + rnd1)*SFy*gLength[pid], gen+1, False)
-        p2 = cpart(E2, 'e',     x, y, y + (dy2 + rnd2)*SFy*gLength[pid], gen+1, False)
+        p1 = cpart(E1, 'gamma', x, y, y + (dy1 + rnd1)*SFy*length, gen+1) #, False)
+        p2 = cpart(E2, 'e',     x, y, y + (dy2 + rnd2)*SFy*length, gen+1) #, False)
         part.xend = x # terminate the parent particle
-        part.interacted = True
+        #part.interacted = True
         return [p1, p2]
 
     # Photons
@@ -161,49 +166,72 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
 
         E1 = xi*part.E
         E2 = (1-xi)*part.E
-        p1 = cpart(E1, 'e', x, y, y + (dy1 + rnd1)*SFy*gLength[pid], gen+1, False)
-        p2 = cpart(E2, 'e', x, y, y + (dy2 + rnd2)*SFy*gLength[pid], gen+1, False) 
+        p1 = cpart(E1, 'e', x, y, y + (dy1 + rnd1)*SFy*length, gen+1) #, False)
+        p2 = cpart(E2, 'e', x, y, y + (dy2 + rnd2)*SFy*length, gen+1) #, False) 
         part.xend = x # terminate the parent particle
-        part.interacted = True
+        #part.interacted = True
         return [p1, p2]
-    elif part.pid == 'pi' and part.E > ECpiThr:
-        xi = 1/3.
-        chi = 0.
-        if halfSteps:
-            x = part.x + length*log(2)
-        else:
+    elif part.pid == 'pi':
+        if part.E < ECpiThr:
+            # decay the pion to a muon
+            # less transverse separation
+            rnd1 = getRndSign()*random.random() / rndSF / rndSF
+            rnd2 = -rnd1
+            gamma = part.E / gmass[part.pid]
+            length = gamma*gctau[part.pid]
             dx = exponential(length)
-            xi = exp(-dx / length)
             x = part.x + dx
-            chi = 2.
-            while 1 - xi - chi < 0.:
-                chi = random.random()
-        if verbose:
-            print('  ...performing pion production!')
-        E1 = xi*part.E
-        E2 = (1-xi-chi)*part.E
-        E3 = (1-xi+chi)*part.E
-        #dy1, dy2 = (1. - deltaY), deltaY
-        #dy3, dy4 = -(1. - deltaY), -deltaY
-        dy3, dy4 = 0, 0
-        newps = []
-        rnd3 = 0.
-        rnd4 = 0.
-        if randomizeY:
-            rnd3 = getRndSign()*random.random() / rndSF
-            rnd4 = -rnd4
+            xi = exp(-dx / length)
+            E1 = xi*part.E
+            E2 = (1-xi)*part.E
+            p1 = cpart(E1, 'mu', x, y, y + (dy1 + rnd1)*SFy*length, gen+1) #, False)
+            p2 = cpart(E2, 'nu',     x, y, y + (dy2 + rnd2)*SFy*length, gen+1) #, False)
+            # terminate muons and neutrinos:
+            p1.xend = world.x2
+            p2.xend = world.x2
+            
+            part.xend = x # terminate the parent particle
+            #part.interacted = True
+            return [p1, p2]
+            
+        else:
+            xi = 1/3.
+            chi = 0.
+            if halfSteps:
+                x = part.x + length*log(2)
+            else:
+                dx = exponential(length)
+                xi = exp(-dx / length)
+                x = part.x + dx
+                chi = 2.
+                while 1 - xi - chi < 0.:
+                    chi = random.random()
+            if verbose:
+                print('  ...performing pion production!')
+            E1 = xi*part.E
+            E2 = (1-xi-chi)*part.E
+            E3 = (1-xi+chi)*part.E
+            #dy1, dy2 = (1. - deltaY), deltaY
+            #dy3, dy4 = -(1. - deltaY), -deltaY
+            dy3, dy4 = 0, 0
+            newps = []
+            rnd3 = 0.
+            rnd4 = 0.
+            if randomizeY:
+                rnd3 = getRndSign()*random.random() / rndSF
+                rnd4 = -rnd4
 
-        newps.append( cpart(E1, 'pi', x, y, y + (dy1 + rnd1)*SFy*gLength[pid], gen+1, False) )
-        newps.append( cpart(E2, 'pi', x, y, y + (dy2 + rnd2)*SFy*gLength[pid], gen+1, False) )
-        # p0 --> gamma gamma:
-        zeta = random.random()
-        # TODO: zeta as a random number drawn from distribution
-        # C*(1 - 4/3*x*(1-x)), C = 9/7?
-        newps.append( cpart(zeta*E3, 'gamma', x, y, y + (dy3 + rnd3)*SFy*gLength[pid], gen+1, False) )
-        newps.append( cpart((1-zeta)*E3, 'gamma', x, y, y + (dy4 + rnd4)*SFy*gLength[pid], gen+1, False) )
-        part.xend = x # terminate the parent particle
-        part.interacted = True
-        return newps
+            newps.append( cpart(E1, 'pi', x, y, y + (dy1 + rnd1)*SFy*length, gen+1) ) #, False) )
+            newps.append( cpart(E2, 'pi', x, y, y + (dy2 + rnd2)*SFy*length, gen+1) )  #, False) )
+            # p0 --> gamma gamma:
+            zeta = random.random()
+            # TODO: zeta as a random number drawn from distribution
+            # C*(1 - 4/3*x*(1-x)), C = 9/7?
+            newps.append( cpart(zeta*E3, 'gamma', x, y, y + (dy3 + rnd3)*SFy*length, gen+1) ) #, False) )
+            newps.append( cpart((1-zeta)*E3, 'gamma', x, y, y + (dy4 + rnd4)*SFy*length, gen+1) )  #, False) )
+            part.xend = x # terminate the parent particle
+            #part.interacted = True
+            return newps
     if verbose:
         print('  ...nothing done!') #
     return []
@@ -227,7 +255,7 @@ def Simulate(primaryPID, world, E0, randomizeY, halfSteps):
     yend = 0*gm # dummy
 
     newparticles = []
-    newparticles.append(cpart(E0, primaryPID, x, y, yend, gen0, False))
+    newparticles.append(cpart(E0, primaryPID, x, y, yend, gen0)) # False
     
     np = -1
     istep = -1
@@ -258,7 +286,7 @@ def DrawResults(world, particles, halfSteps):
     for part in particles:
         ipart = ipart + 1
         if (ipart-1) % 1000000 == 0 and ipart > 0:
-            print(f'{ipart:10,} / {len(particles):10,}; drawn: {drawn:10,}')
+            print(f'{ipart-1:10,} / {len(particles):10,}; drawn: {drawn:10,}')
         if drawn < NmaxDraw:
             if drawn < Ncut or (drawn >= Ncut and random.random() < drawFrac):
                 line = part.Draw(world, halfSteps)
@@ -349,6 +377,10 @@ def doAllDrawing(world, primary, E0, particles, halfSteps, tag, gtag, h1Nx):
         txt.SetTextColor(ROOT.kBlue)
         txt.SetNDC()
         txt.Draw()
+
+        ptxt = makePtctLabels(0.875, 0.855, 0.041)
+        stuff.append(ptxt)
+        
         can.Update()
         
         canname = 'AirStats'
