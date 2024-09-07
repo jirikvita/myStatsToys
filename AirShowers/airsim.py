@@ -28,8 +28,8 @@ stuff = []
 class cworld():
     def __init__(self):
         self.can = None
-        self.x0 = 0.02
-        self.y0 = 0.5
+        self.x0 = 0.0
+        self.y0 = 0.
         self.xscale = 0.00015
         self.yscale = 0.0035
         self.SFy = 0.3 # for separating particles in y for drawing; using rad./int. lengths
@@ -42,7 +42,18 @@ class cworld():
         canname = 'ShowerVis'
         self.can = ROOT.TCanvas(canname, canname, 0, 0, 1200, 600)
         self.can.Draw()
-        return self.can
+        self.can.cd()
+        x1, x2 = 0., 4000. #self.xscale*50
+        ny = 5
+        nb = 1000
+        y1, y2 = -100, 100
+        self.h2 = ROOT.TH2D("worldhisto", ";x[g/cm^{2}];y[arb.];", nb, x1, x2, nb, y1, y2)
+        self.h2.SetStats(0)
+        self.h2.GetYaxis().SetAxisColor(ROOT.kWhite)
+        self.h2.GetYaxis().SetLabelColor(ROOT.kWhite)
+        self.h2.GetYaxis().SetTitleColor(ROOT.kWhite)
+        self.h2.Draw()
+        return self.can, self.h2
 
 ##########################################
 class cpart:
@@ -70,11 +81,12 @@ class cpart:
             else:
                 x1 = self.x + exponential(gLength[self.pid])
 
-        X1, Y1, X2, Y2 = x0 + xscale*self.x, y0 + yscale*self.y, x0 + xscale*x1, y0 + yscale*y1
+        #X1, Y1, X2, Y2 = x0 + xscale*self.x, y0 + yscale*self.y, x0 + xscale*x1, y0 + yscale*y1
+        X1, Y1, X2, Y2 = x0 + self.x, y0 + self.y, x0 + x1, y0 + y1
         if verbose:
             print(f'   ...coors: {X1:1.3f}, {Y1:1.3f}, {X2:1.3f}, {Y2:1.3f}')
         line = ROOT.TLine(X1, Y1, X2, Y2)
-        line.SetNDC()
+        #line.SetNDC()
         alpha =  0.8 * (world.genmax - self.gen ) / world.genmax + 0.1
         line.SetLineColorAlpha(gcol[self.pid], alpha)
         line.SetLineStyle(glst[self.pid])
@@ -233,9 +245,10 @@ def Simulate(primaryPID, world, E0, randomizeY, halfSteps):
 ##########################################
 def DrawResults(world, particles, halfSteps):
     lines = []
-    can = world.Draw()
+    can, h2 = world.Draw()
     can.cd()
     print('Drawing particles...')
+    h2.Draw()
     drawn = 0
     Ncut = 2e6
     NmaxDraw = 4e6 # must be bigger than Ncut!
@@ -252,7 +265,7 @@ def DrawResults(world, particles, halfSteps):
                 drawn = drawn + 1
                 #print('E: ', part.E)
                 lines.append(line)
-    return can, lines, partialDraw
+    return can, h2, lines, partialDraw
 
 ##########################################
 
@@ -327,7 +340,7 @@ def makeOutHistos(last, iteration, rtag, ropt, rootdir = 'root/'):
 
 #########################################
 def doAllDrawing(world, primary, E0, particles, halfSteps, tag, gtag, h1Nx):
-        can, lines, partialDraw = DrawResults(world, particles, halfSteps)
+        can, h2, lines, partialDraw = DrawResults(world, particles, halfSteps)
         if partialDraw:
             gtag = gtag + '_partialDraw'
         print(f'Drawn lines: {len(lines):10,}')
@@ -336,7 +349,8 @@ def doAllDrawing(world, primary, E0, particles, halfSteps, tag, gtag, h1Nx):
         txt.SetTextColor(ROOT.kBlue)
         txt.SetNDC()
         txt.Draw()
-
+        can.Update()
+        
         canname = 'AirStats'
         statcan = ROOT.TCanvas(canname, canname, 1225, 0, 700, 600)
         statcan.cd()
@@ -346,22 +360,22 @@ def doAllDrawing(world, primary, E0, particles, halfSteps, tag, gtag, h1Nx):
         h1Nx.GetYaxis().SetLabelColor(ROOT.kWhite)
         h1Nx.GetYaxis().SetTitleColor(ROOT.kWhite)
         stuff.append(txt)
-        can.Update()
+        statcan.Update()
 
         print('Printing to png and pdf...')
         pngdir = 'png/'
         pdfdir = 'pdf/'
 
-        can.Print(pdfdir + can.GetName() + gtag + '.pdf')
+        #can.Print(pdfdir + can.GetName() + gtag + '.pdf')
         can.Print(pngdir + can.GetName() + gtag + '.png')
 
         statcan.Print(pdfdir + statcan.GetName() + tag + '.pdf')
         statcan.Print(pngdir + statcan.GetName() + tag + '.png')
 
-        stuff.append([can, statcan, lines, txt])
+        stuff.append([can, h2, statcan, lines, txt])
 
         print('DONE!')
-        return can, lines, partialDraw, statcan, txt
+        return can, h2, lines, partialDraw, statcan, txt
 
 
 ##########################################
@@ -411,13 +425,15 @@ def main(argv):
 
     spitSomeInfo(primary, E0, particles, world)
     if doDraw:
-        doAllDrawing(world, primary, E0, particles, halfSteps, tag, gtag, h1Nx)
+        can, h2, lines, partialDraw, statcan, txt = doAllDrawing(world, primary, E0, particles, halfSteps, tag, gtag, h1Nx)
+        stuff.append([can, h2, lines, partialDraw, statcan, txt])
     
     outfile.Write()
-    outfile.Close()
     
     if doDraw and not gBatch:
         ROOT.gApplication.Run()
+    
+    outfile.Close()
     
     print(f'...Thanks for running {sys.argv[0]}')
     print('...Returning and kiling oneself!')
