@@ -108,8 +108,8 @@ class cpart:
 
 ##########################################
 def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
-    #if part.interacted:
-    #    return []
+    if part.pid == 'mu' or part.pid == 'nu':
+        return []
     gen = part.gen
     y = part.yend
     pid = part.pid
@@ -181,6 +181,8 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
             length = gamma*gctau[part.pid]
             dx = exponential(length)
             x = part.x + dx
+            if x > world.x2:
+                x = world.x2
             xi = exp(-dx / length)
             E1 = xi*part.E
             E2 = (1-xi)*part.E
@@ -304,7 +306,7 @@ def processArgs(argv):
         return -1, 0, 0, 0
 
     print(f'*** Running {sys.argv[0]}')
-    E = 100 # GeV
+    E = 300 # GeV
     if len(sys.argv) > 1:
         Ereq = int(sys.argv[1])
         if Ereq <= 1000000 and Ereq >= 30:
@@ -373,8 +375,8 @@ def doAllDrawing(world, primary, E0, particles, halfSteps, tag, gtag, h1Nx):
             gtag = gtag + '_partialDraw'
         print(f'Drawn lines: {len(lines):10,}')
         # draw label
-        txt = ROOT.TLatex(0.05, 0.95, 'Primary: {}; E={:1.1f} TeV, particles: {:1.2f}M, depth={:1.0f}'.format(glabel[primary.pid], E0/1000., len(particles) / 1e6, world.genmax))
-        txt.SetTextColor(ROOT.kBlue)
+        txt = ROOT.TLatex(0.02, 0.95, 'Primary: {}; E={:1.1f} TeV, particles: {:1.2f}M, depth={:1.0f}'.format(glabel[primary.pid], E0/1000., len(particles) / 1e6, world.genmax))
+        txt.SetTextColor(ROOT.kWhite)
         txt.SetNDC()
         txt.Draw()
 
@@ -453,7 +455,8 @@ def main(argv):
     # fill histogrammes
     outfile, h1Nx = makeOutHistos(last, iteration, rtag, ropt)
     for part in particles:
-        h1Nx.Fill(part.x - primary.xend)
+        if part.pid != 'mu' and part.pid != 'nu':
+            h1Nx.Fill(part.x - primary.xend)
 
     spitSomeInfo(primary, E0, particles, world)
     if doDraw:
