@@ -8,9 +8,9 @@
 # decay pions to muons
 # add neutrinos?
 # finish Xmax error in plotting
-# squeeze the particles in y, using the rnds sum
 
 import ROOT
+
 from math import sqrt, pow, log, exp
 import os, sys, getopt
 import random
@@ -107,10 +107,6 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
     dy1, dy2, dy3, dy4 = deltaY, -deltaY, (1. - deltaY), -deltaY
     if randomizeY:
         dy1, dy2, dy3, dy4 = 0, 0, 0, 0
-        #rnd1 = 1
-        #while abs(rnd1 + rnd2) > 0.01:
-        #    rnd1 = getRndSign()*random.random() / rndSF
-        #    rnd2 = getRndSign()*random.random() / rndSF
         rnd1 = getRndSign()*random.random() / rndSF
         rnd2 = -rnd1
     if verbose:
@@ -182,11 +178,6 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
         rnd3 = 0.
         rnd4 = 0.
         if randomizeY:
-            #while abs(rnd1 + rnd2 + rnd3 + rnd4) > 0.01:
-            #    rnd1 = getRndSign()*random.random() / rndSF
-            #    rnd2 = getRndSign()*random.random() / rndSF
-            #    rnd3 = getRndSign()*random.random() / rndSF
-            #    rnd4 = getRndSign()*random.random() / rndSF
             rnd3 = getRndSign()*random.random() / rndSF
             rnd4 = -rnd4
 
@@ -208,15 +199,12 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
 ##########################################
 def PerformInteractionStep(world, particles, randomizeY, halfSteps, verbose = 0):
     newparticles = []
-    #allparticles = []
     for p in particles:
         if verbose:
             print(f'...making {p.pid} interact...')
         newparts = splitParticle(world, p, randomizeY, halfSteps)
         for newp in newparts:
             newparticles.append(newp)
-    #particles.extend(newparticles)
-    #return particles
     return newparticles
     
 ##########################################
@@ -236,7 +224,7 @@ def Simulate(primaryPID, world, E0, randomizeY, halfSteps):
     allparticles = []
     while len(newparticles) > 0 and len(allparticles) < nMax: # producing particles
         istep = istep + 1
-        print(f'step: {istep:3} actual particles count: {len(allparticles):11,}')
+        print(f'step: {istep:3} | total particles count: {len(allparticles):11,} | new particles: {len(newparticles):11,}')
         todoparticles = PerformInteractionStep(world, newparticles, randomizeY, halfSteps)
         allparticles.extend(newparticles)
         newparticles = todoparticles
@@ -256,8 +244,8 @@ def DrawResults(world, particles, halfSteps):
     ipart = 0
     for part in particles:
         ipart = ipart + 1
-        if ipart % 1000000 == 0:
-            print(f'{ipart:10,} / {len(particles):10,}, drawn: {drawn:10,}')
+        if (ipart-1) % 1000000 == 0 and ipart > 0:
+            print(f'{ipart:10,} / {len(particles):10,}; drawn: {drawn:10,}')
         if drawn < NmaxDraw:
             if drawn < Ncut or (drawn >= Ncut and random.random() < drawFrac):
                 line = part.Draw(world, halfSteps)
@@ -269,6 +257,12 @@ def DrawResults(world, particles, halfSteps):
 ##########################################
 
 def processArgs(argv):
+
+    if len(sys.argv) > 1 and sys.argv[1] == '-h':
+        print(f'Usage: {argv[0]} [E(GeV)=100GeV] [iteration=0] [batch=0] [draw=1]')
+        return -1, 0, 0, 0
+
+    print(f'*** Running {sys.argv[0]}')
     E = 100 # GeV
     if len(sys.argv) > 1:
         Ereq = int(sys.argv[1])
@@ -320,20 +314,19 @@ def makeTags(primary, E0, iteration):
     return tag, rtag, gtag, ropt
 
 ##########################################
-def makeOutHistos(last, iteration, rtag, ropt):
+def makeOutHistos(last, iteration, rtag, ropt, rootdir = 'root/'):
     hname = f'h1Nx_{iteration}'
     htitle = ';x[g/cm^{2}];N'
     nb = 40
     x1 = 0
     x2 = last.x*1.25
     #print('x1, x2: ', x1, x2)
-    outfile = ROOT.TFile('histos' + rtag + '.root', ropt)   
+    outfile = ROOT.TFile(rootdir + 'histos' + rtag + '.root', ropt)   
     h1Nx = ROOT.TH1D(hname, htitle, nb, x1, x2)
     return outfile, h1Nx
 
 #########################################
 def doAllDrawing(world, primary, E0, particles, halfSteps, tag, gtag, h1Nx):
-
         can, lines, partialDraw = DrawResults(world, particles, halfSteps)
         if partialDraw:
             gtag = gtag + '_partialDraw'
@@ -352,11 +345,14 @@ def doAllDrawing(world, primary, E0, particles, halfSteps, tag, gtag, h1Nx):
         can.Update()
 
         print('Printing to png and pdf...')
-        can.Print(can.GetName() + gtag + '.pdf')
-        can.Print(can.GetName() + gtag + '.png')
+        pngdir = 'png/'
+        pdfdir = 'pdf/'
 
-        statcan.Print(statcan.GetName() + tag + '.pdf')
-        statcan.Print(statcan.GetName() + tag + '.png')
+        can.Print(pdfdir + can.GetName() + gtag + '.pdf')
+        can.Print(pngdir + can.GetName() + gtag + '.png')
+
+        statcan.Print(pdfdir + statcan.GetName() + tag + '.pdf')
+        statcan.Print(pngdir + statcan.GetName() + tag + '.png')
 
         stuff.append([can, statcan, lines, txt])
 
@@ -374,7 +370,13 @@ def spitSomeInfo(primary, E0, particles, world):
 
 def main(argv):
 
+    dirs = ['png', 'pdf', 'root']
+    for dir in dirs:
+        os.system(f'mkdir -p {dir}')
+    
     E,iteration,gBatch,doDraw = processArgs(argv)
+    if E < 0:
+        return 1
 
     # Primary particle energy!
     E0 = E*gGeV #1e14*geV
@@ -385,6 +387,7 @@ def main(argv):
     halfSteps = False
 
     ROOT.gStyle.SetOptTitle(0)
+    SetMyStyle()
     world = cworld()
 
     # Simulate!
@@ -412,9 +415,11 @@ def main(argv):
     if doDraw and not gBatch:
         ROOT.gApplication.Run()
     
-    print('...returning and kiling oneself!')
+    print(f'...Thanks for running {sys.argv[0]}')
+    print('...Returning and kiling oneself!')
+    print('...So long, and thanks for all the fish!')
     os.system('killall -9 airsim.py')
-    return
+    return 0
 
 ###################################
 ###################################

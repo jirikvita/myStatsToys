@@ -1,6 +1,9 @@
 #!/bin/bash
 
-rm *.png *.pdf
+rm *.png *.pdf *.root
+rm png/*.png pdf/*.pdf
 rm *.aux *.log *\~
-rm *.root
+rm root/*.root
+
+
 

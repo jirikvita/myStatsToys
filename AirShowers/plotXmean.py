@@ -4,6 +4,8 @@
 import ROOT
 from math import pow, log10, pow, sqrt
 
+from utils import *
+from consts import *
 
 ########################################
 
@@ -15,16 +17,17 @@ def getMaxima(hs):
             maxy = 1.*val
     return maxy
 
-########################################
-
-ROOT.gStyle.SetPalette(1)
 
 cans = []
 stuff = []
 
 ########################################
 
-Es = [ int(pow(10,n)) for n in range(2,7)]
+SetMyStyle()
+
+Es = [ int(pow(10,n)) for n in range(2,6)]
+Es.append(250000)
+
 print(Es)
 
 Fs = []
@@ -35,14 +38,18 @@ hbasename = 'h1Nx'
 
 Means = []
 for E in Es:
-    fname = f'histos_pi_E{E}GeV.root'
-    infile = ROOT.TFile(fname, 'read')
+    fname = f'root/histos_pi_E{E}GeV.root'
+    infile = None
+    try:
+        infile = ROOT.TFile(fname, 'read')
+    except:
+        continue
     Fs.append(infile)
     Hs[E] = []
     meansum = 0
     meanSqSum = 0
     np = 0
-    for i in range(0,10):
+    for i in range(0,51):
         hname = hbasename + f'_{i}'
         h = infile.Get(hname)
         try:
@@ -83,7 +90,7 @@ for E,hs in Hs.items():
     can.cd(1+ie)
     ie = ie + 1
     ymax = getMaxima(hs)*1.1
-    h2 = ROOT.TH2D(f'tmp_{E}', ';x[g/cm^{2}];Events', 100, 0, 1500, 100, 0, ymax)
+    h2 = ROOT.TH2D(f'tmp_{E}', ';x[g/cm^{2}];Events', 100, 0, 2500, 100, 0, ymax)
     h2.SetStats(0)
     h2.Draw()
     H2s.append(h2)
@@ -95,19 +102,22 @@ for E,hs in Hs.items():
         h.Draw('hist plc' + opt)
         opt = ' same'
     #ROOT.gPad.BuildLegend()
+ROOT.gPad.RedrawAxis()
+ROOT.gPad.SetGridx(1)
+ROOT.gPad.SetGridy(1)
 ROOT.gPad.Update()
 
 canname = 'GrXmean'
 gcan = ROOT.TCanvas(canname, canname, 500, 500, 800, 600)
-gr.SetMarkerColor(ROOT.kBlack)
+gr.SetMarkerColor(ROOT.kBlue)
 gr.SetMarkerSize(1)
 gr.SetMarkerStyle(20)
-gr.SetLineColor(ROOT.kBlack)
+gr.SetLineColor(ROOT.kBlue)
 gr.SetLineWidth(1)
 gr.SetLineStyle(1)
 gr.GetXaxis().SetTitle('log_{10}E(eV)')
 gr.GetYaxis().SetTitle('X_{max}^{N} [g/cm^{2}]')
-gr.GetYaxis().SetRangeUser(0, 900)
+gr.GetYaxis().SetRangeUser(0, 1900)
 gr.Draw('APL')
 
 ROOT.gPad.Update()

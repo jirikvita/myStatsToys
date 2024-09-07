@@ -1,9 +1,33 @@
 #!/usr/bin/python
 
 import random
+import ROOT
 
 ##########################################
 
+def SetMyStyle():
+    ROOT.gStyle.SetPalette(1)
+
+    ROOT.gStyle.SetCanvasColor(ROOT.kBlack)
+    ROOT.gStyle.SetPadColor(ROOT.kBlack)
+
+    ROOT.gStyle.SetLegendFillColor(ROOT.kBlack)
+    ROOT.gStyle.SetStatColor(ROOT.kBlack)
+    ROOT.gStyle.SetStatTextColor(ROOT.kWhite)
+
+    
+    ROOT.gStyle.SetTitleTextColor(ROOT.kWhite)
+    ROOT.gStyle.SetTitleColor(ROOT.kWhite)
+
+    ROOT.gStyle.SetLabelColor(ROOT.kWhite)
+
+    ROOT.gStyle.SetAxisColor(ROOT.kWhite)
+    ROOT.gStyle.SetFrameLineColor(ROOT.kWhite)
+    ROOT.gStyle.SetGridColor(ROOT.kWhite)
+
+##########################################
+
+    
 def getMaxGen(particles):
     maxg = -1
     for part in particles:
