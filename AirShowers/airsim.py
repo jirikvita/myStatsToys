@@ -7,6 +7,8 @@
 # TODO
 # decay pions to muons
 # add neutrinos?
+# finish Xmax error in plotting
+# squeeze the particles in y, using the rnds sum
 
 import ROOT
 from math import sqrt, pow, log, exp
@@ -28,8 +30,8 @@ class cworld():
         self.can = None
         self.x0 = 0.02
         self.y0 = 0.5
-        self.xscale = 0.00035
-        self.yscale = 0.003
+        self.xscale = 0.00015
+        self.yscale = 0.0035
         self.SFy = 0.3 # for separating particles in y for drawing; using rad./int. lengths
         self.deltaY = 0.7 # particles fork visual factor
         return
@@ -101,22 +103,28 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
     dy1, dy2, dy3, dy4 = deltaY, -deltaY, (1. - deltaY), -deltaY
     if randomizeY:
         dy1, dy2, dy3, dy4 = 0, 0, 0, 0
-        rnd1 = 1
-        while (rnd1 + rnd2) > 0.1:
-            rnd1 = getRndSign()*random.random() / 2
-            rnd2 = getRndSign()*random.random() / 2
+        #rnd1 = 1
+        #while abs(rnd1 + rnd2) > 0.01:
+        #    rnd1 = getRndSign()*random.random() / 4.
+        #    rnd2 = getRndSign()*random.random() / 4.
+        rnd1 = getRndSign()*random.random() / 4.
+        rnd2 = -rnd1
     if verbose:
         print(f' ...trying {part.pid}')
     if part.pid == 'e' and part.E > gECEM:
         if verbose:
             print('  ...performing brehms!')
         # new interaction position:
+        xi = 0.5
         if halfSteps:
             x = part.x + gLength[part.pid]*log(2)
         else:
-            x = part.x + exponential(gLength[part.pid])
-        E1 = part.E / 2. # TBF, to be randomized, swapped...
-        E2 = part.E / 2. # TBF
+            length = gLength[part.pid]
+            dx = exponential(length)
+            x = part.x + dx
+            xi = exp(-dx / length)
+        E1 = xi*part.E
+        E2 = (1-xi)*part.E
         p1 = cpart(E1, 'gamma', x, y, y + (dy1 + rnd1)*SFy*gLength[pid], gen+1, False)
         p2 = cpart(E2, 'e',     x, y, y + (dy2 + rnd2)*SFy*gLength[pid], gen+1, False)
         part.xend = x # terminate the parent particle
@@ -125,27 +133,39 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
     elif part.pid == 'gamma' and part.E > gECpair:
         if verbose:
             print('  ...performing conversion!')
+        xi = 0.5
         if halfSteps:
             x = part.x + gLength[part.pid]*log(2)
         else:
-            x = part.x + exponential(gLength[part.pid])
-        E1 = part.E / 2. # TBF, to be randomized, swapped...
-        E2 = part.E / 2. # TBF
+            length = gLength[part.pid]
+            dx = exponential(length)
+            x = part.x + dx
+            xi = exp(-dx / length)
+        E1 = xi*part.E
+        E2 = (1-xi)*part.E
         p1 = cpart(E1, 'e', x, y, y + (dy1 + rnd1)*SFy*gLength[pid], gen+1, False)
         p2 = cpart(E2, 'e', x, y, y + (dy2 + rnd2)*SFy*gLength[pid], gen+1, False) 
         part.xend = x # terminate the parent particle
         part.interacted = True
         return [p1, p2]
     elif part.pid == 'pi' and part.E > ECpiThr:
+        xi = 1/3.
+        chi = 0.
         if halfSteps:
             x = part.x + gLength[part.pid]*log(2)
         else:
-            x = part.x + exponential(gLength[part.pid])
+            length = gLength[part.pid]
+            dx = exponential(length)
+            xi = exp(-dx / length)
+            x = part.x + dx
+            chi = 2.
+            while 1 - xi - chi < 0.:
+                chi = random.random()
         if verbose:
             print('  ...performing pion production!')
-        E1 = part.E / 3. # TBF, to be randomized, swapped...
-        E2 = part.E / 3. # TBF
-        E3 = part.E / 3. # TBF
+        E1 = xi*part.E
+        E2 = (1-xi-chi)*part.E
+        E3 = (1-xi+chi)*part.E
         #dy1, dy2 = (1. - deltaY), deltaY
         #dy3, dy4 = -(1. - deltaY), -deltaY
         dy3, dy4 = 0, 0
@@ -153,17 +173,20 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
         rnd3 = 0.
         rnd4 = 0.
         if randomizeY:
-            while (rnd1 + rnd2 + rnd3 + rnd4) > 0.1:
-                rnd1 = getRndSign()*random.random() / 3
-                rnd2 = getRndSign()*random.random() / 3
-                rnd3 = getRndSign()*random.random() / 3
-                rnd4 = getRndSign()*random.random() / 3
+            #while abs(rnd1 + rnd2 + rnd3 + rnd4) > 0.01:
+            #    rnd1 = getRndSign()*random.random() / 4
+            #    rnd2 = getRndSign()*random.random() / 4
+            #    rnd3 = getRndSign()*random.random() / 4
+            #    rnd4 = getRndSign()*random.random() / 4
+            rnd3 = getRndSign()*random.random() / 4
+            rnd4 = -rnd4
 
         newps.append( cpart(E1, 'pi', x, y, y + (dy1 + rnd1)*SFy*gLength[pid], gen+1, False) )
         newps.append( cpart(E2, 'pi', x, y, y + (dy2 + rnd2)*SFy*gLength[pid], gen+1, False) )
         # p0 --> gamma gamma:
-        newps.append( cpart(E3/2, 'gamma', x, y, y + (dy3 + rnd3)*SFy*gLength[pid], gen+1, False) )
-        newps.append( cpart(E3/2, 'gamma', x, y, y + (dy4 + rnd4)*SFy*gLength[pid], gen+1, False) )
+        zeta = random.random()
+        newps.append( cpart(zeta*E3, 'gamma', x, y, y + (dy3 + rnd3)*SFy*gLength[pid], gen+1, False) )
+        newps.append( cpart((1-zeta)*E3, 'gamma', x, y, y + (dy4 + rnd4)*SFy*gLength[pid], gen+1, False) )
         part.xend = x # terminate the parent particle
         part.interacted = True
         return newps
@@ -174,6 +197,7 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
 ##########################################
 def PerformInteractionStep(world, particles, randomizeY, halfSteps, verbose = 0):
     newparticles = []
+    #allparticles = []
     for p in particles:
         if verbose:
             print(f'...making {p.pid} interact...')
@@ -182,6 +206,7 @@ def PerformInteractionStep(world, particles, randomizeY, halfSteps, verbose = 0)
             newparticles.append(newp)
     particles.extend(newparticles)
     return particles
+    # return newparticles
     
 ##########################################
 def Simulate(world, E0, randomizeY, halfSteps):
@@ -202,7 +227,7 @@ def Simulate(world, E0, randomizeY, halfSteps):
     nMax = 1e8
     while newnp != np and np < nMax: # producing particles
         istep = istep + 1
-        print(f'step: {istep:3} newnp: {newnp}')
+        print(f'step: {istep:3} actual particles count: {newnp}')
         particles = PerformInteractionStep(world, particles, randomizeY, halfSteps)
         np = 1*newnp
         newnp = len(particles)
@@ -315,6 +340,7 @@ def main(argv):
         #elif part.x != None:
         h1Nx.Fill(part.x - primary.xend)
 
+    print('Primary: {}; E={:1.1f} TeV, particles: {:1.2f}M, depth={:1.0f}'.format(glabel[primary.pid], E0/1000., len(particles) / 1e6, world.genmax))
     if doDraw:
         can, lines, partialDraw = DrawResults(world, particles, halfSteps)
         if partialDraw:
