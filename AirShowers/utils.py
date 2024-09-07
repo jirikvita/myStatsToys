@@ -15,7 +15,6 @@ def SetMyStyle():
     ROOT.gStyle.SetStatColor(ROOT.kBlack)
     ROOT.gStyle.SetStatTextColor(ROOT.kWhite)
 
-    
     ROOT.gStyle.SetTitleTextColor(ROOT.kWhite)
     ROOT.gStyle.SetTitleColor(ROOT.kWhite)
 

@@ -81,7 +81,7 @@ for meanData in Means:
     ip = ip+1
 
 H2s = []
-canname = f'CmpXmean_{E}'
+canname = f'CmpXmean'
 can = ROOT.TCanvas(canname, canname, 0, 0, 1000, 800)
 cans.append(can)
 can.Divide(2,3)
@@ -93,6 +93,9 @@ for E,hs in Hs.items():
     h2 = ROOT.TH2D(f'tmp_{E}', ';x[g/cm^{2}];Events', 100, 0, 2500, 100, 0, ymax)
     h2.SetStats(0)
     h2.Draw()
+    h2.GetYaxis().SetAxisColor(ROOT.kWhite)
+    h2.GetYaxis().SetLabelColor(ROOT.kWhite)
+    h2.GetYaxis().SetTitleColor(ROOT.kWhite)
     H2s.append(h2)
     
     opt = ' same'
@@ -102,10 +105,10 @@ for E,hs in Hs.items():
         h.Draw('hist plc' + opt)
         opt = ' same'
     #ROOT.gPad.BuildLegend()
-ROOT.gPad.RedrawAxis()
-ROOT.gPad.SetGridx(1)
-ROOT.gPad.SetGridy(1)
-ROOT.gPad.Update()
+    ROOT.gPad.RedrawAxis()
+    ROOT.gPad.SetGridx(1)
+    ROOT.gPad.SetGridy(1)
+    ROOT.gPad.Update()
 
 canname = 'GrXmean'
 gcan = ROOT.TCanvas(canname, canname, 500, 500, 800, 600)
@@ -119,6 +122,9 @@ gr.GetXaxis().SetTitle('log_{10}E(eV)')
 gr.GetYaxis().SetTitle('X_{max}^{N} [g/cm^{2}]')
 gr.GetYaxis().SetRangeUser(0, 1900)
 gr.Draw('APL')
+gr.GetYaxis().SetAxisColor(ROOT.kWhite)
+gr.GetYaxis().SetLabelColor(ROOT.kWhite)
+gr.GetYaxis().SetTitleColor(ROOT.kWhite)
 
 ROOT.gPad.Update()
 

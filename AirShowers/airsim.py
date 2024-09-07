@@ -333,14 +333,18 @@ def doAllDrawing(world, primary, E0, particles, halfSteps, tag, gtag, h1Nx):
         print(f'Drawn lines: {len(lines):10,}')
         # draw label
         txt = ROOT.TLatex(0.05, 0.95, 'Primary: {}; E={:1.1f} TeV, particles: {:1.2f}M, depth={:1.0f}'.format(glabel[primary.pid], E0/1000., len(particles) / 1e6, world.genmax))
+        txt.SetTextColor(ROOT.kBlue)
         txt.SetNDC()
         txt.Draw()
 
         canname = 'AirStats'
         statcan = ROOT.TCanvas(canname, canname, 1225, 0, 700, 600)
         statcan.cd()
+        h1Nx.SetLineColor(ROOT.kGreen)
         h1Nx.Draw('hist')
-
+        h1Nx.GetYaxis().SetAxisColor(ROOT.kWhite)
+        h1Nx.GetYaxis().SetLabelColor(ROOT.kWhite)
+        h1Nx.GetYaxis().SetTitleColor(ROOT.kWhite)
         stuff.append(txt)
         can.Update()
 
