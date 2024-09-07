@@ -220,17 +220,12 @@ def PerformInteractionStep(world, particles, randomizeY, halfSteps, verbose = 0)
     # return newparticles
     
 ##########################################
-def Simulate(world, E0, randomizeY, halfSteps):
+def Simulate(primaryPID, world, E0, randomizeY, halfSteps):
     particles = []
-
-    primary = 'pi'
-    #primary = 'e'
-    #primary = 'gamma'
-
     gen0 = 0
     x, y = 0.*gkm, 0.*gm
     yend = 0*gm # dummy
-    particles.append(cpart(E0, primary, x, y, yend, gen0, False))
+    particles.append(cpart(E0, primaryPID, x, y, yend, gen0, False))
     
     newnp = len(particles)
     np = -1
@@ -269,10 +264,8 @@ def DrawResults(world, particles, halfSteps):
     return can, lines, partialDraw
 
 ##########################################
-# https://www.tutorialspoint.com/python/python_command_line_arguments.htm
-def main(argv):
-    #  foo = sys.argv[1]
 
+def processArgs(argv):
     E = 100 # GeV
     if len(sys.argv) > 1:
         Ereq = int(sys.argv[1])
@@ -306,28 +299,13 @@ def main(argv):
             print(f'OK, using user-define draw mode {reqDraw}')
             doDraw = reqDraw
         
-        
     print('*** Settings:')
     print('batch={:}'.format(gBatch))
 
-    ##############################
-    ##############################
-    ##############################
-    E0 = E*gGeV #1e14*geV
-    randomizeY = True
-    #randomizeY = False
-    halfSteps = False
-    ROOT.gStyle.SetOptTitle(0)
-    
-    world = cworld()
-    particles = Simulate(world, E0, randomizeY, halfSteps)
-    world.genmax = getMaxGen(particles)
-    primary = particles[0]
+    return E,iteration,gBatch,doDraw 
 
-    jmax,maxx = getMaxX(particles)
-    last = particles[jmax]
-    
-    # fill histogrammes
+##########################################
+def makeTags(primary, E0, iteration):
     tag = '_{}_E{:1.0f}GeV'.format(primary.pid, E0)
     rtag = tag + ''
     tag = tag + '_iter{}'.format(iteration)
@@ -336,7 +314,10 @@ def main(argv):
     ropt = 'recreate'
     if iteration > 0:
         ropt = 'update'
+    return tag, rtag, gtag, ropt
 
+##########################################
+def makeOutHistos(last, iteration, rtag, ropt):
     hname = f'h1Nx_{iteration}'
     htitle = ';x[g/cm^{2}];N'
     nb = 40
@@ -345,14 +326,11 @@ def main(argv):
     #print('x1, x2: ', x1, x2)
     outfile = ROOT.TFile('histos' + rtag + '.root', ropt)   
     h1Nx = ROOT.TH1D(hname, htitle, nb, x1, x2)
-    for part in particles:
-        #if part.xend != None and part.x != None:
-        #    h1Nx.Fill( 0.5*(part.xend - part.x) )
-        #elif part.x != None:
-        h1Nx.Fill(part.x - primary.xend)
+    return outfile, h1Nx
 
-    print('Primary: {}; E={:1.1f} TeV, particles: {:1.2f}M, depth={:1.0f}'.format(glabel[primary.pid], E0/1000., len(particles) / 1e6, world.genmax))
-    if doDraw:
+#########################################
+def doAllDrawing(world, primary, E0, particles, halfSteps, tag, gtag, h1Nx):
+
         can, lines, partialDraw = DrawResults(world, particles, halfSteps)
         if partialDraw:
             gtag = gtag + '_partialDraw'
@@ -377,17 +355,58 @@ def main(argv):
         statcan.Print(statcan.GetName() + tag + '.pdf')
         statcan.Print(statcan.GetName() + tag + '.png')
 
-        stuff.append([can, statcan, lines])
+        stuff.append([can, statcan, lines, txt])
 
         print('DONE!')
+        return can, lines, partialDraw, statcan, txt
 
+
+##########################################
+def spitSomeInfo(primary, E0, particles, world):
+    print('Primary: {}; E={:1.1f} TeV, particles: {:1.2f}M, depth={:1.0f}'.format(glabel[primary.pid], E0/1000., len(particles) / 1e6, world.genmax))
+
+##########################################
+##########################################
+##########################################
+
+def main(argv):
+
+    E,iteration,gBatch,doDraw = processArgs(argv)
+
+    # Primary particle energy!
+    E0 = E*gGeV #1e14*geV
+    primaryPID = 'pi'
+    #primaryPID = 'e'
+    #primaryPID = 'gamma'
+    randomizeY = True
+    halfSteps = False
+
+    ROOT.gStyle.SetOptTitle(0)
+    world = cworld()
+
+    # Simulate!
+    particles = Simulate(primaryPID, world, E0, randomizeY, halfSteps)
+    
+    world.genmax = getMaxGen(particles)
+    primary = particles[0]
+    jmax,maxx = getMaxX(particles)
+    last = particles[jmax]    
+    tag, rtag, gtag, ropt = makeTags(primary, E0, iteration)
+
+    # fill histogrammes
+    outfile, h1Nx = makeOutHistos(last, iteration, rtag, ropt)
+    for part in particles:
+        h1Nx.Fill(part.x - primary.xend)
+
+    spitSomeInfo(primary, E0, particles, world)
+    if doDraw:
+        doAllDrawing(world, primary, E0, particles, halfSteps, tag, gtag, h1Nx)
     
     outfile.Write()
     outfile.Close()
-
+    
     if doDraw and not gBatch:
         ROOT.gApplication.Run()
-
     
     print('...returning and kiling oneself!')
     os.system('killall -9 airsim.py')
