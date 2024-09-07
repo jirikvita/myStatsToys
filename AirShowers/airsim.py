@@ -215,29 +215,32 @@ def PerformInteractionStep(world, particles, randomizeY, halfSteps, verbose = 0)
         newparts = splitParticle(world, p, randomizeY, halfSteps)
         for newp in newparts:
             newparticles.append(newp)
-    particles.extend(newparticles)
-    return particles
-    # return newparticles
+    #particles.extend(newparticles)
+    #return particles
+    return newparticles
     
 ##########################################
 def Simulate(primaryPID, world, E0, randomizeY, halfSteps):
-    particles = []
+
     gen0 = 0
     x, y = 0.*gkm, 0.*gm
     yend = 0*gm # dummy
-    particles.append(cpart(E0, primaryPID, x, y, yend, gen0, False))
+
+    newparticles = []
+    newparticles.append(cpart(E0, primaryPID, x, y, yend, gen0, False))
     
-    newnp = len(particles)
     np = -1
     istep = -1
     nMax = 1e8
-    while newnp != np and np < nMax: # producing particles
+
+    allparticles = []
+    while len(newparticles) > 0 and len(allparticles) < nMax: # producing particles
         istep = istep + 1
-        print(f'step: {istep:3} actual particles count: {newnp:10,}')
-        particles = PerformInteractionStep(world, particles, randomizeY, halfSteps)
-        np = 1*newnp
-        newnp = len(particles)
-    return particles
+        print(f'step: {istep:3} actual particles count: {len(allparticles):11,}')
+        todoparticles = PerformInteractionStep(world, newparticles, randomizeY, halfSteps)
+        allparticles.extend(newparticles)
+        newparticles = todoparticles
+    return allparticles
 
 ##########################################
 def DrawResults(world, particles, halfSteps):
@@ -279,7 +282,7 @@ def processArgs(argv):
     if len(sys.argv) > 2:
         req_iteration = int(sys.argv[2])
         if req_iteration >= 0 and req_iteration < 1000:
-            print(f'OK, using user-define iteration {req_iteration}')
+            print(f'OK, using user-define iteration  {req_iteration}')
             iteration = req_iteration
 
     gBatch = False
@@ -296,7 +299,7 @@ def processArgs(argv):
     if len(sys.argv) > 4:
         reqDraw = int(sys.argv[4])
         if reqDraw == 0:
-            print(f'OK, using user-define draw mode {reqDraw}')
+            print(f'OK, using user-define draw mode  {reqDraw}')
             doDraw = reqDraw
         
     print('*** Settings:')
@@ -386,11 +389,12 @@ def main(argv):
 
     # Simulate!
     particles = Simulate(primaryPID, world, E0, randomizeY, halfSteps)
-    
+
+    # get/make some stuff needed
     world.genmax = getMaxGen(particles)
-    primary = particles[0]
-    jmax,maxx = getMaxX(particles)
-    last = particles[jmax]    
+    primary      = particles[0]
+    jmax,maxx    = getMaxX(particles)
+    last         = particles[jmax]    
     tag, rtag, gtag, ropt = makeTags(primary, E0, iteration)
 
     # fill histogrammes
