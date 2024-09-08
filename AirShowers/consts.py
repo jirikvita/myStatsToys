@@ -27,7 +27,7 @@ gECpair = 2*gmass['e']
 # critical energy to produce pions:
 ECpiThr = 20*gGeV
 
-gcol = { 'e' : ROOT.kGreen+2, 'gamma' : ROOT.kBlue, 'pi' : ROOT.kRed, 'mu' : ROOT.kMagenta+3, 'nu' : ROOT.kGray+2}
+gcol = { 'e' : ROOT.kGreen+2, 'gamma' : ROOT.kAzure-3, 'pi' : ROOT.kRed, 'mu' : ROOT.kMagenta+3, 'nu' : ROOT.kGray+2}
 glst = { 'e' : 1, 'gamma' : 2, 'pi' : 1, 'mu' : 2, 'nu' : 3}
 glwd = { 'e' : 1, 'gamma' : 1, 'pi' : 2, 'mu' : 1, 'nu' : 1}
 glabel = {'e' : 'e', 'gamma' : '#gamma', 'pi' : '#pi', 'mu' : '#mu', 'nu' : '#nu'}

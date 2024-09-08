@@ -24,6 +24,10 @@ def SetMyStyle():
     ROOT.gStyle.SetFrameLineColor(ROOT.kWhite)
     ROOT.gStyle.SetGridColor(ROOT.kWhite)
 
+
+    ROOT.gStyle.SetPadTickX(1)
+    ROOT.gStyle.SetPadTickY(1)
+
 ##########################################
 
     
@@ -52,3 +56,16 @@ def getRndSign():
         return 1
     else:
         return -1
+
+
+    
+##########################################
+def adjustStats(h):
+    ROOT.gPad.Update()
+    st = h.GetListOfFunctions().FindObject("stats")
+    st = ROOT.gPad.GetPrimitive("stats")
+    st.SetX1NDC(0.65)
+    st.SetX2NDC(0.85)
+    st.SetY1NDC(0.65)
+    st.SetY2NDC(0.85)
+    

@@ -282,7 +282,7 @@ def DrawResults(world, particles, halfSteps):
     drawn = 0
     Ncut = 2e6
     NmaxDraw = 4e6 # must be bigger than Ncut!
-    drawFrac = 0.1
+    drawFrac = 0.3
     partialDraw = len(particles) > Ncut
     ipart = 0
     for part in particles:
@@ -380,7 +380,7 @@ def doAllDrawing(world, primary, E0, particles, halfSteps, tag, gtag, h1Nx):
         txt.SetNDC()
         txt.Draw()
 
-        ptxt = makePtctLabels(0.875, 0.855, 0.041)
+        ptxt = makePtctLabels(0.86, 0.85, 0.041)
         stuff.append(ptxt)
         
         can.Update()
@@ -390,6 +390,7 @@ def doAllDrawing(world, primary, E0, particles, halfSteps, tag, gtag, h1Nx):
         statcan.cd()
         h1Nx.SetLineColor(ROOT.kGreen)
         h1Nx.Draw('hist')
+        adjustStats(h1Nx)
         h1Nx.GetYaxis().SetAxisColor(ROOT.kWhite)
         h1Nx.GetYaxis().SetLabelColor(ROOT.kWhite)
         h1Nx.GetYaxis().SetTitleColor(ROOT.kWhite)
@@ -455,7 +456,7 @@ def main(argv):
     # fill histogrammes
     outfile, h1Nx = makeOutHistos(last, iteration, rtag, ropt)
     for part in particles:
-        if part.pid != 'mu' and part.pid != 'nu':
+        if part.pid == 'e' or part.pid == 'pi':
             h1Nx.Fill(part.x - primary.xend)
 
     spitSomeInfo(primary, E0, particles, world)
