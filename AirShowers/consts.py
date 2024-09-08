@@ -27,17 +27,22 @@ gECpair = 2*gmass['e']
 # critical energy to produce pions:
 ECpiThr = 20*gGeV
 
-gcol = { 'e' : ROOT.kGreen+2, 'gamma' : ROOT.kAzure-3, 'pi' : ROOT.kRed, 'mu' : ROOT.kMagenta+3, 'nu' : ROOT.kGray+2}
+gcol = { 'e' : ROOT.kGreen+2, 'gamma' : ROOT.kAzure-3, 'pi' : ROOT.kRed + 1, 'mu' : ROOT.kMagenta+3, 'nu' : ROOT.kGray+2}
 glst = { 'e' : 1, 'gamma' : 2, 'pi' : 1, 'mu' : 2, 'nu' : 3}
-glwd = { 'e' : 1, 'gamma' : 1, 'pi' : 2, 'mu' : 1, 'nu' : 1}
+glwd = { 'e' : 1, 'gamma' : 1, 'pi' : 1, 'mu' : 1, 'nu' : 1}
 glabel = {'e' : 'e', 'gamma' : '#gamma', 'pi' : '#pi', 'mu' : '#mu', 'nu' : '#nu'}
 
-def makePtctLabels(x,y,dy = 0.03):
+def makePtctLabels(x,y,dy = 0.03, counts = {}):
     txts = []
     i = -1
     for lab in glabel:
         i = i+1
-        txt = ROOT.TLatex(x, y - i*dy, glabel[lab])
+        count = ''
+        try:
+            count = f': {counts[lab]:,}'
+        except:
+            pass
+        txt = ROOT.TLatex(x, y - i*dy, glabel[lab] + count)
         txt.SetTextColor(gcol[lab])
         txt.SetNDC()
         txts.append(txt)

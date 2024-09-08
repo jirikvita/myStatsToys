@@ -251,7 +251,7 @@ def PerformInteractionStep(world, particles, randomizeY, halfSteps, verbose = 0)
     
 ##########################################
 def Simulate(primaryPID, world, E0, randomizeY, halfSteps):
-
+    print('===> Running the simulation!')
     gen0 = 0
     x, y = 0.*gkm, 0.*gm
     yend = 0*gm # dummy
@@ -270,6 +270,7 @@ def Simulate(primaryPID, world, E0, randomizeY, halfSteps):
         todoparticles = PerformInteractionStep(world, newparticles, randomizeY, halfSteps)
         allparticles.extend(newparticles)
         newparticles = todoparticles
+    print('...done simulating!')
     return allparticles
 
 ##########################################
@@ -280,8 +281,8 @@ def DrawResults(world, particles, halfSteps):
     print('Drawing particles...')
     h2.Draw()
     drawn = 0
-    Ncut = 2e6
-    NmaxDraw = 4e6 # must be bigger than Ncut!
+    Ncut = 1e7
+    NmaxDraw = 1e8 # must be bigger than Ncut!
     drawFrac = 0.3
     partialDraw = len(particles) > Ncut
     ipart = 0
@@ -306,7 +307,7 @@ def processArgs(argv):
         return -1, 0, 0, 0
 
     print(f'*** Running {sys.argv[0]}')
-    E = 300 # GeV
+    E = 500 # GeV
     if len(sys.argv) > 1:
         Ereq = int(sys.argv[1])
         if Ereq <= 1000000 and Ereq >= 30:
@@ -339,9 +340,6 @@ def processArgs(argv):
             print(f'OK, using user-define draw mode  {reqDraw}')
             doDraw = reqDraw
         
-    print('*** Settings:')
-    print('batch={:}'.format(gBatch))
-
     return E,iteration,gBatch,doDraw 
 
 ##########################################
@@ -369,7 +367,7 @@ def makeOutHistos(last, iteration, rtag, ropt, rootdir = 'root/'):
     return outfile, h1Nx
 
 #########################################
-def doAllDrawing(world, primary, E0, particles, halfSteps, tag, gtag, h1Nx):
+def doAllDrawing(world, primary, E0, particles, halfSteps, tag, gtag, h1Nx, partCounts):
         can, h2, lines, partialDraw = DrawResults(world, particles, halfSteps)
         if partialDraw:
             gtag = gtag + '_partialDraw'
@@ -380,7 +378,10 @@ def doAllDrawing(world, primary, E0, particles, halfSteps, tag, gtag, h1Nx):
         txt.SetNDC()
         txt.Draw()
 
-        ptxt = makePtctLabels(0.86, 0.85, 0.041)
+        #xx, yy, dd = 0.70, 0.82, 0.045
+        xx, yy, dd = 0.135, 0.825, 0.045
+        ptxt = makePtctLabels(xx, yy, dd, partCounts)
+        
         stuff.append(ptxt)
         
         can.Update()
@@ -447,6 +448,7 @@ def main(argv):
     particles = Simulate(primaryPID, world, E0, randomizeY, halfSteps)
 
     # get/make some stuff needed
+    print('Getting some stats...')
     world.genmax = getMaxGen(particles)
     primary      = particles[0]
     jmax,maxx    = getMaxX(particles)
@@ -454,14 +456,24 @@ def main(argv):
     tag, rtag, gtag, ropt = makeTags(primary, E0, iteration)
 
     # fill histogrammes
+    print('Filling histograms...')
+    partCounts = {}
+    for pid in glabel:
+        partCounts[pid] = 0
+        
+
     outfile, h1Nx = makeOutHistos(last, iteration, rtag, ropt)
     for part in particles:
-        if part.pid == 'e' or part.pid == 'pi':
+        pid = part.pid
+        partCounts[pid] = partCounts[pid] + 1
+        if pid == 'e' or pid == 'pi':
             h1Nx.Fill(part.x - primary.xend)
 
+    for pid in partCounts:
+        print(f'{pid:6}: {partCounts[pid]:10,}')
     spitSomeInfo(primary, E0, particles, world)
     if doDraw:
-        can, h2, lines, partialDraw, statcan, txt = doAllDrawing(world, primary, E0, particles, halfSteps, tag, gtag, h1Nx)
+        can, h2, lines, partialDraw, statcan, txt = doAllDrawing(world, primary, E0, particles, halfSteps, tag, gtag, h1Nx, partCounts)
         stuff.append([can, h2, lines, partialDraw, statcan, txt])
     
     outfile.Write()

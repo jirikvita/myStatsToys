@@ -49,7 +49,7 @@ for E in Es:
     meansum = 0
     meanSqSum = 0
     np = 0
-    for i in range(0,51):
+    for i in range(0,50):
         hname = hbasename + f'_{i}'
         h = infile.Get(hname)
         try:
@@ -82,22 +82,27 @@ for meanData in Means:
 
 H2s = []
 canname = f'CmpXmean'
-can = ROOT.TCanvas(canname, canname, 0, 0, 1000, 800)
+can = ROOT.TCanvas(canname, canname, 0, 0, 1000, 1200)
 cans.append(can)
 can.Divide(2,3)
 ie = 0
+txts = []
 for E,hs in Hs.items():
     can.cd(1+ie)
     ie = ie + 1
     ymax = getMaxima(hs)*1.1
-    h2 = ROOT.TH2D(f'tmp_{E}', ';x[g/cm^{2}];Events', 100, 0, 2500, 100, 0, ymax)
+    h2 = ROOT.TH2D(f'tmp_{E}', ';x[g/cm^{2}];Particles (e/#mu)', 100, 0, 2500, 100, 0, ymax)
     h2.SetStats(0)
     h2.Draw()
     h2.GetYaxis().SetAxisColor(ROOT.kWhite)
     h2.GetYaxis().SetLabelColor(ROOT.kWhite)
     h2.GetYaxis().SetTitleColor(ROOT.kWhite)
     H2s.append(h2)
-    
+    txt = ROOT.TLatex(0.7, 0.8, f'E={E/1000} TeV')
+    txt.SetTextColor(ROOT.kWhite)
+    txt.SetNDC()
+    txt.Draw()
+    txts.append(txt)
     opt = ' same'
     for h in hs:
         h.SetLineWidth(2)
@@ -106,8 +111,8 @@ for E,hs in Hs.items():
         opt = ' same'
     #ROOT.gPad.BuildLegend()
     ROOT.gPad.RedrawAxis()
-    ROOT.gPad.SetGridx(1)
-    ROOT.gPad.SetGridy(1)
+    #ROOT.gPad.SetGridx(1)
+    #ROOT.gPad.SetGridy(1)
     ROOT.gPad.Update()
 
 canname = 'GrXmean'
