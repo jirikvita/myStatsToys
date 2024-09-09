@@ -171,8 +171,7 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
         part.xend = x # terminate the parent particle
         #part.interacted = True
         return [p1, p2]
-    elif part.pid == 'pi':
-        if part.E < ECpiThr:
+    elif part.pid == 'pi' and part.E < ECpiThr:
             # decay the pion to a muon
             # less transverse separation
             rnd1 = getRndSign()*random.random() / rndSF / rndSF
@@ -196,7 +195,7 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
             #part.interacted = True
             return [p1, p2]
             
-        else:
+    elif part.pid == 'pi' or part.pid == 'p' and part.E >= ECpiThr:
             xi = 1/3.
             chi = 0.
             if halfSteps:
@@ -210,9 +209,10 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
                     chi = random.random()
             if verbose:
                 print('  ...performing pion production!')
-            E1 = xi*part.E
-            E2 = (1-xi-chi)*part.E
-            E3 = (1-xi+chi)*part.E
+            E0 = part.E*gInelasticity
+            E1 = xi*part.E*(1-gInelasticity)
+            E2 = (1-xi-chi)*part.E*(1-gInelasticity)
+            E3 = (1-xi+chi)*part.E*(1-gInelasticity)
             #dy1, dy2 = (1. - deltaY), deltaY
             #dy3, dy4 = -(1. - deltaY), -deltaY
             dy3, dy4 = 0, 0
@@ -223,9 +223,12 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
                 rnd3 = getRndSign()*random.random() / rndSF
                 rnd4 = -rnd4
 
+            # keep the same y for the continuing proton or proton born in pi interaction:
+            newps.append( cpart(E0, 'p', x, y, y, gen+1) ) #, False) )
+            # now charged pions:
             newps.append( cpart(E1, 'pi', x, y, y + (dy1 + rnd1)*SFy*length, gen+1) ) #, False) )
             newps.append( cpart(E2, 'pi', x, y, y + (dy2 + rnd2)*SFy*length, gen+1) )  #, False) )
-            # p0 --> gamma gamma:
+            # and now p0 --> gamma gamma:
             zeta = random.random()
             # TODO: zeta as a random number drawn from distribution
             # C*(1 - 4/3*x*(1-x)), C = 9/7?
@@ -358,9 +361,9 @@ def makeTags(primary, E0, iteration):
 def makeOutHistos(last, iteration, rtag, ropt, rootdir = 'root/'):
     hname = f'h1Nx_{iteration}'
     htitle = ';x[g/cm^{2}];N'
-    nb = 40
+    nb = 200
     x1 = 0
-    x2 = last.x*1.25
+    x2 = 4000. #last.x*1.25
     #print('x1, x2: ', x1, x2)
     outfile = ROOT.TFile(rootdir + 'histos' + rtag + '.root', ropt)   
     h1Nx = ROOT.TH1D(hname, htitle, nb, x1, x2)
@@ -379,7 +382,7 @@ def doAllDrawing(world, primary, E0, particles, halfSteps, tag, gtag, h1Nx, part
         txt.Draw()
 
         #xx, yy, dd = 0.70, 0.82, 0.045
-        xx, yy, dd = 0.135, 0.825, 0.045
+        xx, yy, dd = 0.135, 0.825, 0.05
         ptxt = makePtctLabels(xx, yy, dd, partCounts)
         
         stuff.append(ptxt)
@@ -434,9 +437,7 @@ def main(argv):
 
     # Primary particle energy!
     E0 = E*gGeV #1e14*geV
-    primaryPID = 'pi'
-    #primaryPID = 'e'
-    #primaryPID = 'gamma'
+    primaryPID = 'p'
     randomizeY = True
     halfSteps = False
 
@@ -466,7 +467,7 @@ def main(argv):
     for part in particles:
         pid = part.pid
         partCounts[pid] = partCounts[pid] + 1
-        if pid == 'e' or pid == 'pi':
+        if pid == 'e' or pid == 'pi' or pid == 'p':
             h1Nx.Fill(part.x - primary.xend)
 
     for pid in partCounts:

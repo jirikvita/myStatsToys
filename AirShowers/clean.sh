@@ -1,10 +1,10 @@
 #!/bin/bash
 
-for `ls pdf/*.pdf | grep -v 30` ; do
-    rm pdf/$i
+for i in `ls pdf/*.pdf | grep -v 30` ; do
+    rm $i
 done
-for `ls png/*.png | grep -v 30` ; do
-    rm png/$i
+for i in `ls png/*.png | grep -v 30` ; do
+    rm $i
 done
 
 rm *.aux *.log *\~

@@ -3,6 +3,8 @@
 import random
 import ROOT
 
+from consts import *
+
 ##########################################
 
 def SetMyStyle():
@@ -24,13 +26,10 @@ def SetMyStyle():
     ROOT.gStyle.SetFrameLineColor(ROOT.kWhite)
     ROOT.gStyle.SetGridColor(ROOT.kWhite)
 
-
     ROOT.gStyle.SetPadTickX(1)
     ROOT.gStyle.SetPadTickY(1)
 
 ##########################################
-
-    
 def getMaxGen(particles):
     maxg = -1
     for part in particles:
@@ -56,8 +55,6 @@ def getRndSign():
         return 1
     else:
         return -1
-
-
     
 ##########################################
 def adjustStats(h):
@@ -68,4 +65,29 @@ def adjustStats(h):
     st.SetX2NDC(0.85)
     st.SetY1NDC(0.65)
     st.SetY2NDC(0.85)
-    
+
+
+##########################################
+def makePtctLabels(x,y,dy = 0.03, counts = {}, ny = 2, dx = 0.15):
+    txts = []
+    i = -1
+    for lab in glabel:
+        i = i+1
+        count = ''
+        try:
+            count = f': {counts[lab]:,}'
+        except:
+            pass
+        ddx = 1*dx
+        if i > 3:
+            ddx = ddx*0.80
+        txt = ROOT.TLatex(x + ((i) // 2)*ddx, y - ( (i) % 2)*dy, glabel[lab] + count)
+        txt.SetTextColor(gcol[lab])
+        txt.SetNDC()
+        txts.append(txt)
+        txt.Draw()
+    return txts
+
+##########################################
+##########################################
+##########################################
