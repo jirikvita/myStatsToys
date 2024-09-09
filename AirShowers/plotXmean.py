@@ -25,8 +25,10 @@ stuff = []
 
 SetMyStyle()
 
-Es = [ int(pow(10,n)) for n in range(2,6)]
-Es.append(250000)
+Rebin = 2
+
+Es = [ int(pow(10,n)) for n in range(2,7)]
+#Es.append(250000)
 
 print(Es)
 
@@ -56,6 +58,7 @@ for E in Es:
             mean = h.GetBinCenter(h.GetMaximumBin()) #h.GetMean()
             err = h.GetMeanError()
             #print(mean)
+            h.Rebin(Rebin)
             Hs[E].append(h)
             np = np+1
             meansum = meansum + mean
@@ -91,7 +94,7 @@ for E,hs in Hs.items():
     can.cd(1+ie)
     ie = ie + 1
     ymax = getMaxima(hs)*1.1
-    h2 = ROOT.TH2D(f'tmp_{E}', ';x[g/cm^{2}];Particles (e/#mu)', 100, 0, 2500, 100, 0, ymax)
+    h2 = ROOT.TH2D(f'tmp_{E}', ';x[g/cm^{2}];Particles (e/#mu)', 100, 0, 4000, 100, 0, ymax)
     h2.SetStats(0)
     h2.Draw()
     h2.GetYaxis().SetAxisColor(ROOT.kWhite)
