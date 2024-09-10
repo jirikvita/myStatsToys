@@ -6,9 +6,7 @@
 
 # TODO
 # enable possibility of separate particle histograms
-# decay pions to muons
-# add neutrinos?
-# finish Xmax error in plotting
+# finish Xmax unc. in plotting
 
 import ROOT
 
@@ -31,15 +29,20 @@ class cworld():
         self.can = None
         self.x0 = 0.0
         self.y0 = 0.
-        self.xscale = 0.00015
-        self.yscale = 0.0035
+        #self.xscale = 0.00015
+        #self.yscale = 0.0035
         self.SFy = 0.3    # for separating particles in y for drawing; using rad./int. lengths
         self.deltaY = 0.7 # particles fork visual factor
         self.rndSF = 4.   # SF for random number division in vertical split
 
         self.x1, self.x2 = 0., 4000. #g/cm2  #self.xscale*50
+        self.maxgen = 0
+        self.steps = 0
 
         return
+    
+    def UpdateMaxGen(self):
+        self.maxgen = self.maxgen + 1
     
     def Draw(self):
         print('Drawing the world...')
@@ -60,23 +63,33 @@ class cworld():
         self.h2.Draw()
         return self.can, self.h2
 
+    ##########################################
+    def makeOutHistos(self, iteration, rtag, ropt, rootdir = 'root/'):
+        hname = f'h1Nx_{iteration}'
+        htitle = ';x[g/cm^{2}];N'
+        nb = 200
+        x1 = 0
+        x2 = 4000. # g/cm^2 #last.x*1.25
+        self.outfile = ROOT.TFile(rootdir + 'histos' + rtag + '.root', ropt)   
+        self.h1Nx = ROOT.TH1D(hname, htitle, nb, x1, x2)
+
 ##########################################
 class cpart:
     
-    def __init__(self, E, pid, x, y, yend, gen): #, interacted):
+    def __init__(self, E, pid, x, y, yend): #, interacted):
         self.E = E
         self.pid = pid
         self.x = x # position where born
         self.y = y # position where born
         self.xend = None # end position
         self.yend = yend # end position
-        self.gen = gen # generation
+        #self.gen = gen # generation
         #self.interacted = interacted
         
     def Draw(self, world, halfSteps, verbose = 0):
         if verbose:
             print(f'Drawing particle {self.pid} of generation {self.gen}...')
-        xscale, yscale, x0, y0, SFy = world.xscale, world.yscale, world.x0, world.y0, world.SFy
+        x0, y0, SFy = world.x0, world.y0, world.SFy
         x1 = self.xend
         y1 = self.yend
         if x1 == None:
@@ -92,7 +105,7 @@ class cpart:
             print(f'   ...coors: {X1:1.3f}, {Y1:1.3f}, {X2:1.3f}, {Y2:1.3f}')
         line = ROOT.TLine(X1, Y1, X2, Y2)
         #line.SetNDC()
-        alpha =  0.8 * (world.genmax - self.gen ) / world.genmax + 0.1
+        alpha =  0.2 # * (world.maxgen - self.gen ) / world.maxgen + 0.1
         line.SetLineColorAlpha(gcol[self.pid], alpha)
         line.SetLineStyle(glst[self.pid])
         line.SetLineWidth(glwd[self.pid])
@@ -107,10 +120,49 @@ class cpart:
 #    return x + gX0[part.pid]
 
 ##########################################
+
+def genPions(pid, E, length, x, y, SFy, rndSF):
+    # gen pions and actuially also gammas from pi0 decay;)
+    
+    pions = []
+    # TODO: make some of these protons, actually, too?
+    nCharged = int(10*pow(E/gGeV, 0.2)) # 10 # can be randomized say between 8 and 12?
+    PiZeroFrac = chooseFrom (1/4., 1/3.)
+    nNeutral = int( PiZeroFrac*nCharged / (1. - PiZeroFrac)  ) 
+    ECh = E*(1. - PiZeroFrac)
+    ENeutral = E*PiZeroFrac
+    #print('PiZeroFrac , nCharged, nNeutral: ',  PiZeroFrac , nCharged, nNeutral)
+
+    # make some additinal protons, addition to the leading one already done before
+    protonsToMake = 0
+    if pid != 'pi':
+        protonsToMake = 1
+    for ipi in range(0, nCharged):
+        newpid = 'pi'
+        if protonsToMake > 0:
+            newpid = 'p'
+            protonsToMake = protonsToMake - 1
+        Epi = ECh / nCharged # to randomize later
+        #print('Epi ch.', Epi)
+        rnd = getRndSign()*random.random() / rndSF
+        pions.append( cpart(Epi, newpid, x, y, y + rnd*SFy*length) )
+
+    # and now pi0 --> gamma gamma:
+    for ipi in range(0, nNeutral ):
+        Epi = ENeutral / nNeutral # to randmize later
+        #print('Epi neutr.', Epi)
+        rnd = getRndSign()*random.random() / rndSF
+        zeta = random.random()
+        # TODO: zeta as a random number drawn from the lab photons energy distribution?
+        pions.append( cpart(    zeta*Epi, 'gamma', x, y, y + rnd*SFy*length) )
+        pions.append( cpart((1-zeta)*Epi, 'gamma', x, y, y - rnd*SFy*length) )
+
+    return pions
+
+##########################################
 def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
     if part.pid == 'mu' or part.pid == 'nu':
         return []
-    gen = part.gen
     y = part.yend
     pid = part.pid
     length = gLength[part.pid]
@@ -143,10 +195,11 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
             xi = exp(-dx / length)
         E1 = xi*part.E
         E2 = (1-xi)*part.E
-        p1 = cpart(E1, 'gamma', x, y, y + (dy1 + rnd1)*SFy*length, gen+1) #, False)
-        p2 = cpart(E2, 'e',     x, y, y + (dy2 + rnd2)*SFy*length, gen+1) #, False)
+        p1 = cpart(E1, 'gamma', x, y, y + (dy1 + rnd1)*SFy*length)
+        p2 = cpart(E2, 'e',     x, y, y + (dy2 + rnd2)*SFy*length)
         part.xend = x # terminate the parent particle
         #part.interacted = True
+        world.UpdateMaxGen()
         return [p1, p2]
 
     # Photons
@@ -166,10 +219,11 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
 
         E1 = xi*part.E
         E2 = (1-xi)*part.E
-        p1 = cpart(E1, 'e', x, y, y + (dy1 + rnd1)*SFy*length, gen+1) #, False)
-        p2 = cpart(E2, 'e', x, y, y + (dy2 + rnd2)*SFy*length, gen+1) #, False) 
+        p1 = cpart(E1, 'e', x, y, y + (dy1 + rnd1)*SFy*length)
+        p2 = cpart(E2, 'e', x, y, y + (dy2 + rnd2)*SFy*length)
         part.xend = x # terminate the parent particle
         #part.interacted = True
+        world.UpdateMaxGen()
         return [p1, p2]
     elif part.pid == 'pi' and part.E < ECpiThr:
             # decay the pion to a muon
@@ -185,17 +239,18 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
             xi = exp(-dx / length)
             E1 = xi*part.E
             E2 = (1-xi)*part.E
-            p1 = cpart(E1, 'mu', x, y, y + (dy1 + rnd1)*SFy*length, gen+1) #, False)
-            p2 = cpart(E2, 'nu',     x, y, y + (dy2 + rnd2)*SFy*length, gen+1) #, False)
+            p1 = cpart(E1, 'mu', x, y, y + (dy1 + rnd1)*SFy*length)
+            p2 = cpart(E2, 'nu',     x, y, y + (dy2 + rnd2)*SFy*length)
             # terminate muons and neutrinos:
             p1.xend = world.x2
             p2.xend = world.x2
             
             part.xend = x # terminate the parent particle
             #part.interacted = True
+            world.UpdateMaxGen()
             return [p1, p2]
             
-    elif part.pid == 'pi' or part.pid == 'p' and part.E >= ECpiThr:
+    elif (part.pid == 'pi' or part.pid == 'p') and part.E >= ECpiThr:
             xi = 1/3.
             chi = 0.
             if halfSteps:
@@ -209,33 +264,15 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
                     chi = random.random()
             if verbose:
                 print('  ...performing pion production!')
-            E0 = part.E*gInelasticity
-            E1 = xi*part.E*(1-gInelasticity)
-            E2 = (1-xi-chi)*part.E*(1-gInelasticity)
-            E3 = (1-xi+chi)*part.E*(1-gInelasticity)
-            #dy1, dy2 = (1. - deltaY), deltaY
-            #dy3, dy4 = -(1. - deltaY), -deltaY
-            dy3, dy4 = 0, 0
-            newps = []
-            rnd3 = 0.
-            rnd4 = 0.
-            if randomizeY:
-                rnd3 = getRndSign()*random.random() / rndSF
-                rnd4 = -rnd4
 
+            pions = genPions( part.pid, (1.-gInelasticity)*part.E, length, x, y, SFy, rndSF )
             # keep the same y for the continuing proton or proton born in pi interaction:
-            newps.append( cpart(E0, 'p', x, y, y, gen+1) ) #, False) )
-            # now charged pions:
-            newps.append( cpart(E1, 'pi', x, y, y + (dy1 + rnd1)*SFy*length, gen+1) ) #, False) )
-            newps.append( cpart(E2, 'pi', x, y, y + (dy2 + rnd2)*SFy*length, gen+1) )  #, False) )
-            # and now p0 --> gamma gamma:
-            zeta = random.random()
-            # TODO: zeta as a random number drawn from distribution
-            # C*(1 - 4/3*x*(1-x)), C = 9/7?
-            newps.append( cpart(zeta*E3, 'gamma', x, y, y + (dy3 + rnd3)*SFy*length, gen+1) ) #, False) )
-            newps.append( cpart((1-zeta)*E3, 'gamma', x, y, y + (dy4 + rnd4)*SFy*length, gen+1) )  #, False) )
+            proton = cpart(part.E*gInelasticity, 'p', x, y, y)
+            newps = [proton]
+            newps.extend(pions)
             part.xend = x # terminate the parent particle
             #part.interacted = True
+            world.UpdateMaxGen()
             return newps
     if verbose:
         print('  ...nothing done!') #
@@ -253,14 +290,10 @@ def PerformInteractionStep(world, particles, randomizeY, halfSteps, verbose = 0)
     return newparticles
     
 ##########################################
-def Simulate(primaryPID, world, E0, randomizeY, halfSteps):
+def Simulate(doDraw, primary, world, E0, randomizeY, halfSteps):
     print('===> Running the simulation!')
-    gen0 = 0
-    x, y = 0.*gkm, 0.*gm
-    yend = 0*gm # dummy
-
     newparticles = []
-    newparticles.append(cpart(E0, primaryPID, x, y, yend, gen0)) # False
+    newparticles.append(primary)
     
     np = -1
     istep = -1
@@ -271,9 +304,19 @@ def Simulate(primaryPID, world, E0, randomizeY, halfSteps):
         istep = istep + 1
         print(f'step: {istep:3} | total particles count: {len(allparticles):11,} | new particles: {len(newparticles):11,}')
         todoparticles = PerformInteractionStep(world, newparticles, randomizeY, halfSteps)
-        allparticles.extend(newparticles)
+        
+        if doDraw:
+            allparticles.extend(newparticles)
         newparticles = todoparticles
+        for part in newparticles:
+            pid = part.pid
+            if pid == 'e' or pid == 'pi' or pid == 'p':
+                # we do not have the xend information at this point
+                # so cannot average x and xend...
+                world.h1Nx.Fill(part.x - primary.xend)
+
     print('...done simulating!')
+    world.steps = 1*istep
     return allparticles
 
 ##########################################
@@ -313,24 +356,24 @@ def processArgs(argv):
     E = 500 # GeV
     if len(sys.argv) > 1:
         Ereq = int(sys.argv[1])
-        if Ereq <= 1000000 and Ereq >= 30:
-            print(f'Using custom energy E={Ereq} GeV')
-            E = Ereq
-        else:
-            print(f'Wrong custom energy E={Ereq} GeV, using default E={E} GeV')
+        #if Ereq <= 1000000 and Ereq >= 30:
+        print(f'Using custom energy             E: {Ereq} GeV')
+        E = Ereq
+        #else:
+        #    print(f'Wrong custom energy E={Ereq} GeV, using default E={E} GeV')
 
     iteration = 0
     if len(sys.argv) > 2:
         req_iteration = int(sys.argv[2])
         if req_iteration >= 0 and req_iteration < 1000:
-            print(f'OK, using user-define iteration  {req_iteration}')
+            print(f'OK, using user-defined iteration : {req_iteration}')
             iteration = req_iteration
 
     gBatch = False
     if len(sys.argv) > 3:
         reqBatch = int(sys.argv[3])
         if reqBatch > 0:
-            print(f'OK, using user-define batch mode {reqBatch}')
+            print(f'OK, using user-defined batch mode: {reqBatch}')
             gBatch = True
         
     if gBatch:
@@ -340,7 +383,7 @@ def processArgs(argv):
     if len(sys.argv) > 4:
         reqDraw = int(sys.argv[4])
         if reqDraw == 0:
-            print(f'OK, using user-define draw mode  {reqDraw}')
+            print(f'OK, using user-defined draw mode : {reqDraw}')
             doDraw = reqDraw
         
     return E,iteration,gBatch,doDraw 
@@ -357,18 +400,6 @@ def makeTags(primary, E0, iteration):
         ropt = 'update'
     return tag, rtag, gtag, ropt
 
-##########################################
-def makeOutHistos(last, iteration, rtag, ropt, rootdir = 'root/'):
-    hname = f'h1Nx_{iteration}'
-    htitle = ';x[g/cm^{2}];N'
-    nb = 200
-    x1 = 0
-    x2 = 4000. #last.x*1.25
-    #print('x1, x2: ', x1, x2)
-    outfile = ROOT.TFile(rootdir + 'histos' + rtag + '.root', ropt)   
-    h1Nx = ROOT.TH1D(hname, htitle, nb, x1, x2)
-    return outfile, h1Nx
-
 #########################################
 def doAllDrawing(world, primary, E0, particles, halfSteps, tag, gtag, h1Nx, partCounts):
         can, h2, lines, partialDraw = DrawResults(world, particles, halfSteps)
@@ -376,7 +407,8 @@ def doAllDrawing(world, primary, E0, particles, halfSteps, tag, gtag, h1Nx, part
             gtag = gtag + '_partialDraw'
         print(f'Drawn lines: {len(lines):10,}')
         # draw label
-        txt = ROOT.TLatex(0.02, 0.95, 'Primary: {}; E={:1.1f} TeV, particles: {:1.2f}M, depth={:1.0f}'.format(glabel[primary.pid], E0/1000., len(particles) / 1e6, world.genmax))
+        txt = ROOT.TLatex(0.02, 0.95, 'Primary: {}; E={:1.1f} TeV, particles: {:1.2f}M, steps={:1.0f}'.format(glabel[primary.pid], E0/1000., len(particles) / 1e6, world.steps))
+        #txt = ROOT.TLatex(0.02, 0.95, 'Primary: {}; E={:1.1f} TeV, particles: {:1.2f}M'.format(glabel[primary.pid], E0/1000., len(particles) / 1e6))
         txt.SetTextColor(ROOT.kWhite)
         txt.SetNDC()
         txt.Draw()
@@ -419,7 +451,8 @@ def doAllDrawing(world, primary, E0, particles, halfSteps, tag, gtag, h1Nx, part
 
 ##########################################
 def spitSomeInfo(primary, E0, particles, world):
-    print('Primary: {}; E={:1.1f} TeV, particles: {:1.2f}M, depth={:1.0f}'.format(glabel[primary.pid], E0/1000., len(particles) / 1e6, world.genmax))
+    print('Primary: {}; E={:1.1f} TeV, particles: {:1.2f}M, steps={:1.0f}'.format(glabel[primary.pid], E0/1000., len(particles) / 1e6, world.steps))
+    #print('Primary: {}; E={:1.1f} TeV, particles: {:1.2f}M'.format(glabel[primary.pid], E0/1000., len(particles) / 1e6))
 
 ##########################################
 ##########################################
@@ -445,44 +478,42 @@ def main(argv):
     SetMyStyle()
     world = cworld()
 
+    x, y = 0.*gkm, 0.*gm
+    yend = 0*gm # dummy
+    primary = cpart(E0, primaryPID, x, y, yend)
+    tag, rtag, gtag, ropt = makeTags(primary, E0, iteration)
+    world.makeOutHistos(iteration, rtag, ropt)
+    
     # Simulate!
-    particles = Simulate(primaryPID, world, E0, randomizeY, halfSteps)
+    particles = Simulate(doDraw, primary, world, E0, randomizeY, halfSteps)
 
     # get/make some stuff needed
     print('Getting some stats...')
-    world.genmax = getMaxGen(particles)
-    primary      = particles[0]
     jmax,maxx    = getMaxX(particles)
-    last         = particles[jmax]    
-    tag, rtag, gtag, ropt = makeTags(primary, E0, iteration)
 
     # fill histogrammes
-    print('Filling histograms...')
+    print('Counting drawn particles...')
     partCounts = {}
     for pid in glabel:
         partCounts[pid] = 0
-        
-
-    outfile, h1Nx = makeOutHistos(last, iteration, rtag, ropt)
     for part in particles:
         pid = part.pid
         partCounts[pid] = partCounts[pid] + 1
-        if pid == 'e' or pid == 'pi' or pid == 'p':
-            h1Nx.Fill(part.x - primary.xend)
+
 
     for pid in partCounts:
         print(f'{pid:6}: {partCounts[pid]:10,}')
     spitSomeInfo(primary, E0, particles, world)
     if doDraw:
-        can, h2, lines, partialDraw, statcan, txt = doAllDrawing(world, primary, E0, particles, halfSteps, tag, gtag, h1Nx, partCounts)
+        can, h2, lines, partialDraw, statcan, txt = doAllDrawing(world, primary, E0, particles, halfSteps, tag, gtag, world.h1Nx, partCounts)
         stuff.append([can, h2, lines, partialDraw, statcan, txt])
     
-    outfile.Write()
+    world.outfile.Write()
     
     if doDraw and not gBatch:
         ROOT.gApplication.Run()
     
-    outfile.Close()
+    world.outfile.Close()
     
     print(f'...Thanks for running {sys.argv[0]}')
     print('...Returning and kiling oneself!')

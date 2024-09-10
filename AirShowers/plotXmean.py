@@ -48,30 +48,31 @@ for E in Es:
         continue
     Fs.append(infile)
     Hs[E] = []
-    meansum = 0
-    meanSqSum = 0
-    np = 0
+    means = []
     for i in range(0,50):
         hname = hbasename + f'_{i}'
         h = infile.Get(hname)
         try:
             mean = h.GetBinCenter(h.GetMaximumBin()) #h.GetMean()
             err = h.GetMeanError()
+            means.append(mean)
             #print(mean)
             h.Rebin(Rebin)
+            if E < 10e3:
+                h.Rebin(2)
             Hs[E].append(h)
-            np = np+1
-            meansum = meansum + mean
-            meanSqSum = meanSqSum + pow(mean,2)
         except:
             print(f'Error getting {hname} from {fname}')
-    if np > 1 and meansum > 0:
-        meanMean = meansum / np
-        meanErrSq = (pow(meanMean,2) - meanSqSum / (np-1) )
-        print(pow(meanMean,2), meanSqSum, meanSqSum )
-        meanErr = 0.
-        if meanErrSq > 0:
-            meanErr = sqrt(meanErrSq)
+
+    meanSqSum = 0
+    np = len(means)
+    meanMean = sum(means) / np
+    for i in range(0, len(means)):
+        meanSqSum = pow(means[i] - meanMean, 2)
+
+    meanErr = 0.
+    if np > 1 and meanSqSum > 0:
+        meanErr = sqrt(meanSqSum / (np - 1))
         Means.append([E, meanMean, meanErr])
 
 ip = 0
@@ -101,14 +102,14 @@ for E,hs in Hs.items():
     h2.GetYaxis().SetLabelColor(ROOT.kWhite)
     h2.GetYaxis().SetTitleColor(ROOT.kWhite)
     H2s.append(h2)
-    txt = ROOT.TLatex(0.7, 0.8, f'E={E/1000} TeV')
+    txt = ROOT.TLatex(0.65, 0.8, f'E={E/1000} TeV')
     txt.SetTextColor(ROOT.kWhite)
     txt.SetNDC()
     txt.Draw()
     txts.append(txt)
     opt = ' same'
     for h in hs:
-        h.SetLineWidth(2)
+        h.SetLineWidth(1)
         h.SetStats(0)
         h.Draw('hist plc' + opt)
         opt = ' same'
@@ -120,21 +121,33 @@ for E,hs in Hs.items():
 
 canname = 'GrXmean'
 gcan = ROOT.TCanvas(canname, canname, 500, 500, 800, 600)
-gr.SetMarkerColor(ROOT.kBlue)
-gr.SetMarkerSize(1)
+gr.SetMarkerColor(ROOT.kAzure-3)
+gr.SetMarkerSize(1.5)
 gr.SetMarkerStyle(20)
-gr.SetLineColor(ROOT.kBlue)
-gr.SetLineWidth(1)
+gr.SetLineColor(gr.GetMarkerColor())
+gr.SetLineWidth(2)
 gr.SetLineStyle(1)
 gr.GetXaxis().SetTitle('log_{10}E(eV)')
 gr.GetYaxis().SetTitle('X_{max}^{N} [g/cm^{2}]')
-gr.GetYaxis().SetRangeUser(0, 1900)
+gr.GetYaxis().SetRangeUser(0, 1000)
 gr.Draw('APL')
+fun = ROOT.TF1("fit", "[0] + [1]*x", 12., 20.)
+fun.SetParameters(500, 0.1)
+fun.SetLineStyle(2)
+fun.SetLineWidth(1)
+gr.Fit('fit')
+predict17 = fun.Eval(17.)
+print('Fit extrapolation to 10^17 eV: ', predict17)
 gr.GetYaxis().SetAxisColor(ROOT.kWhite)
 gr.GetYaxis().SetLabelColor(ROOT.kWhite)
 gr.GetYaxis().SetTitleColor(ROOT.kWhite)
 
+
+ROOT.gPad.SetGridx(1)
+ROOT.gPad.SetGridy(1)
 ROOT.gPad.Update()
+
+
 
 can.Print(can.GetName() + '.png')
 can.Print(can.GetName() + '.pdf')

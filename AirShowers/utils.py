@@ -55,7 +55,13 @@ def getRndSign():
         return 1
     else:
         return -1
-    
+
+##########################################
+def chooseFrom(x, y):
+    if random.random() < 0.5:
+        return x
+    else:
+        return y
 ##########################################
 def adjustStats(h):
     ROOT.gPad.Update()
@@ -80,7 +86,7 @@ def makePtctLabels(x,y,dy = 0.03, counts = {}, ny = 2, dx = 0.15):
             pass
         ddx = 1*dx
         if i > 3:
-            ddx = ddx*0.80
+            ddx = ddx*0.85
         txt = ROOT.TLatex(x + ((i) // 2)*ddx, y - ( (i) % 2)*dy, glabel[lab] + count)
         txt.SetTextColor(gcol[lab])
         txt.SetNDC()
