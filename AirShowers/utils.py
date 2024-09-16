@@ -85,10 +85,11 @@ def makePtctLabels(x,y,dy = 0.03, counts = {}, ny = 2, dx = 0.15):
         except:
             pass
         ddx = 1*dx
-        if i > 3:
-            ddx = ddx*0.85
+        #if i > 3:
+        #    ddx = ddx*0.85
         txt = ROOT.TLatex(x + ((i) // 2)*ddx, y - ( (i) % 2)*dy, glabel[lab] + count)
         txt.SetTextColor(gcol[lab])
+        #txt.SetTextSize(0.03)
         txt.SetNDC()
         txts.append(txt)
         txt.Draw()

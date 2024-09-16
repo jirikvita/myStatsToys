@@ -3,6 +3,7 @@
 import ROOT
 
 gInfty = 999e999
+gEpsilon = 1e-4
 
 gkm = 1.e3
 gm = 1.
@@ -43,5 +44,6 @@ ECpiThr = 20*gGeV
 
 gcol = { 'e' : ROOT.kGreen+2, 'gamma' : ROOT.kAzure-3, 'pi' : ROOT.kRed + 2, 'mu' : ROOT.kMagenta+3, 'nu' : ROOT.kGray+2, 'p' : ROOT.kRed}
 glst = { 'e' : 1, 'gamma' : 2, 'pi' : 1, 'mu' : 2, 'nu' : 3, 'p' : 1}
-glwd = { 'e' : 1, 'gamma' : 1, 'pi' : 1, 'mu' : 1, 'nu' : 1, 'p' : 2}
+glwd = { 'e' : 1, 'gamma' : 1, 'pi' : 1, 'mu' : 1, 'nu' : 1, 'p' : 1}
 glabel = {'e' : 'e^{#pm}', 'gamma' : '#gamma', 'pi' : '#pi^{#pm}', 'mu' : '#mu^{#pm}', 'nu' : '#nu/#bar{#nu}', 'p' : 'p/#bar{p}'}
+gdaughters = { 'e' : ['',''], 'gamma' : ['',''], 'pi' : ['mu','nu'], 'mu' : ['e','nu'], 'nu' : ['',''], 'p' : ['','']}
