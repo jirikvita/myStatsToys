@@ -122,6 +122,8 @@ def main(argv):
     ROOT.gPad.Update()
 
 
+    print(f'{sum(osobni[-6:-1])/5*12}')
+
     can.Print(can.GetName() + '.pdf')
     can.Print(can.GetName() + '.png')
     ROOT.gApplication.Run()

@@ -526,8 +526,26 @@ def doAllDrawing(world, primary, E0, particles, halfSteps, tag, gtag, h1Nx, part
         statcan = ROOT.TCanvas(canname, canname, 1225, 0, 700, 600)
         statcan.cd()
         h1Nx.SetLineColor(ROOT.kGreen)
+        h1Nx.SetLineWidth(2)
         h1Nx.Draw('hist')
+
+        form = '(x > [1])*[0]*( (x-[1])/([2]-[1]) )^( ([2]-[1])/([3]) ) * exp(([2] - x)/[3])'
+        pns = 'Nmax', 'X0', 'Xmax', 'lambda'
+        fname = 'fit'
+        fun = ROOT.TF1(fname, form, h1Nx.GetXaxis().GetXmin(), h1Nx.GetXaxis().GetXmax())
+        fun.SetLineColor(ROOT.kWhite)
+        fun.SetLineWidth(2)
+        fun.SetLineStyle(2)
+        pvs = [h1Nx.GetMaximum()/8., 0., h1Nx.GetMean(), 150.]
+        #h1.Fit(fname, '', '0')
+        for pn,pv in zip(pns,pvs):
+            ip = pns.index(pn)
+            fun.SetParameter(ip, pv)
+            fun.SetParName(ip, pn)
+        h1Nx.Fit(fun, '', '0')
+        fun.Draw('same')
         adjustStats(h1Nx)
+        
         h1Nx.GetYaxis().SetAxisColor(ROOT.kWhite)
         h1Nx.GetYaxis().SetLabelColor(ROOT.kWhite)
         h1Nx.GetYaxis().SetTitleColor(ROOT.kWhite)
@@ -544,7 +562,7 @@ def doAllDrawing(world, primary, E0, particles, halfSteps, tag, gtag, h1Nx, part
         statcan.Print(pdfdir + statcan.GetName() + tag + '.pdf')
         statcan.Print(pngdir + statcan.GetName() + tag + '.png')
 
-        stuff.append([can, h2, statcan, lines, txt])
+        stuff.append([can, h2, statcan, lines, txt, fun])
 
         print('DONE!')
         return can, h2, lines, partialDraw, statcan, txt
