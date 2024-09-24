@@ -31,7 +31,7 @@ def readData(infname, nMaxEvts = -1, debug = 0):
         if 'Evt' in line:
             # store event till now:
             if len(metaData) > 0:
-                Data.append(  [ [metaData], [Traces] ]  )
+                Data.append(  [ [metaData, Traces] ]  )
 
             # prepare for next event:
             Traces = []
