@@ -14,10 +14,8 @@ stuff = []
 ##########################################
 # https://www.tutorialspoint.com/python/python_command_line_arguments.htm
 def main(argv):
-  
-
     infname = '/home/qitek/work/github/myStatsToys/FastProcessing/ascii_5k.txt'
-    Data = readData(infname, 10)
+    Data = readData(infname, 5, 7)
     print(Data)
     
     return

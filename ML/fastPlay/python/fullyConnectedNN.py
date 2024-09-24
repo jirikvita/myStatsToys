@@ -26,33 +26,58 @@ from readData import *
 
 def concatData(data):
     vals = []
-    for ds in data:
-        vals.append(ds)
+    for dss in data:
+        for ds in dss:
+            vals.append(ds)
     return vals
 
 ##########################################
+def ReadAndParseData(infname, i1, i2, debug = 0):
+    Data = readData(infname, i1, i2)
+    ys = []
+    xs = []
+    for data in Data:
+        logE = data[0]['logE']
+        Xmax = data[0]['Xmax']
+        ys.append( [logE, Xmax] )
+        xxs = concatData(data[1])
+        if len(xxs) > 0:
+            xs.append(xxs)
+
+    if debug:
+        print('-----------------------------------------------')
+        print(xs)
+        print('-----------------------------------------------')
+        print(ys)
+        print('-----------------------------------------------')
+        for x in xs:
+            print(len(x))
+        print('-----------------------------------------------')
+        for y in ys:
+            print(len(y))
+    
+    rows = len(xs)
+    cols = len(xs[0])
+    X = np.array(xs, dtype=float).reshape(rows, cols)
+    rows = len(ys)
+    cols = len(ys[0])
+    Y = np.array(ys).reshape(rows, cols)
+    return X, Y
+
+##########################################
+
+#infname = '/home/qitek/work/github/myStatsToys/FastProcessing/ascii_5k.txt'
+infname = '/home/qitek/work/github/myStatsToys/FastProcessing/ascii_full.txt'
+
+i1 = 0
+i2 = 1000
+X, Y = ReadAndParseData(infname, i1, i2)
 
 # Parameters
-N = 10  # Number of input features (change based on your requirement)
-num_samples = 1000  # Number of samples in the dataset
+N = len(X[0]) # # Number of input features
+num_samples = len(X)  # Number of samples in the dataset
 epochs = 50  # Number of epochs for training
 
-# Generate the dataset
-#X, Y = generate_dataset(num_samples, N)
-
-infname = '/home/qitek/work/github/myStatsToys/FastProcessing/ascii_5k.txt'
-Data = readData(infname, 100)
-ys = []
-xs = []
-for data in Data:
-    logE = data[0]['logE']
-    Xmax = data[0]['Xmax']
-    ys.append( [logE, Xmax] )
-    xxs = concatData(data[1])
-    xs.append(xxs)
-
-X = np.array(xs, dtype=float)
-Y = np.array(ys)
 
 # Build the model
 model = Sequential()
@@ -66,7 +91,16 @@ model.compile(optimizer='adam', loss='mse', metrics=['mae'])
 # Train the model
 model.fit(X, Y, epochs=epochs, batch_size=32, validation_split=0.2)
 
-# Predict for a new random input
-#new_input = np.random.rand(1, N)
-#predicted_output = model.predict(new_input)
-#print(f"Predicted output: {predicted_output}")
+# Predict for a new input
+i3 = i2 + 10
+testX, trueY = ReadAndParseData(infname, i2, i3)
+predictedY = model.predict(testX)
+print(f"Predicted output: {predictedY}")
+
+for y,ytrue in zip(predictedY,trueY):
+    ePred,xmaxPred = y[0], y[1]
+    eTrue,xmaxTrue = ytrue[0], ytrue[1]
+    print('-------------------------------------------')
+    print(f'E: true: {eTrue} predicted: {ePred}')
+    print(f'E: true: {xmaxTrue} predicted: {xmaxPred}')
+    

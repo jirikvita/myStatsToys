@@ -19,7 +19,7 @@ def parseMetaData(tokens):
 
 #####################################################################
 
-def readData(infname, nMaxEvts = -1, debug = 0):
+def readData(infname, i1 = 0, nMaxEvts = -1, debug = 0):
     infile = open(infname, 'r')
     ievt = -1
     metaData = {}
@@ -29,6 +29,7 @@ def readData(infname, nMaxEvts = -1, debug = 0):
     for xline in infile.readlines():
         line = xline[:-1]
         if 'Evt' in line:
+            
             # store event till now:
             if len(metaData) > 0:
                 Data.append(  [ metaData, Traces ]  )
@@ -36,13 +37,16 @@ def readData(infname, nMaxEvts = -1, debug = 0):
             # prepare for next event:
             Traces = []
             ievt = ievt + 1
+            if ievt < i1:
+                continue
+            
             if ievt > nMaxEvts:
                 break
             tokens = line.split(',')
             metaData = parseMetaData(tokens)
             print(f'Reading event {ievt}')
             continue
-        if ':' in line:
+        if ':' in line and ievt >= i1:
             tokens = line.split(':')
             if len(tokens) > 1:
                 spix,xtrace = tokens[0], tokens[1]
