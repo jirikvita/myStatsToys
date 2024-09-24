@@ -48,6 +48,10 @@ def main(argv):
 
     ROOT.gSystem.Load("libFastEvent.so")
 
+    gBatch = True
+
+    if gBatch:
+        ROOT.gROOT.SetBatch(1)
 
     # zubr:
     #infname = "/astroparticle/FAST/Simulations/ntels_1_core_in_fov_auger/ntels_1_core_in_fov_auger.root"
@@ -71,7 +75,7 @@ def main(argv):
     hCorey = ROOT.TH1D("corey", ";core y [m]", 100, -30000, -5000)   
 
     hTraces = list()
-    nb, t1, t2 =  1000, 0., 5000.
+    nb, t1, t2 =  500, 0., 5000.
     #nb, t1, t2 =  5000, 0., 5000.
     for i in range(4):
         hname = f"hTracePMT{i}"
@@ -89,7 +93,7 @@ def main(argv):
     ###############
     # EVENT LOOP! #
     ###############
-    breakN = 500000
+    breakN = 5000
     verb = 1000
     if breakN < 10000:
         verb = 100
@@ -154,8 +158,9 @@ def main(argv):
         # dump beginning of the trace
         for ipixel in range(0,len(pixels)):
             bin2 = hTraces[ipixel].GetXaxis().FindBin(1000.)
+            #print(bin2)
             outfile.write(f'{ipixel}: ')
-            for ibin in range(0, bin2):
+            for ibin in range(1, bin2):
                 outfile.write('{:f}'.format(hTraces[ipixel].GetBinContent(ibin)))
                 if ibin < bin2-1:
                     outfile.write(',')
@@ -174,8 +179,9 @@ def main(argv):
     for can in cans:
         can.Print(can.GetName() + '.png')
         can.Print(can.GetName() + '.pdf')
-    
-    ROOT.gApplication.Run()
+
+    if not gBatch:
+        ROOT.gApplication.Run()
 
 ###########################################################
 ###########################################################
