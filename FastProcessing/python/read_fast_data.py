@@ -2,6 +2,11 @@
 
 # 2024 (c) code by Petr Hamal, modified by Jiri Kvita
 
+# TODO:
+# x,y map
+# E, xmax map
+# etc
+
 import sys, os
 import ROOT
 
@@ -14,16 +19,16 @@ fast_z = 0
 cans = []
 
 ###########################################################
-def plotHistos(hTraces, hs, h2):
+def plotHistos(hTraces, hs, h2s):
     
-    c1 = ROOT.TCanvas("hTraces", "hTraces", 1200, 800)
+    c1 = ROOT.TCanvas("hTraces", "hTraces", 0, 0, 1200, 800)
     c1.Divide(2, 2)
     for i in range(4):
         c1.cd(i+1)
         hTraces[i].SetLineColor(i+1)
         hTraces[i].Draw("hist")
 
-    c2 = ROOT.TCanvas("fast_simulation", "fast_simulation", 1200, 800)
+    c2 = ROOT.TCanvas("fast_simulation", "fast_simulation", 50, 50, 1200, 800)
     c2.Divide(3, 2)
     fcols = [ROOT.kYellow, ROOT.kGreen, ROOT.kGray, ROOT.kCyan, ROOT.kMagenta, ROOT.kTeal]
     for col,h in zip(fcols,hs):
@@ -33,9 +38,12 @@ def plotHistos(hTraces, hs, h2):
         h.Draw()
 
     cn = 'heatmap'
-    c3 = ROOT.TCanvas(cn, cn, 100, 100, 1000, 800)
-    c3.cd()
-    h2.Draw('colz')
+    c3 = ROOT.TCanvas(cn, cn, 100, 100, 1000, 1000)
+    c3.Divide(2,2)
+
+    for h2 in h2s:
+        c3.cd(h2s.index(h2)+1)
+        h2.Draw('colz')
 
     return [c1, c2, c3]
 
@@ -74,6 +82,9 @@ def main(argv):
     hCorex = ROOT.TH1D("corex", ";core x [m]", 100, -30000, -5000)   
     hCorey = ROOT.TH1D("corey", ";core y [m]", 100, -30000, -5000)   
 
+    hXmaxVsEnergy = ROOT.TH2D("XmaxVsEnergy", ";xmax [gcm-2];log(E) [-]", 80, 17, 21, 110, 50, 1300)
+
+    
     hTraces = list()
     nb, t1, t2 =  500, 0., 5000.
     #nb, t1, t2 =  5000, 0., 5000.
@@ -127,13 +138,16 @@ def main(argv):
         corez = simu.GetCoreZ()
         # print(f"entry, energy, xmax, zenith, azimuth, x, y: {entry:7d} {energy:6.2f} {xmax:7.1f} {zenith:5.1f} {azimuth:6.1f} {corex:9.1f} {corey:9.1f}")
 
+        # 1D
         hAzimuth.Fill(azimuth)
         hZenith.Fill(zenith)
         hEnergy.Fill(energy)
         hXmax.Fill(xmax)
         hCorex.Fill(corex)
         hCorey.Fill(corey)
-
+        # 2D
+        hXmaxVsEnergy.Fill(energy, xmax)
+        
         # --- information from PMTs ---
         pixels = event.GetPixels()
         # print(f"entry, pixel size: {entry}, {len(pixels)}")
@@ -174,7 +188,8 @@ def main(argv):
     # PLOTTING            
     ROOT.gStyle.SetPalette(1)
     hs = [ hAzimuth, hZenith, hEnergy, hXmax, hCorex, hCorey ]
-    cs = plotHistos(hTraces, hs, h2)
+    h2s = [h2, hXmaxVsEnergy]
+    cs = plotHistos(hTraces, hs, h2s)
     cans.extend(cs)
     for can in cans:
         can.Print(can.GetName() + '.png')

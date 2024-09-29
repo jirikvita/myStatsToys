@@ -1,6 +1,8 @@
 #!/usr/bin/python
+
 # was: #!/snap/bin/pyroot
 # was: #!/usr/bin/python3
+
 # Út 24. září 2024, 13:57:02 CEST
 
 import ROOT
@@ -15,7 +17,16 @@ stuff = []
 # https://www.tutorialspoint.com/python/python_command_line_arguments.htm
 def main(argv):
     infname = '/home/qitek/work/github/myStatsToys/FastProcessing/ascii_5k.txt'
-    Data = readData(infname, 5, 7)
+    
+    # central vals and sigma around them to accept
+    restrictions = { 'logE' : [ [17.5, 18, 19, 20], 0.25],
+                     'Xmax' : [ [390], 250 ],
+                     'Azimuth' : [ [4.5], 40],
+                     'Zenith' : [ [7.], 40],
+                     'Corex' : [ [-18000], 2000],
+                     'Corey' : [ [-25000], 2000]
+                }
+    Data = readData(infname, 0, 700000, restrictions)
     print(Data)
     
     return

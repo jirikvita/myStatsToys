@@ -1,4 +1,5 @@
 #!/usr/bin/python
+
 # 24.9.2024
 # Q: can you please generate python code that reads N float inputs, trains a fully connected neural network for 2 output float number nodes?
 

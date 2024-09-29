@@ -19,7 +19,7 @@ def parseMetaData(tokens):
 
 #####################################################################
 
-def readData(infname, i1 = 0, nMaxEvts = -1, debug = 0):
+def readData(infname, i1 = 0, nMaxEvts = -1, restrictions = {}, debug = 0, verb = 1000):
     infile = open(infname, 'r')
     ievt = -1
     metaData = {}
@@ -32,6 +32,35 @@ def readData(infname, i1 = 0, nMaxEvts = -1, debug = 0):
             
             # store event till now:
             if len(metaData) > 0:
+                # but first check whether shower parameters are within requirements;)
+                GoOnBasedOnAllVars = True
+                if len(restrictions) > 0:
+                    if not GoOnBasedOnAllVars:
+                        continue
+                    for varname in restrictions:
+                        if debug:
+                            print(f'* Judging based on var {varname}')
+                        if debug:
+                            print(restrictions[varname])
+                        reqvals,sigma = restrictions[varname][0], restrictions[varname][1]
+                        if not varname in metaData:
+                            continue
+                        strcurrval = metaData[varname]
+                        try:
+                            currval = float(strcurrval)
+                            shouldContinueSingleVar = False
+                            for reqval in reqvals:
+                                shouldContinueSingleVar = shouldContinueSingleVar or (abs(currval - reqval) < sigma)
+                                if debug:
+                                    print(currval, reqval, sigma, shouldContinueSingleVar)
+                        except:
+                            print('error converting metadata {varname} value {strcurrval} to float...')
+                        GoOnBasedOnAllVars = GoOnBasedOnAllVars and shouldContinueSingleVar
+                    if not GoOnBasedOnAllVars:
+                        if debug:
+                            print('skipping event based on required variables')
+                        continue # the reading to next event
+
                 Data.append(  [ metaData, Traces ]  )
 
             # prepare for next event:
@@ -40,11 +69,12 @@ def readData(infname, i1 = 0, nMaxEvts = -1, debug = 0):
             if ievt < i1:
                 continue
             
-            if ievt > nMaxEvts:
+            if nMaxEvts > 0 and ievt > nMaxEvts:
                 break
             tokens = line.split(',')
             metaData = parseMetaData(tokens)
-            print(f'Reading event {ievt}')
+            if ievt % verb == 0:
+                print(f'Reading event {ievt}')
             continue
         if ':' in line and ievt >= i1:
             tokens = line.split(':')
