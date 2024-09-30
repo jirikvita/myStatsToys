@@ -104,9 +104,9 @@ def main(argv):
     ###############
     # EVENT LOOP! #
     ###############
-    breakN = 5000
+    breakN = -1
     verb = 1000
-    if breakN < 10000:
+    if breakN > 0 and breakN < 10000:
         verb = 100
     outfname = 'ascii.txt'
     outfile = open(outfname, 'w')
@@ -114,7 +114,7 @@ def main(argv):
         if entry % verb == 0:
             print(f'Processing {entry} / {breakN} / {nentries}')
 
-        if entry >= breakN: break
+        if breakN > 0 and entry >= breakN: break
         
         tree.GetEntry(entry)
         # --- information about the setup of the simulation ---
