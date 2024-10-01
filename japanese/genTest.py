@@ -1,6 +1,9 @@
 #!/usr/bin/python
 
 import random, sys, os, math
+import termios
+import tty
+
 
 ###########################################################
 
@@ -61,6 +64,26 @@ hiragana = { 'a' : '\u3042', 'i' : '\u3044',  'u' : '\u3046', 'e' : '\u3048', 'o
 # }
 
 ###########################################################
+
+"""
+ChatGPT4:
+"how can i use read() in python as a 'hit any key' and not have an amptuy printed line on terminal?"
+How this works:
+It switches the terminal to raw mode (disabling line buffering) so it reads a single character instead of waiting for Enter.
+It restores the terminal settings after reading.
+This method ensures there are no extra newlines printed and only one key is captured.
+"""
+
+def wait_for_key():
+    fd = sys.stdin.fileno()
+    old_settings = termios.tcgetattr(fd)
+    try:
+        tty.setraw(fd)
+        sys.stdin.read(1)
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+
+###########################################################
 def checkUniqUnicode(hiragana):
     vals = {}
     for key,val in hiragana.items():
@@ -81,7 +104,7 @@ def toFill(used):
     return False
 
 ###########################################################
-def getTest(syllabs, indent = 5):
+def getTest(syllabs, doPrintBatch = 1, indent = 8):
     used = {}
     for syl in syllabs:
         used[syl] = False
@@ -93,7 +116,9 @@ def getTest(syllabs, indent = 5):
     print('------------------------------------------------')
     n = 0
     endl = ''
-    test = []
+    toTest = []
+    TestLines = []
+    testline = []
     while toFill(used):
         j = int(random.uniform(0,1)*N)
         j = min(j,N-1)
@@ -101,30 +126,84 @@ def getTest(syllabs, indent = 5):
         if not used[syl]:
             n = n+1
             used[syl] = True
-            test.append(syl)
+            toTest.append(syl)
             endl = ' '
+            testline.append(syl)
             if n % indent == 0:
                 endl = '\n'
-            print(f'{syl:3}', end = endl)
-    print('------------------------------------------------')
-    print('Hit a key for solution -- when ready! ;-)')
-    a = input()
-    print('Solution:')
-    print('------------------------------------------------')
+                TestLines.append(testline)
+                testline = []
+            #if doPrintBatch:
+            #    print(f'{syl:4}', end = endl)
+    if len(testline) > 0:
+        TestLines.append(testline)
+            
+    if doPrintBatch:
+        for testline in TestLines:
+            for syll in testline:
+                print(f'{syll:4}', end='')
+            print()
+
+    if doPrintBatch:
+        print('------------------------------------------------')
+        print('Hit a key for solution -- when ready! ;-)')
+        a = input()
+
+    if doPrintBatch:
+        print('Solution:')
+        print('------------------------------------------------')
+        
     n = 0
-    for syl in test:
+    Solutions = []
+    solution = []
+    for syl in toTest:
         n = n + 1
         endl = ' '
+        solution.append(f'{hiragana[syl]}')
         if n % indent == 0:
             endl = '\n'
-        print(f'{hiragana[syl]:2}', end = endl)
-    print('------------------------------------------------')
+            Solutions.append(solution)
+            solution = []
+        #if doPrintBatch:
+        #    print(f'{hiragana[syl]:2}', end = endl)
+    if len(solution) > 0:
+        Solutions.append(solution)
+
+        
+    if doPrintBatch:
+        for solution in Solutions:
+            for syll in solution:
+                print(f'{syll:3}', end='')
+            print()
+
+        print('------------------------------------------------')
+
+    if not doPrintBatch:
+        for testline, solution in zip(TestLines, Solutions):
+            for syll in testline:
+                print(f'{syll:4}', end='')
+            print()
+            #a = input()
+            wait_for_key()
+            print('\b\b', end='')
+            for syll in solution:
+                print(f'{syll:3}', end='')
+            print('\n-----------------------------------------------------')
+
 
 ###########################################################
 
 def main(argv):
     checkUniqUnicode(hiragana)
-    getTest(syllabs)
+    doPrintBatch = 1
+    if len(argv) > 1:
+        try:
+            doPrintBatch = int(argv[1])
+            print(f'OK, using custom doPrintBatch={doPrintBatch}')
+        except:
+            print('error getting doPrintBatch as first command line argument')
+            
+    getTest(syllabs, doPrintBatch)
     return
 
 ###########################################################
