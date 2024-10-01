@@ -133,7 +133,44 @@ def toFill(used):
     return False
 
 ###########################################################
-def getTest(syllabs, alphabet, doPrintBatch = 0, indent = 8):
+def printTestLines(TestLines):
+    for testline in TestLines:
+        for syll in testline:
+            print(f'{syll:6}', end='')
+        print()
+    return
+###########################################################
+           
+def printSolutions(Solutions, alphabet):
+    for solution in Solutions:
+        for syll in solution:
+            key = find_key(alphabet, syll)
+            if syllabs.index(key) > 70:
+                print(f'{syll:4}', end='')
+            else:
+                print(f'{syll:5}', end='')
+        print()
+    return
+
+###########################################################
+def printTestLine(testline):
+    for syll in testline:
+        print(f'{syll:6}', end='')
+    print()
+    return
+
+###########################################################
+def printSolution(solution, alphabet):
+    for syll in solution:
+        key = find_key(alphabet, syll)
+        if syllabs.index(key) > 70:
+            print(f'{syll:4}', end='')
+        else:
+            print(f'{syll:5}', end='')
+    return
+
+###########################################################
+def getTest(syllabs, alphabet, doPrintBatch = 0, doReverse = 0, indent = 8):
     used = {}
     for syl in syllabs:
         used[syl] = False
@@ -143,6 +180,7 @@ def getTest(syllabs, alphabet, doPrintBatch = 0, indent = 8):
     #print(syllabs)
     #print(used)
     print('------------------------------------------------')
+ 
     n = 0
     endl = ''
     toTest = []
@@ -164,21 +202,7 @@ def getTest(syllabs, alphabet, doPrintBatch = 0, indent = 8):
                 testline = []
     if len(testline) > 0:
         TestLines.append(testline)
-            
-    if doPrintBatch:
-        for testline in TestLines:
-            for syll in testline:
-                print(f'{syll:6}', end='')
-            print()
 
-    if doPrintBatch:
-        print('------------------------------------------------')
-        print('Hit a key for solution -- when ready! ;-)')
-        a = input()
-
-    if doPrintBatch:
-        print('Solution:')
-        print('------------------------------------------------')
         
     n = 0
     Solutions = []
@@ -191,43 +215,61 @@ def getTest(syllabs, alphabet, doPrintBatch = 0, indent = 8):
             endl = '\n'
             Solutions.append(solution)
             solution = []
-        #if doPrintBatch:
-        #    print(f'{alphabet[syl]:3}', end = endl)
     if len(solution) > 0:
         Solutions.append(solution)
-        
+
+
+    #######################################
+    # print
+
     if doPrintBatch:
-        for solution in Solutions:
-            for syll in solution:
-                key = find_key(alphabet, syll)
-                if syllabs.index(key) > 70:
-                    print(f'{syll:4}', end='')
-                else:
-                    print(f'{syll:5}', end='')
-            print()
+        # print the assignement
+        print('------------------------------------------------')
+        if not doReverse:
+            printTestLines(TestLines)
+        else:
+            printSolutions(Solutions, alphabet)
+        print('------------------------------------------------')
+        print('Hit a key for solution -- when ready! ;-)')
+        wait_for_key()
+        #print('Solution:')
+        print('------------------------------------------------')
+        if not doReverse:
+            printSolutions(Solutions, alphabet)
+        else:
+            printTestLines(TestLines)
         print('------------------------------------------------')
 
-    if not doPrintBatch:
+    else:
+        # line by line
         for testline, solution in zip(TestLines, Solutions):
-            for syll in testline:
-                print(f'{syll:6}', end='')
-            print()
-            #a = input()
+            if not doReverse:
+                printTestLine(testline)
+            else:
+                printSolution(solution, alphabet)
+                print()
             wait_for_key()
-            print('\b\b', end='')
-            for syll in solution:
-                key = find_key(alphabet, syll)
-                if syllabs.index(key) > 70:
-                    print(f'{syll:4}', end='')
-                else:
-                    print(f'{syll:5}', end='')
-            print('\n-----------------------------------------------------')
+            if not doReverse:
+                printSolution(solution, alphabet)
+                print('\n-----------------------------------------------------')
+            else:
+                printTestLine(testline)
+                print('-----------------------------------------------------')
 
 
 ###########################################################
+###########################################################
+###########################################################
 
 def main(argv):
+
+    if '-h' in argv:
+        print('Usage: ')
+        print(f'argv[0] [PrintAllAtOnce=0/1] [reverse=0/1]')
+        return
+        
     checkUniqUnicode(hiragana)
+
     doPrintBatch = 0
     if len(argv) > 1:
         try:
@@ -235,8 +277,17 @@ def main(argv):
             print(f'OK, using custom doPrintBatch={doPrintBatch}')
         except:
             print('error getting doPrintBatch as first command line argument')
+
+    doReverse = 0
+    if len(argv) > 2:
+        try:
+            doReverse = int(argv[2])
+            print(f'OK, using custom doReverse={doReverse}')
+        except:
+            print('error getting doReverse as first command line argument')
             
-    getTest(syllabs, hiragana, doPrintBatch)
+    getTest(syllabs, hiragana, doPrintBatch, doReverse)
+
     return
 
 ###########################################################
