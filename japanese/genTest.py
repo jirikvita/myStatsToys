@@ -27,7 +27,16 @@ syllabs = [ 'a', 'i', 'u', 'e', 'o',
 
             'ba', 'bi', 'bu', 'be', 'bo',
             'pa', 'pi', 'pu', 'pe', 'po',
-            
+
+            'kya', 'kyu', 'kyo',
+            'sya', 'syu', 'syo',
+            'cya', 'cyu', 'cyo',
+            'nya', 'nyu', 'nyo',
+            'hya', 'hyu', 'hyo',
+            'gya', 'gyu', 'gyo',
+            'ja' , 'ju' , 'jo',
+            'bya', 'byu', 'byo',
+            'pya', 'pyu', 'pyo',
             
             ]
 
@@ -56,12 +65,32 @@ hiragana = { 'a' : '\u3042', 'i' : '\u3044',  'u' : '\u3046', 'e' : '\u3048', 'o
 
              'ba' : '\u3070', 'bi' : '\u3073', 'bu' : '\u3076', 'be' : '\u3079', 'bo' : '\u307C',
              'pa' : '\u3071', 'pi' : '\u3074', 'pu' : '\u3077', 'pe' : '\u307A', 'po' : '\u307D',
+
+             'kya' : '\u304D\u3083', 'kyu' : '\u304D\u3085', 'kyo' : '\u304D\u3087',
+             'sya' : '\u3057\u3083', 'syu' : '\u3057\u3085', 'syo' : '\u3057\u3087',
+             'cya' : '\u3061\u3083', 'cyu' : '\u3061\u3085', 'cyo' : '\u3061\u3087',
+             'nya' : '\u306B\u3083', 'nyu' : '\u306B\u3085', 'nyo' : '\u306B\u3087',
+             'hya' : '\u3072\u3083', 'hyu' : '\u3072\u3085', 'hyo' : '\u3072\u3087',
+             'gya' : '\u304E\u3083', 'gyu' : '\u304E\u3085', 'gyo' : '\u304E\u3087',
+             'ja'  : '\u3058\u3083', 'ju'  : '\u3058\u3085', 'jo'  : '\u3058\u3087',
+             'bya' : '\u3073\u3083', 'byu' : '\u3073\u3085', 'byo' : '\u3073\u3087',
+             'pya' : '\u3074\u3083', 'pyu' : '\u3074\u3085', 'pyo' : '\u3074\u3087',
              
             }
+
+
 
 # https://en.wikipedia.org/wiki/Katakana_(Unicode_block)
 # katakana {
 # }
+
+###########################################################
+
+def find_key(alphabet, val):
+    for key in alphabet:
+        if alphabet[key] == val:
+            return key
+    return None
 
 ###########################################################
 
@@ -104,7 +133,7 @@ def toFill(used):
     return False
 
 ###########################################################
-def getTest(syllabs, doPrintBatch = 1, indent = 8):
+def getTest(syllabs, alphabet, doPrintBatch = 0, indent = 8):
     used = {}
     for syl in syllabs:
         used[syl] = False
@@ -133,15 +162,13 @@ def getTest(syllabs, doPrintBatch = 1, indent = 8):
                 endl = '\n'
                 TestLines.append(testline)
                 testline = []
-            #if doPrintBatch:
-            #    print(f'{syl:4}', end = endl)
     if len(testline) > 0:
         TestLines.append(testline)
             
     if doPrintBatch:
         for testline in TestLines:
             for syll in testline:
-                print(f'{syll:4}', end='')
+                print(f'{syll:6}', end='')
             print()
 
     if doPrintBatch:
@@ -159,35 +186,41 @@ def getTest(syllabs, doPrintBatch = 1, indent = 8):
     for syl in toTest:
         n = n + 1
         endl = ' '
-        solution.append(f'{hiragana[syl]}')
+        solution.append(f'{alphabet[syl]}')
         if n % indent == 0:
             endl = '\n'
             Solutions.append(solution)
             solution = []
         #if doPrintBatch:
-        #    print(f'{hiragana[syl]:2}', end = endl)
+        #    print(f'{alphabet[syl]:3}', end = endl)
     if len(solution) > 0:
         Solutions.append(solution)
-
         
     if doPrintBatch:
         for solution in Solutions:
             for syll in solution:
-                print(f'{syll:3}', end='')
+                key = find_key(alphabet, syll)
+                if syllabs.index(key) > 70:
+                    print(f'{syll:4}', end='')
+                else:
+                    print(f'{syll:5}', end='')
             print()
-
         print('------------------------------------------------')
 
     if not doPrintBatch:
         for testline, solution in zip(TestLines, Solutions):
             for syll in testline:
-                print(f'{syll:4}', end='')
+                print(f'{syll:6}', end='')
             print()
             #a = input()
             wait_for_key()
             print('\b\b', end='')
             for syll in solution:
-                print(f'{syll:3}', end='')
+                key = find_key(alphabet, syll)
+                if syllabs.index(key) > 70:
+                    print(f'{syll:4}', end='')
+                else:
+                    print(f'{syll:5}', end='')
             print('\n-----------------------------------------------------')
 
 
@@ -195,7 +228,7 @@ def getTest(syllabs, doPrintBatch = 1, indent = 8):
 
 def main(argv):
     checkUniqUnicode(hiragana)
-    doPrintBatch = 1
+    doPrintBatch = 0
     if len(argv) > 1:
         try:
             doPrintBatch = int(argv[1])
@@ -203,7 +236,7 @@ def main(argv):
         except:
             print('error getting doPrintBatch as first command line argument')
             
-    getTest(syllabs, doPrintBatch)
+    getTest(syllabs, hiragana, doPrintBatch)
     return
 
 ###########################################################
