@@ -76,6 +76,8 @@ def readData(infname, i1 = 0, i2 = -1, **kwargs):
                         except:
                             print('error converting metadata {varname} value {strcurrval} to float...')
                         GoOnBasedOnAllVars = GoOnBasedOnAllVars and shouldContinueSingleVar
+                        if not GoOnBasedOnAllVars:
+                            break
                     if not GoOnBasedOnAllVars:
                         if debug > 0:
                             print('skipping event based on required variables')
@@ -109,7 +111,7 @@ def readData(infname, i1 = 0, i2 = -1, **kwargs):
             tokens = line.split(',')
             metaData = parseMetaData(tokens)
             if ievt % verb == 0:
-                print(f'Reading event {ievt}')
+                print(f'Reading event {ievt}, read so far: {len(Data)}')
             continue
 
         if len(metaData) == 0:

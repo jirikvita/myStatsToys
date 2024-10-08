@@ -192,7 +192,7 @@ def main(argv):
 
     # central vals and sigma around them to accept
     restrictions = { #'logE' : [ [18, 19, 20], 0.25],
-                     'Xmax' : [ [750], 100],
+                    #'Xmax' : [ [750], 100],
                      'Azimuth' : [ [130], 30],
                      'Zenith' : [ [80], 30],
                      'Corex' : [ [-18000], 5000],
@@ -206,7 +206,7 @@ def main(argv):
     i2 = -1
     debug = 0
     verb = 10000
-    X, Y = ReadAndParseData(infname, i1, i2, debug=debug, verb=verb, skip='odd', restrictions = {})
+    X, Y = ReadAndParseData(infname, i1, i2, debug=debug, verb=verb, skip='odd', restrictions = {})#restrictions)
 
     """
     Recurrent Neural Networks (RNNs) & LSTMs for Sequential Data

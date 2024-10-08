@@ -83,7 +83,8 @@ def main(argv):
     hCorey = ROOT.TH1D("corey", ";core y [m]", 100, -30000, -5000)   
 
     hXmaxVsEnergy = ROOT.TH2D("XmaxVsEnergy", ";xmax [gcm-2];log(E) [-]", 80, 17, 21, 110, 50, 1300)
-
+    hCoreYvsCoreX = ROOT.TH2D("CoreYvsCoreX", ";X[km];Y[km]", 100, -30000, 0, 100, -30000, 0)
+    hAzimuthVsZenith = ROOT.TH2D("AzimuthVsZenith", ";Zenith;Azimuth;", 90, 0, 90, 100, -200, 200)
     
     hTraces = list()
     nb, t1, t2 =  500, 0., 5000.
@@ -145,8 +146,11 @@ def main(argv):
         hXmax.Fill(xmax)
         hCorex.Fill(corex)
         hCorey.Fill(corey)
+        
         # 2D
         hXmaxVsEnergy.Fill(energy, xmax)
+        hCoreYvsCoreX.Fill(corex, corey)
+        hAzimuthVsZenith.Fill(zenith, azimuth)
         
         # --- information from PMTs ---
         pixels = event.GetPixels()
