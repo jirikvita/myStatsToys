@@ -58,9 +58,9 @@ def readData(infname, i1 = 0, i2 = -1, **kwargs):
                     if not GoOnBasedOnAllVars:
                         continue
                     for varname in restrictions:
-                        if debug:
+                        if debug > 0:
                             print(f'* Judging based on var {varname}')
-                        if debug:
+                        if debug > 0:
                             print(restrictions[varname])
                         reqvals,sigma = restrictions[varname][0], restrictions[varname][1]
                         if not varname in metaData:
@@ -71,13 +71,13 @@ def readData(infname, i1 = 0, i2 = -1, **kwargs):
                             shouldContinueSingleVar = False
                             for reqval in reqvals:
                                 shouldContinueSingleVar = shouldContinueSingleVar or (abs(currval - reqval) < sigma)
-                                if debug:
+                                if debug > 0:
                                     print(currval, reqval, sigma, shouldContinueSingleVar)
                         except:
                             print('error converting metadata {varname} value {strcurrval} to float...')
                         GoOnBasedOnAllVars = GoOnBasedOnAllVars and shouldContinueSingleVar
                     if not GoOnBasedOnAllVars:
-                        if debug:
+                        if debug > 0:
                             print('skipping event based on required variables')
                         continue # the reading to next event
                     
@@ -85,6 +85,11 @@ def readData(infname, i1 = 0, i2 = -1, **kwargs):
                     
                 # here store event till now:  
                 Data.append(  [ metaData, Traces ]  )
+                if debug == -1:
+                    print('dimensions: meta: {}, traces: {} -- '.format(len(metaData), len(Traces)), end = '' )
+                    for trace in Traces:
+                        print('{} '.format(len(trace)), end='')
+                    print()
                 metaData = {}
 
             # prepare for saving traces for the next event:
@@ -117,7 +122,7 @@ def readData(infname, i1 = 0, i2 = -1, **kwargs):
             if len(tokens) > 1:
                 spix,xtrace = tokens[0], tokens[1]
                 strace = xtrace.replace(' ', '').split(',')
-                if debug:
+                if debug > 0:
                     print(f'Processing pixel id {ipix}')
                     print('strace: ', strace)
                 ipix = int(spix)

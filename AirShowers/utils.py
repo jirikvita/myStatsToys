@@ -5,6 +5,34 @@ import ROOT
 
 from consts import *
 
+
+##########################################
+##########################################
+##########################################
+
+
+##########################################
+def makeGrStyle(gr):
+    gr.SetMarkerColor(ROOT.kAzure-3)
+    gr.SetMarkerSize(1.5)
+    gr.SetMarkerStyle(20)
+    gr.SetLineColor(gr.GetMarkerColor())
+    gr.SetLineWidth(2)
+    gr.SetLineStyle(1)
+    
+##########################################
+def makeWhiteAxes(h2):
+    h2.SetStats(0)
+        
+    h2.GetYaxis().SetAxisColor(ROOT.kWhite)
+    h2.GetYaxis().SetLabelColor(ROOT.kWhite)
+    h2.GetYaxis().SetTitleColor(ROOT.kWhite)
+
+    h2.GetZaxis().SetAxisColor(ROOT.kWhite)
+    h2.GetZaxis().SetLabelColor(ROOT.kWhite)
+    h2.GetZaxis().SetTitleColor(ROOT.kWhite)
+
+
 ##########################################
 
 def SetMyStyle():

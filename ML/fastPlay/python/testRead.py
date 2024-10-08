@@ -26,8 +26,8 @@ def main(argv):
                      'Corex' : [ [-18000], 2000],
                      'Corey' : [ [-25000], 2000]
                 }
-    Data = readData(infname, 0, verb=1000, debug = 1, restrictions = restrictions)
-    print(Data)
+    Data = readData(infname, 0, verb=1000, debug = -1, restrictions = {})#restrictions)
+    ###print(Data)
     
     return
 
