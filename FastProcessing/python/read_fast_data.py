@@ -43,6 +43,7 @@ def plotHistos(hTraces, hs, h2s):
 
     for h2 in h2s:
         c3.cd(h2s.index(h2)+1)
+        h2.SetStats(0)
         h2.Draw('colz')
 
     return [c1, c2, c3]
@@ -62,9 +63,9 @@ def main(argv):
         ROOT.gROOT.SetBatch(1)
 
     # zubr:
-    #infname = "/astroparticle/FAST/Simulations/ntels_1_core_in_fov_auger/ntels_1_core_in_fov_auger.root"
+    infname = "/astroparticle/FAST/Simulations/ntels_1_core_in_fov_auger/ntels_1_core_in_fov_auger.root"
     # JK:
-    infname='/scratch/FAST/sim/ntels_1_core_in_fov_auger.root'
+    #infname='/scratch/FAST/sim/ntels_1_core_in_fov_auger.root'
 
     infile = ROOT.TFile(infname, 'READ')
     tree = infile.Get('tree')
@@ -192,7 +193,7 @@ def main(argv):
     # PLOTTING            
     ROOT.gStyle.SetPalette(1)
     hs = [ hAzimuth, hZenith, hEnergy, hXmax, hCorex, hCorey ]
-    h2s = [h2, hXmaxVsEnergy]
+    h2s = [h2, hXmaxVsEnergy, hCoreYvsCoreX, hAzimuthVsZenith]
     cs = plotHistos(hTraces, hs, h2s)
     cans.extend(cs)
     for can in cans:
