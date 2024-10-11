@@ -26,7 +26,8 @@ def plotMetaHistos(MetaData):
     # Create a figure with 1 row and 2 columns of subplots
     plt.figure(figsize=(9, 9))
 
-    alpha = 0.7
+    alpha = min(max(0.01, 100./len(logE)), 1)
+    #alpha = 1000./len(logE)
     
 
     print('Lengths to plot')
@@ -153,19 +154,30 @@ def readData(infname, i1 = 0, i2 = -1, **kwargs):
                     
                     # end of requirements check; NOT TESTED YET
                 if debug > 0:
-                    print('ACCEPTING skipping event based on required variables')
-                
-                # here store event till now:  
-                Data.append(  [ metaData, Traces ]  )
-                MetaData.append(metaData)
+                    print('ACCEPTING event based on required variables')
+                if len(metaData) < 1:
+                    continue
+                # here store event till now:
+                if len(Traces) > 0:
+                    Data.append(  [ metaData, Traces ]  )
+                    MetaData.append(metaData)
+                else:
+                    print('Oooops, have got nontrivial metadata, but no corresponding traces! ')
+                    metaData = {}
+                    Traces = []
+                    continue
                 if debug == -1:
                     print('dimensions: meta: {}, traces: {} -- '.format(len(metaData), len(Traces)), end = '' )
-                    print(' ... ', metaData)
+                    #print(' ... ', metaData)
                     for trace in Traces:
                         print('{} '.format(len(trace)), end='')
                     print()
                 metaData = {}
+                Traces = []
+                continue
 
+            # done if the line was metadata;)
+            
             # prepare for saving traces for the next event:
             Traces = []
             ievt = ievt + 1

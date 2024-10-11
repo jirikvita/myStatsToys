@@ -63,9 +63,9 @@ def main(argv):
         ROOT.gROOT.SetBatch(1)
 
     # zubr:
-    infname = "/astroparticle/FAST/Simulations/ntels_1_core_in_fov_auger/ntels_1_core_in_fov_auger.root"
+    #infname = "/astroparticle/FAST/Simulations/ntels_1_core_in_fov_auger/ntels_1_core_in_fov_auger.root"
     # JK:
-    #infname='/scratch/FAST/sim/ntels_1_core_in_fov_auger.root'
+    infname='/scratch/FAST/sim/ntels_1_core_in_fov_auger.root'
 
     infile = ROOT.TFile(infname, 'READ')
     tree = infile.Get('tree')
@@ -156,6 +156,8 @@ def main(argv):
         # --- information from PMTs ---
         pixels = event.GetPixels()
         # print(f"entry, pixel size: {entry}, {len(pixels)}")
+        if len(pixels) < 1:
+            continue
         outfile.write(f'#Evt={entry},A={A},logE={energy},Xmax={xmax},Azimuth={azimuth},Zenith={zenith},Corex={corex},Corey={corey}\n')
         for pixel in pixels:
             absid = pixel.GetAbsPixelId()
@@ -178,7 +180,7 @@ def main(argv):
         for ipixel in range(0,len(pixels)):
             bin2 = hTraces[ipixel].GetXaxis().FindBin(1000.)
             #print(bin2)
-            outfile.write(f'{ipixel}: ')
+            outfile.write(f'{ipixel}/{entry}: ')
             for ibin in range(1, bin2):
                 outfile.write('{:f}'.format(hTraces[ipixel].GetBinContent(ibin)))
                 if ibin < bin2-1:

@@ -71,8 +71,8 @@ def plotBias(predictedY,trueY, **kwargs):
         ePred,xmaxPred = y[0], y[1]
         eTrue,xmaxTrue = ytrue[0], ytrue[1]
         #print('-------------------------------------------')
-        print(f'E:    true: {eTrue:10.1f}    predicted: {ePred:10.1f}')
-        print(f'Xmax: true: {xmaxTrue:10.1f} predicted: {xmaxPred:10.1f}')
+        #print(f'E:    true: {eTrue:10.1f}    predicted: {ePred:10.1f}')
+        #print(f'Xmax: true: {xmaxTrue:10.1f} predicted: {xmaxPred:10.1f}')
         de = ePred - eTrue
         dxmax = xmaxPred - xmaxTrue
         #eBias.append(de)
@@ -191,14 +191,18 @@ def ReadAndParseData(infname, i1, i2, **kwargs):
 def main(argv):
 
     # central vals and sigma around them to accept
-    restrictions = { #'logE' : [ [18, 19, 20], 0.25],
-                    #'Xmax' : [ [750], 100],
-                     'Azimuth' : [ [0.], 180],
-                     'Zenith' : [ [45.], 45],
-                     'Corex' : [ [-18000], 7000],
-                     'Corey' : [ [-22000], 7000]
-                    }
+    restrictions1 = { #'logE' : [ [18, 19, 20], 0.25],
+        #'Xmax' : [ [750], 100],
+        'Azimuth' : [ [125.], 40],
+        'Zenith' : [ [80.], 40.],
+        'Corex' : [ [-18000], 8000],
+        'Corey' : [ [-18000], 8000]
+    }
 
+    # HACK!
+    restrictions = {}
+    restrictions = restrictions1
+    
     #infname = '/home/qitek/work/github/myStatsToys/FastProcessing/ascii_5k.txt'
     infname = '/home/qitek/work/github/myStatsToys/FastProcessing/ascii_full.txt'
 
@@ -206,7 +210,7 @@ def main(argv):
     i2 = -1
     debug = 0
     verb = 10000
-    X, Y = ReadAndParseData(infname, i1, i2, debug=debug, verb=verb, skip='odd', restrictions = restrictions)
+    X, Y = ReadAndParseData(infname, i1, i2, debug=debug, verb=verb, plotmetahistos = True, skip='odd', restrictions = restrictions)
 
     """
     Recurrent Neural Networks (RNNs) & LSTMs for Sequential Data
@@ -320,7 +324,7 @@ def main(argv):
     # Predict for a new input
     #i3 = i2 + 10000
     print('Reading test events...')
-    testX, trueY = ReadAndParseData(infname, i1, i2, verb = 10000, debug=0, skip='even', restrictions = {})
+    testX, trueY = ReadAndParseData(infname, i1, i2, verb = 10000, debug=0, plotmetahistos = True, skip='even', restrictions = restrictions)
     print(f'Read test events  : {len(testX)}')
     
     testX_reshaped = np.expand_dims(testX, axis=1)
