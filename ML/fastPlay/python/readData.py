@@ -194,8 +194,9 @@ def readData(infname, i1 = 0, i2 = -1, **kwargs):
             
             tokens = line.split(',')
             metaData = parseMetaData(tokens)
+            evt = metaData['#Evt']
             if ievt % verb == 0:
-                print(f'Reading event {ievt}, read so far: {len(Data)}')
+                print(f'Reading event {ievt} ID {evt}, read so far: {len(Data)}')
             continue
 
         if len(metaData) == 0:
@@ -206,7 +207,18 @@ def readData(infname, i1 = 0, i2 = -1, **kwargs):
         if ':' in line and ievt >= i1:
             tokens = line.split(':')
             if len(tokens) > 1:
-                spix,xtrace = tokens[0], tokens[1]
+                spixevt,xtrace = tokens[0], tokens[1]
+                #print(f'spixevt: "{spixevt}"')
+                spix = spixevt.split('/')[0]
+                sevt = spixevt.split('/')[1]
+                thisevt = int(sevt)
+                
+                if thisevt != evt:
+                    print(f'ERROR! Non-matching metadata evt {evt} and as in pixel trace: {thisevt}')
+                    metaData = {}
+                    Traces = []
+                    continue
+                
                 strace = xtrace.replace(' ', '').split(',')
                 if debug > 3:
                     print(f'Processing pixel id {ipix}')

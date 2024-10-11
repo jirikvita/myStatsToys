@@ -4,13 +4,10 @@
 
 # https://stackoverflow.com/questions/75608323/how-do-i-solve-error-externally-managed-environment-every-time-i-use-pip-3
 
-# ChatGPT, modified:
+# ChatGPT, modified.
 
 # TODO:
-# for events read:
-# x,y map
-# E, xmax map
-# etc
+# extract features separately from each pixel's trace before concating!
 
 import os, sys
 
@@ -191,12 +188,12 @@ def ReadAndParseData(infname, i1, i2, **kwargs):
 def main(argv):
 
     # central vals and sigma around them to accept
-    restrictions1 = { #'logE' : [ [18, 19, 20], 0.25],
+    restrictions1 = { 'logE' : [ [17, 18, 19, 20], 0.25],
         #'Xmax' : [ [750], 100],
-        'Azimuth' : [ [125.], 40],
-        'Zenith' : [ [80.], 40.],
-        'Corex' : [ [-18000], 8000],
-        'Corey' : [ [-18000], 8000]
+        #'Azimuth' : [ [125.], 40],
+        #'Zenith' : [ [80.], 40.],
+        #'Corex' : [ [-18000], 8000],
+        #'Corey' : [ [-18000], 8000]
     }
 
     # HACK!
@@ -204,7 +201,8 @@ def main(argv):
     restrictions = restrictions1
     
     #infname = '/home/qitek/work/github/myStatsToys/FastProcessing/ascii_5k.txt'
-    infname = '/home/qitek/work/github/myStatsToys/FastProcessing/ascii_full.txt'
+    #infname = '/home/qitek/work/github/myStatsToys/FastProcessing/ascii_full.txt'
+    infname = '/home/qitek/work/github/myStatsToys/FastProcessing/ascii.txt'
 
     i1 = 0
     i2 = -1
