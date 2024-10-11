@@ -20,14 +20,15 @@ def main(argv):
     infname = '/home/qitek/work/github/myStatsToys/FastProcessing/ascii_full.txt'
     
     # central vals and sigma around them to accept
-    restrictions = { #'logE' : [ [17.5, 18, 19, 20], 0.25],
-                     #'Xmax' : [ [390], 250 ],
-                     'Azimuth' : [ [100.], 100],
-                     'Zenith' : [ [40.], 50],
-                     'Corex' : [ [-20000], 10000],
-                     'Corey' : [ [-15000], 10000]
-                }
-    Data = readData(infname, 0, verb=1000, debug = 1, restrictions = {})#restrictions)
+    restrictions = { 'logE' : [ [17., 18, 19, 20], 0.20],
+                     'Xmax' : [ [400, 600, 800], 50 ],
+                     'Azimuth' : [ [0.], 45],
+                     'Zenith' : [ [45.], 25],
+                     'Corex' : [ [-18000, -15000], 1000],
+                     'Corey' : [ [-22000, -18000], 1000]
+                    }
+    
+    Data = readData(infname, 0, -1, verb=1000, debug = 0, plotmetahistos = True, restrictions = restrictions)
     ###print(Data)
     print(f'Read {len(Data)} data lines.')
     return

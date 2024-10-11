@@ -71,8 +71,8 @@ def plotBias(predictedY,trueY, **kwargs):
         ePred,xmaxPred = y[0], y[1]
         eTrue,xmaxTrue = ytrue[0], ytrue[1]
         #print('-------------------------------------------')
-        #print(f'E:    true: {eTrue:10.1f}    predicted: {ePred:10.1f}')
-        #print(f'Xmax: true: {xmaxTrue:10.1f} predicted: {xmaxPred:10.1f}')
+        print(f'E:    true: {eTrue:10.1f}    predicted: {ePred:10.1f}')
+        print(f'Xmax: true: {xmaxTrue:10.1f} predicted: {xmaxPred:10.1f}')
         de = ePred - eTrue
         dxmax = xmaxPred - xmaxTrue
         #eBias.append(de)
@@ -193,10 +193,10 @@ def main(argv):
     # central vals and sigma around them to accept
     restrictions = { #'logE' : [ [18, 19, 20], 0.25],
                     #'Xmax' : [ [750], 100],
-                     'Azimuth' : [ [130], 30],
-                     'Zenith' : [ [80], 30],
-                     'Corex' : [ [-18000], 5000],
-                     'Corey' : [ [-12000], 5000]
+                     'Azimuth' : [ [0.], 180],
+                     'Zenith' : [ [45.], 45],
+                     'Corex' : [ [-18000], 7000],
+                     'Corey' : [ [-22000], 7000]
                     }
 
     #infname = '/home/qitek/work/github/myStatsToys/FastProcessing/ascii_5k.txt'
@@ -206,7 +206,7 @@ def main(argv):
     i2 = -1
     debug = 0
     verb = 10000
-    X, Y = ReadAndParseData(infname, i1, i2, debug=debug, verb=verb, skip='odd', restrictions = {})#restrictions)
+    X, Y = ReadAndParseData(infname, i1, i2, debug=debug, verb=verb, skip='odd', restrictions = restrictions)
 
     """
     Recurrent Neural Networks (RNNs) & LSTMs for Sequential Data
