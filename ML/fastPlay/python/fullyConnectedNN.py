@@ -8,6 +8,7 @@
 
 # TODO:
 # extract features separately from each pixel's trace before concating!
+# use only traces with signal above some level!
 
 import os, sys
 
@@ -17,6 +18,9 @@ from tensorflow.keras.layers import Dense, BatchNormalization
 import numpy as np
 from tensorflow.keras.optimizers import Adam, SGD
 from tensorflow.keras.initializers import RandomNormal, HeNormal
+
+import pandas as pd
+#import seaborn as sns
 
 
 from tensorflow.keras.layers import LSTM, Embedding, Input
@@ -60,10 +64,13 @@ for layer in model.layers:
 def plotBias(predictedY,trueY, **kwargs):
     eBias = []
     xmaxBias = []
+
     ePreds = []
     eTrues = []
+
     xmaxPreds = []
     xmaxTrues = []
+    
     for y,ytrue in zip(predictedY,trueY):
         ePred,xmaxPred = y[0], y[1]
         eTrue,xmaxTrue = ytrue[0], ytrue[1]
@@ -82,17 +89,34 @@ def plotBias(predictedY,trueY, **kwargs):
         xmaxPreds.append(xmaxPred)
         xmaxTrues.append(xmaxTrue)
 
+
+    df = pd.DataFrame({
+        'eTrue': eTrues,
+        'eBias': eBias,
+        'ePred': ePreds,
+        'xmaxTrue': xmaxTrues,
+        'xmaxBias' : xmaxBias,
+        'xmaxPred' : xmaxPreds 
+    })
+    #cut_bins = [-5, -0.1, 0.1, 5]
+    #df['EbCuts'] = pd.cut(df['eBias'], bins=cut_bins, labels=['Low', 'Cenral', 'High'])
+    #df['XbCuts'] = pd.cut(df['xmaxBias'], bins=cut_bins, labels=['Low', 'Cenral', 'High'])
+    delta = 0.05
+    df_EbCuts = df[ (df['eBias']    > -delta) & (df['eBias']    < delta) ]
+    df_XbCuts = df[ (df['xmaxBias'] > -delta) & (df['xmaxBias'] < delta) ]
+    
+    
     # Create a figure with 1 row and 2 columns of subplots
-    plt.figure(figsize=(9, 9))
+    plt.figure(figsize=(12, 9))
     
     # First subplot (left)
-    plt.subplot(2, 2, 1)  # 1 row, 2 columns, 1st subplot
+    plt.subplot(2, 3, 1)  # 1 row, 2 columns, 1st subplot
     plt.hist(eBias, bins=25, color='red', alpha=0.7)
     #plt.title('logE bias')
     plt.xlabel(r'logE: (predicted-true)/true')
     
     # Second subplot (right)
-    plt.subplot(2, 2, 2)  # 1 row, 2 columns, 2nd subplot
+    plt.subplot(2, 3, 4)  # 1 row, 2 columns, 2nd subplot
     plt.hist(xmaxBias, bins=25, color='blue', alpha=0.7)
     #plt.title('Xmax bias')
     plt.xlabel(r'$X_{max}$: (predicted-true)/true')
@@ -101,7 +125,7 @@ def plotBias(predictedY,trueY, **kwargs):
     plt.subplots_adjust(bottom=0.1)
     plt.subplots_adjust(left=0.1)
 
-    plt.subplot(2, 2, 3)
+    plt.subplot(2, 3, 2)
     plt.scatter(eTrues, ePreds, c='red', s=5, alpha = 0.01)
     plt.xlabel('true logE')
     plt.ylabel('predicted logE')
@@ -114,7 +138,7 @@ def plotBias(predictedY,trueY, **kwargs):
     corre = np.corrcoef(eTrues, ePreds)
     print(f'E correlation factor: {corre}')
     
-    plt.subplot(2, 2, 4)
+    plt.subplot(2, 3, 5)
     plt.scatter(xmaxTrues, xmaxPreds, c='blue', s=5, alpha = 0.01)
     plt.xlabel(r'true $X_{max}$')
     plt.ylabel(r'predicted $X_{max}$')
@@ -134,6 +158,22 @@ def plotBias(predictedY,trueY, **kwargs):
         tag = kwargs['tag']
     plt.savefig(f'biases{tag}.png')
     plt.savefig(f'biases{tag}.pdf')
+
+    plt.subplot(2, 3, 3)
+    plt.scatter(df_XbCuts['eTrue'], df_XbCuts['ePred'], c='red', s=5, alpha = 0.01)
+    #plt.colorbar(label='Bins')
+    plt.xlim(16, 21)
+    plt.ylim(16, 21)
+    plt.title('logE scatter in central Xmax Bias')
+
+    plt.subplot(2, 3, 6)
+    plt.scatter(df_EbCuts['xmaxTrue'], df_EbCuts['xmaxPred'], c='blue', s=5, alpha = 0.01)
+    #plt.colorbar(label='Bins')
+    plt.xlim(150, 1200)
+    plt.ylim(150, 1200)
+    plt.title('Xmax scatter in central logE Bias')
+    
+    
     plt.show()
     
 ##########################################
@@ -187,6 +227,9 @@ def ReadAndParseData(infname, i1, i2, **kwargs):
 ##########################################
 def main(argv):
 
+    # min. value of the maximum amplitude over all traces:
+    minSignal = 10.
+    
     # central vals and sigma around them to accept
     restrictions1 = { 'logE' : [ [17, 18, 19, 20], 0.25],
         #'Xmax' : [ [750], 100],
@@ -198,7 +241,7 @@ def main(argv):
 
     # HACK!
     restrictions = {}
-    restrictions = restrictions1
+    #restrictions = restrictions1
     
     #infname = '/home/qitek/work/github/myStatsToys/FastProcessing/ascii_5k.txt'
     #infname = '/home/qitek/work/github/myStatsToys/FastProcessing/ascii_full.txt'
@@ -208,7 +251,7 @@ def main(argv):
     i2 = -1
     debug = 0
     verb = 10000
-    X, Y = ReadAndParseData(infname, i1, i2, debug=debug, verb=verb, plotmetahistos = True, skip='odd', restrictions = restrictions)
+    X, Y = ReadAndParseData(infname, i1, i2, debug=debug, verb=verb, plotmetahistos = True, skip='odd', minSignal = minSignal, restrictions = restrictions)
 
     """
     Recurrent Neural Networks (RNNs) & LSTMs for Sequential Data
@@ -322,7 +365,7 @@ def main(argv):
     # Predict for a new input
     #i3 = i2 + 10000
     print('Reading test events...')
-    testX, trueY = ReadAndParseData(infname, i1, i2, verb = 10000, debug=0, plotmetahistos = True, skip='even', restrictions = restrictions)
+    testX, trueY = ReadAndParseData(infname, i1, i2, verb = 10000, debug=0, plotmetahistos = True, skip='even', minSignal = minSignal, restrictions = restrictions)
     print(f'Read test events  : {len(testX)}')
     
     testX_reshaped = np.expand_dims(testX, axis=1)

@@ -6,6 +6,14 @@ import matplotlib.pyplot as plt
 
 
 #####################################################################
+def passedMinSignal(Traces, minSignal):
+    maxs = []
+    for trace in Traces:
+        maxs.append(max(trace))
+    Max = max(maxs)
+    return Max >= minSignal
+
+#####################################################################
 def plotMetaHistos(MetaData):
 
     logE = []
@@ -90,7 +98,9 @@ def readData(infname, i1 = 0, i2 = -1, **kwargs):
     plotmetahistos = False
     if 'plotmetahistos' in kwargs:
         plotmetahistos = kwargs['plotmetahistos']
-        
+    minSignal = -1
+    if 'minSignal' in kwargs:
+        minSignal = kwargs['minSignal']
         
     print('debug, verb: ', debug, verb)
 
@@ -158,11 +168,14 @@ def readData(infname, i1 = 0, i2 = -1, **kwargs):
                 if len(metaData) < 1:
                     continue
                 # here store event till now:
-                if len(Traces) > 0:
+                passMinSignal = True
+                if minSignal > 0:
+                    passMinSignal = passedMinSignal(Traces, minSignal) 
+                if len(Traces) > 0 and passMinSignal:
                     Data.append(  [ metaData, Traces ]  )
                     MetaData.append(metaData)
                 else:
-                    print('Oooops, have got nontrivial metadata, but no corresponding traces! ')
+                    #print('Oooops, have got nontrivial metadata, but no corresponding traces! ')
                     metaData = {}
                     Traces = []
                     continue
