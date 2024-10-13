@@ -156,8 +156,6 @@ def plotBias(predictedY,trueY, **kwargs):
     tag = ''
     if 'tag' in kwargs:
         tag = kwargs['tag']
-    plt.savefig(f'biases{tag}.png')
-    plt.savefig(f'biases{tag}.pdf')
 
     plt.subplot(2, 3, 3)
     plt.scatter(df_XbCuts['eTrue'], df_XbCuts['ePred'], c='red', s=5, alpha = 0.01)
@@ -173,7 +171,9 @@ def plotBias(predictedY,trueY, **kwargs):
     plt.ylim(150, 1200)
     plt.title('Xmax scatter in central logE Bias')
     
-    
+    plt.savefig(f'biases{tag}.png')
+    plt.savefig(f'biases{tag}.pdf')
+
     plt.show()
     
 ##########################################
