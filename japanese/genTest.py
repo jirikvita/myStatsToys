@@ -81,14 +81,46 @@ hiragana = { 'a' : '\u3042', 'i' : '\u3044',  'u' : '\u3046', 'e' : '\u3048', 'o
 
 
 # https://en.wikipedia.org/wiki/Katakana_(Unicode_block)
-# katakana {
-# }
+katakana = {
+
+             'a' : '\u30A2', 'i' : '\u30A4',  'u' : '\u30A6', 'e' : '\u30A8', 'o' : '\u30AA',
+             
+             'ka' : '\u30AB', 'ki' : '\u30AD', 'ku' : '\u30AF', 'ke' : '\u30B1', 'ko' : '\u30B3',
+             'sa' : '\u30B5', 'shi' : '\u30B7', 'su' : '\u30B9', 'se' : '\u30BB', 'so' : '\u30BD',
+             'ta' : '\u30BF', 'chi' : '\u30C1', 'tsu' : '\u30C4', 'te' : '\u30C6', 'to' : '\u30C8',
+             'na' : '\u30CA', 'ni' : '\u30CB', 'nu' : '\u30CC', 'ne' : '\u30CD', 'no' : '\u30CE',
+             'ha' : '\u30CF', 'hi' : '\u30D2', 'fu' : '\u30D5', 'he' : '\u30D8', 'ho' : '\u30DB',
+
+             'ma' : '\u30DE', 'mi' : '\u30DF', 'mu' : '\u30E0', 'me' : '\u30E1', 'mo' : '\u30E2',
+             'ya' : '\u30E4', 'yu' : '\u30E6', 'yo' : '\u30E8',
+             
+             'ra' : '\u30E9', 'ri' : '\u30EA', 'ru' : '\u30EB', 're' : '\u30EC', 'ro' : '\u30ED',
+             'wa' : '\u30EF', 'O' : '\u30F2', 'n' : '\u30F3',
+             
+             'ga' : '\u30AC', 'gi' : '\u30AE', 'gu' : '\u30B0', 'ge' : '\u30B2', 'go' : '\u30B4',
+             'za' : '\u30B6', 'ji' : '\u30B8', 'zu' : '\u30BA', 'ze' : '\u30BC', 'zo' : '\u30BE',
+             'da' : '\u30C0', 'Ji' : '\u30C2', 'Zu' : '\u30C5', 'de' : '\u30C7', 'do' : '\u30C9',
+
+             'ba' : '\u30D0', 'bi' : '\u30D3', 'bu' : '\u30D6', 'be' : '\u30D9', 'bo' : '\u30DC',
+             'pa' : '\u30D1', 'pi' : '\u30D4', 'pu' : '\u30D7', 'pe' : '\u30DA', 'po' : '\u30DD',
+
+             'kya' : '\u30AD\u30E3', 'kyu' : '\u30AD\u30E5', 'kyo' : '\u30AD\u30E7',
+             'sya' : '\u30B7\u30E3', 'syu' : '\u30B7\u30E5', 'syo' : '\u30B7\u30E7',
+             'cya' : '\u30C1\u30E3', 'cyu' : '\u30C1\u30E5', 'cyo' : '\u30C1\u30E7',
+             'nya' : '\u30CB\u30E3', 'nyu' : '\u30CB\u30E5', 'nyo' : '\u30CB\u30E7',
+             'hya' : '\u30D2\u30E3', 'hyu' : '\u30D2\u30E5', 'hyo' : '\u30D2\u30E7',
+             'gya' : '\u30AE\u30E3', 'gyu' : '\u30AE\u30E5', 'gyo' : '\u30AE\u30E7',
+             'ja'  : '\u30B8\u30E3', 'ju'  : '\u30B8\u30E5', 'jo'  : '\u30B8\u30E7',
+             'bya' : '\u30D3\u30E3', 'byu' : '\u30D3\u30E5', 'byo' : '\u30D3\u30E7',
+             'pya' : '\u30D4\u30E3', 'pyu' : '\u30D4\u30E5', 'pyo' : '\u30D4\u30E7',
+    
+}
 
 ###########################################################
 
-def find_key(alphabet, val):
-    for key in alphabet:
-        if alphabet[key] == val:
+def find_key(syllabet, val):
+    for key in syllabet:
+        if syllabet[key] == val:
             return key
     return None
 
@@ -113,9 +145,9 @@ def wait_for_key():
         termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
 
 ###########################################################
-def checkUniqUnicode(hiragana):
+def checkUniqUnicode(syllabet):
     vals = {}
-    for key,val in hiragana.items():
+    for key,val in syllabet.items():
         if not val in vals:
             vals[val] = 1
         else:
@@ -141,10 +173,10 @@ def printTestLines(TestLines):
     return
 ###########################################################
            
-def printSolutions(Solutions, alphabet):
+def printSolutions(Solutions, syllabet):
     for solution in Solutions:
         for syll in solution:
-            key = find_key(alphabet, syll)
+            key = find_key(syllabet, syll)
             if syllabs.index(key) > 70:
                 print(f'{syll:4}', end='')
             else:
@@ -160,9 +192,9 @@ def printTestLine(testline):
     return
 
 ###########################################################
-def printSolution(solution, alphabet):
+def printSolution(solution, syllabet):
     for syll in solution:
-        key = find_key(alphabet, syll)
+        key = find_key(syllabet, syll)
         if syllabs.index(key) > 70:
             print(f'{syll:4}', end='')
         else:
@@ -170,7 +202,7 @@ def printSolution(solution, alphabet):
     return
 
 ###########################################################
-def getTest(syllabs, alphabet, doPrintBatch = 0, doReverse = 0, indent = 8):
+def getTest(syllabs, syllabet, doPrintBatch = 0, doReverse = 0, indent = 8):
     used = {}
     for syl in syllabs:
         used[syl] = False
@@ -210,7 +242,7 @@ def getTest(syllabs, alphabet, doPrintBatch = 0, doReverse = 0, indent = 8):
     for syl in toTest:
         n = n + 1
         endl = ' '
-        solution.append(f'{alphabet[syl]}')
+        solution.append(f'{syllabet[syl]}')
         if n % indent == 0:
             endl = '\n'
             Solutions.append(solution)
@@ -228,14 +260,14 @@ def getTest(syllabs, alphabet, doPrintBatch = 0, doReverse = 0, indent = 8):
         if not doReverse:
             printTestLines(TestLines)
         else:
-            printSolutions(Solutions, alphabet)
+            printSolutions(Solutions, syllabet)
         print('------------------------------------------------')
         print('Hit a key for solution -- when ready! ;-)')
         wait_for_key()
         #print('Solution:')
         print('------------------------------------------------')
         if not doReverse:
-            printSolutions(Solutions, alphabet)
+            printSolutions(Solutions, syllabet)
         else:
             printTestLines(TestLines)
         print('------------------------------------------------')
@@ -246,11 +278,11 @@ def getTest(syllabs, alphabet, doPrintBatch = 0, doReverse = 0, indent = 8):
             if not doReverse:
                 printTestLine(testline)
             else:
-                printSolution(solution, alphabet)
+                printSolution(solution, syllabet)
                 print()
             wait_for_key()
             if not doReverse:
-                printSolution(solution, alphabet)
+                printSolution(solution, syllabet)
                 print('\n-----------------------------------------------------')
             else:
                 printTestLine(testline)
@@ -265,28 +297,48 @@ def main(argv):
 
     if '-h' in argv:
         print('Usage: ')
-        print(f'argv[0] [PrintAllAtOnce=0/1] [reverse=0/1]')
+        print(f'argv[0] [syllabete=h/k=hiragana/katakana] [PrintAllAtOnce=0/1] [reverse=0/1]')
         return
-        
-    checkUniqUnicode(hiragana)
 
-    doPrintBatch = 0
+    
+    askedFor = 'hiragana'
     if len(argv) > 1:
+        askedFor = ''
         try:
-            doPrintBatch = int(argv[1])
+            askedFor = argv[1]
+            print(f'OK, using custom syllabet {askedFor}')
+        except:
+            # this should bever happen;)
+            print('error getting user-defined syllabet to be examind from!')
+
+    doPrintBatch = 0    
+    if len(argv) > 2:
+        try:
+            doPrintBatch = int(argv[2])
             print(f'OK, using custom doPrintBatch={doPrintBatch}')
         except:
             print('error getting doPrintBatch as first command line argument')
 
     doReverse = 0
-    if len(argv) > 2:
+    if len(argv) > 3:
         try:
-            doReverse = int(argv[2])
+            doReverse = int(argv[3])
             print(f'OK, using custom doReverse={doReverse}')
         except:
             print('error getting doReverse as first command line argument')
-            
-    getTest(syllabs, hiragana, doPrintBatch, doReverse)
+
+    syllabet = {}
+    if askedFor == 'h' or askedFor == 'H' or askedFor == 'hiragana' or askedFor == 'Hiragana':
+        syllabet = hiragana
+    elif askedFor == 'k' or askedFor == 'K' or askedFor == 'katakana' or askedFor == 'Katakana':
+        syllabet = katakana
+    else:
+        print(f'Error determining the syllabete to be examined from! Should be h/k = hiragana/katakana; got "{askedFor}" instead.')
+        return 1
+
+    checkUniqUnicode(syllabet)
+
+    getTest(syllabs, syllabet, doPrintBatch, doReverse)
 
     return
 
