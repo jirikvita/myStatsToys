@@ -44,7 +44,7 @@ def main(argv):
         for hbase,bins in hbasenames.items():
             hname = f'{treename}_{hbase}'
             htitle = hname + f';{hbase};events;'
-            histos[treename][hbase] = ROOT.TH1D(hname, htitle, bins[0], bins[1], bins[2])
+            histos[treename][hbase] = ROOT.TH1D(hname, htitle, 2*bins[0], bins[1], bins[2])
             histos[treename][hbase].SetFillColor(bins[3])
             histos[treename][hbase].SetFillStyle(1111)
 
@@ -83,7 +83,7 @@ def main(argv):
     for treename in treenames:
         canname = f'canvas'
         print(f'Making canvas {canname}')
-        can = ROOT.TCanvas(canname, canname)
+        can = ROOT.TCanvas(canname, canname, 0, 0, 1200, 800)
         can.Divide(len(hbasenames),1)
         cans.append(can)
         i = 0
@@ -96,7 +96,7 @@ def main(argv):
 
 
     canname = f'can2d'
-    can2d = ROOT.TCanvas(canname, canname, 0, 0, 1200, 800)
+    can2d = ROOT.TCanvas(canname, canname, 100, 100, 1200, 800)
     can2d.Divide(2,1)
     cans.append(can2d)
     #ROOT.gStyle.SetPalette(ROOT.kDarkBodyRadiator)
