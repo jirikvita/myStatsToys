@@ -1,10 +1,16 @@
 #!/usr/bin/python
 
 import ROOT
-    
+
+##########################################
+def makeDarkLegend(leg):
+    #h2.SetStats(0)
+        
+    leg.SetTextColor(ROOT.kWhite)
+
 ##########################################
 def makeWhiteAxes(h2):
-    h2.SetStats(0)
+    #h2.SetStats(0)
         
     h2.GetYaxis().SetAxisColor(ROOT.kWhite)
     h2.GetYaxis().SetLabelColor(ROOT.kWhite)
