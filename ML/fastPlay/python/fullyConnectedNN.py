@@ -309,7 +309,7 @@ def main(argv):
     # activations: relu, sigmoid, linear
     # kernel_initializer=RandomNormal(mean=0.0, stddev=0.05), bias_initializer='zeros'
     #, input_shape=(32,)),
-
+    
     N1, N2, N3, N4 = 256, 128, 64, 32
     model.add(Dense(N1, input_dim=Nfeat, activation='relu'))  # Input layer and first hidden layer
     model.add(BatchNormalization())                           # batch normalization of the output
