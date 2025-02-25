@@ -5,7 +5,7 @@ from airsim import *
 
 ##########################################
 
-def main(argv):
+def simulate(argv):
 
     dirs = ['png', 'pdf', 'root']
     for dir in dirs:
@@ -64,21 +64,9 @@ def main(argv):
     
     world.outfile.Close()
     
-    print(f'...Thanks for running {sys.argv[0]}')
-    print('...Returning and kiling oneself!')
-    print('...So long, and thanks for all the fish!')
-    os.system('killall -9 airsim.py')
+   
     return 0
 
 ###################################
 ###################################
 ###################################
-
-if __name__ == "__main__":
-    # execute only if run as a script"
-    main(sys.argv)
-    
-###################################
-###################################
-###################################
-
