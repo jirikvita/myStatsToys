@@ -5,7 +5,6 @@ from tkinter import messagebox
 
 from call_airsim import *
 
-
 ###################################
 def update_label():
     """Updates the label with the user's input."""
@@ -16,10 +15,11 @@ def update_label():
         label.config(text="Please enter a name!")
 
 ###################################
-def get_number():
+def get_logE():
     """Retrieves the selected number from the Spinbox and shows it."""
-    selected_number = spinbox.get()
-    messagebox.showinfo("Selected Number", f"You selected: {selected_number}")
+    selected_logE = spinbox.get()
+    # messagebox.showinfo("Selected log(E)", f"You selected: {selected_logE}")
+    return selected_logE
 
 ###################################
 def show_message():
@@ -48,7 +48,10 @@ def exit_app():
 ###################################
 def run_app():
     """Closes the application."""
-    simulate(sys.argv)
+    selected_logE = get_logE()
+    argv = [sys.argv[0]]
+    argv.append(selected_logE)
+    simulate(argv)
     return
 
     
@@ -83,14 +86,14 @@ def main(argv):
     btn_update = tk.Button(button_frame, text="Greet Me", command=update_label)
     btn_update.pack(side="left", padx=5)
 
-    btn_get_number = tk.Button(button_frame, text="Show Number", command=get_number)
-    btn_get_number.pack(side="left", padx=5)
+    btn_get_logE = tk.Button(button_frame, text="Show logE", command=get_logE)
+    btn_get_logE.pack(side="left", padx=5)
 
     # Numeric Input (Spinbox)
-    spinbox_label = tk.Label(root, text="Select a number:", font=("Arial", 12), bg="white")
+    spinbox_label = tk.Label(root, text="Select logE:", font=("Arial", 12), bg="white")
     spinbox_label.pack(pady=5)
 
-    spinbox = tk.Spinbox(root, from_=1, to=100, font=("Arial", 12), width=5)
+    spinbox = tk.Spinbox(root, from_=11, to=15, font=("Arial", 12), width=5)
     spinbox.pack(pady=5)
 
     # Toggle Checkbutton

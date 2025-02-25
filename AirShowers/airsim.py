@@ -75,7 +75,7 @@ class cworld():
         nb = 200
         x1 = 0
         x2 = 4000. # g/cm^2 #last.x*1.25
-        self.outfile = ROOT.TFile(rootdir + 'histos' + rtag + '.root', ropt)   
+        self.outfile = ROOT.TFile(rootdir + 'histos' + rtag + '_tmp.root', ropt)   
         self.h1Nx = ROOT.TH1D(hname, htitle, nb, x1, x2)
 
         E1, E2 = 20*gGeV, 1e6*gGeV
@@ -447,30 +447,37 @@ def DrawResults(world, particles, halfSteps):
 
 def processArgs(argv):
 
-    if len(sys.argv) > 1 and sys.argv[1] == '-h':
+    print(argv)
+    if len(argv) > 1 and argv[1] == '-h':
         print(f'Usage: {argv[0]} [E(GeV)=100GeV] [iteration=0] [batch=0] [draw=1]')
         return -1, 0, 0, 0
 
-    print(f'*** Running {sys.argv[0]}')
+    print(f'*** Running {argv[0]}')
     E = 500 # GeV
-    if len(sys.argv) > 1:
-        Ereq = int(sys.argv[1])
+    if len(argv) > 1:
+        Ereq = float(argv[1])
         #if Ereq <= 1000000 and Ereq >= 30:
-        print(f'Using custom energy             E: {Ereq} GeV')
         E = Ereq
+        if E < 21:
+            # assuming we got logE
+            E = pow(10, E - 9)
+        else:
+            # assuming we got E in GeV
+            E = Ereq
         #else:
         #    print(f'Wrong custom energy E={Ereq} GeV, using default E={E} GeV')
+        print(f'Using custom energy             E: {E} GeV')
 
     iteration = 0
-    if len(sys.argv) > 2:
-        req_iteration = int(sys.argv[2])
+    if len(argv) > 2:
+        req_iteration = int(argv[2])
         if req_iteration >= 0 and req_iteration < 1000:
             print(f'OK, using user-defined iteration : {req_iteration}')
             iteration = req_iteration
 
     gBatch = False
-    if len(sys.argv) > 3:
-        reqBatch = int(sys.argv[3])
+    if len(argv) > 3:
+        reqBatch = int(argv[3])
         if reqBatch > 0:
             print(f'OK, using user-defined batch mode: {reqBatch}')
             gBatch = True
@@ -479,8 +486,8 @@ def processArgs(argv):
         ROOT.gROOT.SetBatch(1)
 
     doDraw = True
-    if len(sys.argv) > 4:
-        reqDraw = int(sys.argv[4])
+    if len(argv) > 4:
+        reqDraw = int(argv[4])
         if reqDraw == 0:
             print(f'OK, using user-defined draw mode : {reqDraw}')
             doDraw = reqDraw
