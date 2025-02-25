@@ -12,7 +12,7 @@ for i in 100 1000 10000 100000 1000000 ; do
 	#if [ $i -gt 100000 ] ; then
 	#    draw=0
 	#fi
-	python3 ./airsim.py $i $j $batch $draw
+	python3 ./run_airsim.py $i $j $batch $draw
     done
 done
 
