@@ -106,7 +106,10 @@ def main(argv):
         addRandomGauss(h2, mu, sigma, a)
     
     h2.SetLineColor(ROOT.kCyan)
-    h2.SetLineWidth(2)
+    h2.SetMarkerColor(ROOT.kCyan)
+    h2.SetMarkerSize(1)
+    h2.SetMarkerStyle(20)
+    h2.SetLineWidth(1)
 
     x0 = 1.2
     x1,x2 = 0.7, 2.5
@@ -126,7 +129,7 @@ def main(argv):
     #h2.SetMinimum(0)
     #h2.SetMaximum(c + 5*A)
     h2.SetStats(0)
-    h2.Draw('hist e1')
+    h2.Draw('e1 x0')
     h2.Fit(fun, '', '', x1, x2)
     fun.Draw('same')
 

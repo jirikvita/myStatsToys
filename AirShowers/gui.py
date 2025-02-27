@@ -18,7 +18,7 @@ def update_label():
 def get_logE():
     """Retrieves the selected number from the Spinbox and shows it."""
     selected_logE = spinbox.get()
-    # messagebox.showinfo("Selected log(E)", f"You selected: {selected_logE}")
+    messagebox.showinfo("Selected log(E)", f"You selected: {selected_logE}")
     return selected_logE
 
 ###################################
@@ -132,7 +132,7 @@ if __name__ == "__main__":
     print(f'...Thanks for running {sys.argv[0]}')
     print('...Returning and kiling oneself!')
     print('...So long, and thanks for all the fish!')
-    os.system('killall -9 airsim.py')
+    os.system('killall -9 gui.py')
     
 ###################################
 ###################################

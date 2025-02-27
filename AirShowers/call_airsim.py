@@ -59,8 +59,8 @@ def simulate(argv):
     
     world.outfile.Write()
     
-    if doDraw and not gBatch:
-        ROOT.gApplication.Run()
+    #if doDraw and not gBatch:
+    #    ROOT.gApplication.Run()
     
     world.outfile.Close()
     
