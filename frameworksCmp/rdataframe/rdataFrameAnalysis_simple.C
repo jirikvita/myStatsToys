@@ -1,6 +1,7 @@
 
 // jk
 // using https://root.cern/doc/master/classROOT_1_1RDataFrame.html#crash-course
+// using WCTE test beam data 2023
 
 
 void rdataFrameAnalysis_simple(TString fname = "output/ntuple_000409.root")
