@@ -12,6 +12,10 @@ def makeDarkLegend(leg):
 def makeWhiteAxes(h2):
     #h2.SetStats(0)
         
+    h2.GetXaxis().SetAxisColor(ROOT.kWhite)
+    h2.GetXaxis().SetLabelColor(ROOT.kWhite)
+    h2.GetXaxis().SetTitleColor(ROOT.kWhite)
+
     h2.GetYaxis().SetAxisColor(ROOT.kWhite)
     h2.GetYaxis().SetLabelColor(ROOT.kWhite)
     h2.GetYaxis().SetTitleColor(ROOT.kWhite)
