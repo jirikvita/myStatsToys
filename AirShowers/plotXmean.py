@@ -53,7 +53,7 @@ def main(argv):
 
     Means = []
     for E in Es:
-        fname = f'root/histos_p_E{E}GeV.root'
+        fname = f'root/HighStats/histos_p_E{E}GeV.root'
         infile = None
         try:
             infile = ROOT.TFile(fname, 'read')

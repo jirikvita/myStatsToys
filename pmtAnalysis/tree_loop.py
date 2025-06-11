@@ -24,7 +24,11 @@ def ReadEntry(trs, i):
 ##########################################
 def main(argv):
 
-    fname = "KM66024.root"
+    if len(argv) < 2:
+        print(f'Usage: {argv[0]} rootfile.root')
+        return
+    
+    fname = argv[1] # "root_data/KM66024.root"
     rfile = ROOT.TFile(fname, 'read')
 
     treenames = [ 'singlephotons/pmtaf_tree'
@@ -39,10 +43,17 @@ def main(argv):
     ktime_over_threshold_ns = "time_over_threshold_ns"
     hbasenames = {  kenergy: [50, 250., 350., ROOT.kYellow], ktime_over_threshold_ns : [50, 0., 100., ROOT.kCyan] }
     histos = {}
+
+    hdir = 'histos/'
+    os.system(f'mkdir -p {hdir}')
+    outfname = f'{hdir}histos_' + fname.split('/')[-1]
+    outrfile = ROOT.TFile(outfname, 'recreate')
+
     for treename in treenames:
+        treebasename = treename.split('/')[-1]
         histos[treename] = {}
         for hbase,bins in hbasenames.items():
-            hname = f'{treename}_{hbase}'
+            hname = f'{treebasename}_{hbase}'
             htitle = hname + f';{hbase};events;'
             histos[treename][hbase] = ROOT.TH1D(hname, htitle, 2*bins[0], bins[1], bins[2])
             histos[treename][hbase].SetFillColor(bins[3])
@@ -66,9 +77,11 @@ def main(argv):
     print(histos2d)
     trees = InitTrees(rfile, treenames)
     Nevt = trees[refname].GetEntries()
+
     # HACK!!!
-    
     #Nevt = int (Nevt / 100.)
+
+    # Event loop
     for ievt in range(0,Nevt):
         if ievt % 10000 == 0: print(f'processing {ievt}/{Nevt}')
         ReadEntry(trees, ievt)
@@ -112,7 +125,9 @@ def main(argv):
             can.Print(can.GetName() + '.pdf')
         except:
             print('Error')
-        
+
+    outrfile.Write()
+    outrfile.Close()
     stuff.append(histos)
     ROOT.gApplication.Run()
     return

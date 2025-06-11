@@ -6,6 +6,7 @@
 
 # TODO
 # enable possibility of separate particle histograms
+# ...and no to keep particles in memory!
 # finish Xmax unc. in plotting
 
 import ROOT
