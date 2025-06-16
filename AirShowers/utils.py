@@ -12,12 +12,12 @@ from consts import *
 
 
 ##########################################
-def makeGrStyle(gr):
-    gr.SetMarkerColor(ROOT.kAzure-3)
+def makeGrStyle(gr, col = ROOT.kAzure-3):
+    gr.SetMarkerColor(col)
     gr.SetMarkerSize(1.5)
     gr.SetMarkerStyle(20)
     gr.SetLineColor(gr.GetMarkerColor())
-    gr.SetLineWidth(2)
+    gr.SetLineWidth(1)
     gr.SetLineStyle(1)
     
 ##########################################

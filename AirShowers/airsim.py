@@ -103,34 +103,36 @@ class cpart:
         #self.gen = gen # generation
         #self.interacted = interacted
         
-    def Draw(self, world, halfSteps, verbose = 0):
-        if verbose:
-            print(f'Drawing particle {self.pid} of generation {self.gen}...')
-        x0, y0, SFy = world.x0, world.y0, world.SFy
-        x1 = self.xend
-        y1 = self.yend
-        if x1 == None:
-            # unterminated particle, possible end of shower
-            if halfSteps:
-                x1 = min(self.x + gLength[self.pid], world.x2)
-            else:
-                x1 = min(self.x + exponential(gLength[self.pid]), world.x2)
+##########################################
 
-        #X1, Y1, X2, Y2 = x0 + xscale*self.x, y0 + yscale*self.y, x0 + xscale*x1, y0 + yscale*y1
-        X1, Y1, X2, Y2 = x0 + self.x, y0 + self.y, x0 + x1, y0 + y1
-        if verbose:
-            print(f'   ...coors: {X1:1.3f}, {Y1:1.3f}, {X2:1.3f}, {Y2:1.3f}')
-        line = ROOT.TLine(X1, Y1, X2, Y2)
-        #line.SetNDC()
-        alpha =  0.2 # * (world.maxgen - self.gen ) / world.maxgen + 0.1
-        line.SetLineColorAlpha(gcol[self.pid], alpha)
-        line.SetLineStyle(glst[self.pid])
-        line.SetLineWidth(glwd[self.pid])
-        #if verbose:
-        #    print('...drawing...')
-        line.Draw()
-        return line
-    
+def DrawParticle(part, world, halfSteps, verbose = 0):
+    if verbose:
+        print(f'Drawing particle {part.pid} of generation {part.gen}...')
+    x0, y0, SFy = world.x0, world.y0, world.SFy
+    x1 = part.xend
+    y1 = part.yend
+    if x1 == None:
+        # unterminated particle, possible end of shower
+        if halfSteps:
+            x1 = min(part.x + gLength[part.pid], world.x2)
+        else:
+            x1 = min(part.x + exponential(gLength[part.pid]), world.x2)
+
+    #X1, Y1, X2, Y2 = x0 + xscale*part.x, y0 + yscale*part.y, x0 + xscale*x1, y0 + yscale*y1
+    X1, Y1, X2, Y2 = x0 + part.x, y0 + part.y, x0 + x1, y0 + y1
+    if verbose:
+        print(f'   ...coors: {X1:1.3f}, {Y1:1.3f}, {X2:1.3f}, {Y2:1.3f}')
+    line = ROOT.TLine(X1, Y1, X2, Y2)
+    #line.SetNDC()
+    alpha =  0.2 # * (world.maxgen - part.gen ) / world.maxgen + 0.1
+    line.SetLineColorAlpha(gcol[part.pid], alpha)
+    line.SetLineStyle(glst[part.pid])
+    line.SetLineWidth(glwd[part.pid])
+    #if verbose:
+    #    print('...drawing...')
+    line.Draw()
+    return line
+
 
 ##########################################
 #def ChooseNextInteractionPoint(part):
@@ -165,8 +167,8 @@ def genPions(pid, E, gamma, length, x, y, world):
             protonsToMake = protonsToMake - 1
         Epi = ECh / nCharged # to randomize later
         #print('Epi ch.', Epi)
-        rnd = getRndSign()*random.random() / gamma
-        pions.append( cpart(Epi, newpid, x, y, y + rnd*SFy*length*piySF) )
+        yrnd = getRndSign()*random.random() / gamma
+        pions.append( cpart(Epi, newpid, x, y, y + yrnd*SFy*length*piySF) )
 
     world.h1NpE.Fill(E, protonsToMake + 1)
 
@@ -174,11 +176,11 @@ def genPions(pid, E, gamma, length, x, y, world):
     for ipi in range(0, nNeutral ):
         Epi = ENeutral / nNeutral # to randmize later
         #print('Epi neutr.', Epi)
-        rnd = getRndSign()*random.random() / gamma
+        yrnd = getRndSign()*random.random() / gamma
         zeta = random.random()
         # TODO: zeta as a random number drawn from the lab photons energy distribution?
-        pions.append( cpart(    zeta*Epi, 'gamma', x, y, y + rnd*SFy*length / gammaySF) )
-        pions.append( cpart((1-zeta)*Epi, 'gamma', x, y, y - rnd*SFy*length / gammaySF) )
+        pions.append( cpart(    zeta*Epi, 'gamma', x, y, y + yrnd*SFy*length / gammaySF) )
+        pions.append( cpart((1-zeta)*Epi, 'gamma', x, y, y - yrnd*SFy*length / gammaySF) )
 
     return pions
 
@@ -410,7 +412,7 @@ def DrawResults(world, particles, halfSteps):
             print(f'{ipart-1:10,} / {len(particles):10,}; drawn: {drawn:10,}')
         if drawn < NmaxDraw:
             if drawn < Ncut or (drawn >= Ncut and random.random() < drawFrac):
-                line = part.Draw(world, halfSteps)
+                line = DrawParticle(part, world, halfSteps)
                 drawn = drawn + 1
                 #print('E: ', part.E)
                 lines.append(line)
@@ -426,7 +428,7 @@ def DrawResults(world, particles, halfSteps):
         ipart = ipart + 1
         if (ipart-1) % 1000000 == 0 and ipart > 0:
             print(f'{ipart-1:10,} / {len(particles):10,}; drawn: {drawn:10,}')
-        line = part.Draw(world, halfSteps)
+        line = DrawParticle(part, world, halfSteps)
         lines.append(line)
 
     requids = ['p']
@@ -439,7 +441,7 @@ def DrawResults(world, particles, halfSteps):
         ipart = ipart + 1
         if (ipart-1) % 1000000 == 0 and ipart > 0:
             print(f'{ipart-1:10,} / {len(particles):10,}; drawn: {drawn:10,}')
-        line = part.Draw(world, halfSteps)
+        line = DrawParticle(part, world, halfSteps)
         lines.append(line)
 
     return can, h2, lines, partialDraw
@@ -472,7 +474,7 @@ def processArgs(argv):
     iteration = 0
     if len(argv) > 2:
         req_iteration = int(argv[2])
-        if req_iteration >= 0 and req_iteration < 1000:
+        if req_iteration >= 0 and req_iteration < 10000:
             print(f'OK, using user-defined iteration : {req_iteration}')
             iteration = req_iteration
 
