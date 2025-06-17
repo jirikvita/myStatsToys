@@ -24,6 +24,7 @@ cans = []
 stuff = []
 
 
+
 ##########################################
 class cworld():
     def __init__(self):
@@ -46,6 +47,7 @@ class cworld():
         self.maxgen = 0
         self.steps = 0
 
+        self.Tunables = tunables()
         return
     
     #def UpdateMaxGen(self):
@@ -76,6 +78,7 @@ class cworld():
         nb = 200
         x1 = 0
         x2 = 4000. # g/cm^2 #last.x*1.25
+        os.system(f'mkdir -p {rootdir}')
         self.outfile = ROOT.TFile(rootdir + 'histos' + rtag + '_tmp.root', ropt)   
         self.h1Nx = ROOT.TH1D(hname, htitle, nb, x1, x2)
 
@@ -145,7 +148,7 @@ def genPions(pid, E, gamma, length, x, y, world):
     # gen pions and actuially also gammas from pi0 decay;)
     pions = []
     # TODO: make some of these protons, actually, too?
-    nCharged = int(10*pow(E/gGeV, 0.2)) # 10 # can be randomized say between 8 and 12?
+    nCharged = int(world.Tunables.PionsConst*pow(E/gGeV, world.Tunables.PionsExp)) # 10 # can be randomized say between 8 and 12?
     PiZeroFrac = chooseFrom (1/4., 1/3.)
     nNeutral = int( PiZeroFrac*nCharged / (1. - PiZeroFrac)  ) 
     ECh = E*(1. - PiZeroFrac)
@@ -318,9 +321,9 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
             if verbose:
                 print('  ...performing pion production!')
                 
-            pions = genPions( part.pid, (1.-gInelasticity)*part.E, gamma, length, x, y, world)
+            pions = genPions( part.pid, (1.-world.Tunables.Inelasticity)*part.E, gamma, length, x, y, world)
             # keep the same y for the continuing proton or proton born in pi interaction:
-            proton = cpart(part.E*gInelasticity, 'p', x, y, y)
+            proton = cpart(part.E*world.Tunables.Inelasticity, 'p', x, y, y)
             newps = [proton]
             newps.extend(pions)
             part.xend = x # terminate the parent particle

@@ -36,8 +36,6 @@ gmass = { 'e' : 0.511*gMeV, 'gamma' : 0, 'pi' : 139.6*gMeV, 'mu' : 105.7*gMeV, '
 gECEM = 87.92*gMeV
 gECpair = 2*gmass['e']
 
-# fraction of energy in collision going to pions:
-gInelasticity = 0.45
 
 # critical energy to produce pions:
 ECpiThr = 20*gGeV
@@ -47,3 +45,20 @@ glst = { 'e' : 1, 'gamma' : 2, 'pi' : 1, 'mu' : 2, 'nu' : 3, 'p' : 1}
 glwd = { 'e' : 1, 'gamma' : 1, 'pi' : 1, 'mu' : 1, 'nu' : 1, 'p' : 1}
 glabel = {'e' : 'e^{#pm}', 'gamma' : '#gamma', 'pi' : '#pi^{#pm}', 'mu' : '#mu^{#pm}', 'nu' : '#nu/#bar{#nu}', 'p' : 'p/#bar{p}'}
 gdaughters = { 'e' : ['',''], 'gamma' : ['',''], 'pi' : ['mu','nu'], 'mu' : ['e','nu'], 'nu' : ['',''], 'p' : ['','']}
+
+##########################################
+
+class tunables:
+    def __init__(self):
+        self.PionsConst = 10.
+        self.PionsExp = 0.2
+        # fraction of energy in collision going to pions:
+        self.Inelasticity = 0.35
+    def print(self):
+        print(self.PionsConst, self.PionsExp, self.Inelasticity)
+    def makeTag(self):
+        tag = f'_Inel_{self.Inelasticity}_C_{self.PionsConst}_piExp_{self.PionsExp}'
+        return tag
+        
+        
+##########################################

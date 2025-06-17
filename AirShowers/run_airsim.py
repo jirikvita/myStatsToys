@@ -31,7 +31,8 @@ def main(argv):
     tag, rtag, gtag, ropt = makeTags(primary, E0, iteration)
 
     world.decayMuons = False
-    world.makeOutHistos(iteration, rtag, ropt)
+    tuneTag = world.Tunables.makeTag()
+    world.makeOutHistos(iteration, rtag, ropt, f'root{tuneTag}/')
     
     # Simulate!
     particles = Simulate(doDraw, primary, world, E0, randomizeY, halfSteps)

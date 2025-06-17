@@ -161,11 +161,13 @@ def main(argv):
 
 
     conexDir='conex/simulated_showers/uniqueE_low/merged/' #'/home/qitek/install/conex/conex2r6.40/simulated_showers/uniqueE_low/merged'
-    EconexDict = { 100: 'conex_p_E_11_SIBYLL_merged.root',
-                   1000: 'conex_p_E_12_SIBYLL_merged.root',
-                   10000: 'conex_p_E_13_SIBYLL_merged.root',
-                   100000: 'conex_p_E_14_SIBYLL_merged.root',
-                   1000000: 'conex_p_E_15_SIBYLL_merged.root',
+    generator = 'SIBYLL'
+    #generator = 'EPOS'
+    EconexDict = { 100: f'conex_p_E_11_{generator}_merged.root',
+                   1000: f'conex_p_E_12_{generator}_merged.root',
+                   10000: f'conex_p_E_13_{generator}_merged.root',
+                   100000: f'conex_p_E_14_{generator}_merged.root',
+                   1000000: f'conex_p_E_15_{generator}_merged.root',
                   }
     cfnames = EconexDict.values()
     cHs, cFs, MeansConex = GetHmeansFromTree(conexDir, EconexDict, 'Shower', 'Xmax')
@@ -272,7 +274,7 @@ def main(argv):
 
     leg = ROOT.TLegend(0.15, 0.65, 0.40, 0.88)
     leg.AddEntry(gr, 'Private AirSim', 'PL')
-    leg.AddEntry(gr_conex, 'Conex + Sibyll', 'PL')
+    leg.AddEntry(gr_conex, f'Conex + {generator}', 'PL')
     leg.SetTextColor(ROOT.kWhite)
     leg.Draw()
     
@@ -285,8 +287,8 @@ def main(argv):
     can.Print(can.GetName() + '.png')
     can.Print(can.GetName() + '.pdf')
 
-    gcan.Print(gcan.GetName() + '.png')
-    gcan.Print(gcan.GetName() + '.pdf')
+    gcan.Print(gcan.GetName() + f'_{generator}.png')
+    gcan.Print(gcan.GetName() + f'_{generator}.pdf')
 
     stuff.append([Hs, Fs, cHs, cFs, gr, gr_conex])
 
