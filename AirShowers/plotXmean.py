@@ -53,7 +53,7 @@ def main(argv):
 
     Means = []
     for E in Es:
-        fname = f'root/HighStats/histos_p_E{E}GeV.root'
+        fname = f'root_Inel_0.45_C_10.0_piExp_0.2_II/histos_p_E{E}GeV_tmp.root'
         infile = None
         try:
             infile = ROOT.TFile(fname, 'read')
@@ -62,7 +62,7 @@ def main(argv):
         Fs.append(infile)
         Hs[E] = []
         means = []
-        for i in range(0,502):
+        for i in range(0,2000):
             hname = hbasename + f'_{i}'
             h = infile.Get(hname)
             try:

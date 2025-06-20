@@ -61,8 +61,8 @@ def GetHmeans(Es, fnames, hbasename, Nshowers):
             except:
                 print(f'Error getting {hname} from {fname}')
 
-            meanMean, meanErr = GetMeanAndError(means)
-            Means[E] = showerAverResults(E, meanMean, meanErr)
+        meanMean, meanErr = GetMeanAndError(means)
+        Means[E] = showerAverResults(E, meanMean, meanErr)
 
     return Hs, Fs, Means
         
@@ -139,7 +139,7 @@ def main(argv):
     print(Es)
     
     hbasename = 'h1Nx'
-    Nshowers = 502
+    Nshowers = 1000
     fnames = {}
 
     if len(argv) < 3:
@@ -303,9 +303,18 @@ def main(argv):
     leg.AddEntry(gr_conex, f'Conex + {generator}', 'PL')
     leg.SetTextColor(ROOT.kWhite)
     leg.Draw()
+
+    chi2, ndf = getChi2(gr_conex, gr)
+    chi2ndf = chi2/ndf
+    chtxt = '#chi^{2}/ndf = ' + f'{chi2ndf:1.1f}'
+    txt = ROOT.TLatex(0.62, 0.15, chtxt)
+    txt.SetNDC()
+    txt.SetTextColor(ROOT.kWhite)
+    txt.Draw()
     
     ROOT.gPad.Update()
-    
+
+    stuff.append([leg, txt])
 
     ########################
     # print

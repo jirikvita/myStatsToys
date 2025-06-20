@@ -4,11 +4,53 @@ import random
 import ROOT
 
 from consts import *
+from ctypes import c_double
 
+##########################################
+##########################################
+##########################################
+import ROOT
+import math
 
-##########################################
-##########################################
-##########################################
+def getChi2(g1, g2):
+    n1 = g1.GetN()
+    n2 = g2.GetN()
+
+    if n1 != n2:
+        raise ValueError("Graphs have different number of points!")
+
+    chi2 = 0.0
+    ndf = 0
+
+    for i in range(n1):
+        x1 = c_double(0.)
+        y1 = c_double(0.)
+        x2 = c_double(0.)
+        y2 = c_double(0.)
+
+        g1.GetPoint(i, x1, y1)
+        g2.GetPoint(i, x2, y2)
+
+        if abs(x1.value - x2.value) > 1e-6:
+            print(f"Warning: x-values differ at point {i}: {x1.value} vs {x2.value}")
+            continue
+
+        ey1 = g1.GetErrorY(i)
+        ey2 = g2.GetErrorY(i)
+
+        sigma2 = ey1**2 + ey2**2
+        if sigma2 <= 0:
+            continue  # skip this point
+
+        chi2 += (y1.value - y2.value)**2 / sigma2
+        ndf += 1
+
+    if ndf == 0:
+        raise ValueError("No valid points to compare")
+
+    #chi2_ndf = chi2 / ndf
+    #print(f"Chi2 / ndf = {chi2_ndf:.4f}")
+    return chi2, ndf
 
 
 ##########################################
