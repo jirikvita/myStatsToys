@@ -55,8 +55,8 @@ def GetHmeans(Es, fnames, hbasename, Nshowers):
                 means.append(mean)
                 #print(mean)
                 h.Rebin(Rebin)
-                if E < 10e3:
-                    h.Rebin(2)
+                #if E < 10e3:
+                #    h.Rebin(2)
                 Hs[E].append(h)
             except:
                 print(f'Error getting {hname} from {fname}')
@@ -141,10 +141,38 @@ def main(argv):
     hbasename = 'h1Nx'
     Nshowers = 502
     fnames = {}
-    for E in Es:
-        fnames[E] = f'root/HighStats/histos_p_E{E}GeV.root'
-    Hs, Fs, MeansAirSim = GetHmeans(Es, fnames, hbasename, Nshowers)
 
+    if len(argv) < 3:
+        print(f'Usage:   {argv[0]} rootdir model=EPOS,SIBYLL')
+        print(f'Example: {argv[0]} root_Inel_0.3_C_10.0_piExp_0.2 SIBYLL')
+        return()
+    
+    rootdir = argv[1]
+    generator = argv[2] # EPOS, SIBYLL
+    gBatch = False
+    if len(argv) > 3 and argv[3] == '-b':
+        gBatch = True
+        ROOT.gROOT.SetBatch(1)
+
+    for E in Es:
+
+        fnames[E] = f'{rootdir}/histos_p_E{E}GeV_tmp.root'
+        
+        # HACKS:
+        #fnames[E] = f'root_Inel_0.45_C_10.0_piExp_0.2_I/histos_p_E{E}GeV.root'
+        #fnames[E] = f'root_Inel_0.45_C_10.0_piExp_0.2_II/histos_p_E{E}GeV.root'
+        #fnames[E] = f'root_Inel_0.35_C_10.0_piExp_0.2/histos_p_E{E}GeV_tmp.root'
+        #fnames[E] = f'root_Inel_0.35_C_8.0_piExp_0.15/histos_p_E{E}GeV_tmp.root'
+        #fnames[E] = f'root_Inel_0.3_C_10.0_piExp_0.25/histos_p_E{E}GeV_tmp.root'
+        #fnames[E] = f'root_Inel_0.3_C_10.0_piExp_0.2/histos_p_E{E}GeV_tmp.root'
+        #fnames[E] = f'root_Inel_0.45_C_6.0_piExp_0.2/histos_p_E{E}GeV_tmp.root'
+        #fnames[E] = f'root_Inel_0.25_C_10.0_piExp_0.2/histos_p_E{E}GeV_tmp.root'
+        
+        
+    Hs, Fs, MeansAirSim = GetHmeans(Es, fnames, hbasename, Nshowers)
+    ftag = fnames[E].split('/')[0].replace('root_','').replace('_',' ')
+    fftag = ftag.replace(' ','_')
+    
     ip = 0
     print('Got following lengths:')
     for E in Hs:
@@ -161,8 +189,6 @@ def main(argv):
 
 
     conexDir='conex/simulated_showers/uniqueE_low/merged/' #'/home/qitek/install/conex/conex2r6.40/simulated_showers/uniqueE_low/merged'
-    generator = 'SIBYLL'
-    #generator = 'EPOS'
     EconexDict = { 100: f'conex_p_E_11_{generator}_merged.root',
                    1000: f'conex_p_E_12_{generator}_merged.root',
                    10000: f'conex_p_E_13_{generator}_merged.root',
@@ -272,8 +298,8 @@ def main(argv):
     ROOT.gPad.SetGridx(1)
     ROOT.gPad.SetGridy(1)
 
-    leg = ROOT.TLegend(0.15, 0.65, 0.40, 0.88)
-    leg.AddEntry(gr, 'Private AirSim', 'PL')
+    leg = ROOT.TLegend(0.15, 0.65, 0.66, 0.88)
+    leg.AddEntry(gr, f'Private AirSim {ftag}', 'PL')
     leg.AddEntry(gr_conex, f'Conex + {generator}', 'PL')
     leg.SetTextColor(ROOT.kWhite)
     leg.Draw()
@@ -283,16 +309,22 @@ def main(argv):
 
     ########################
     # print
+    pngdir  = 'png/'
+    pdfdir  = 'pdf/'
 
-    can.Print(can.GetName() + '.png')
-    can.Print(can.GetName() + '.pdf')
+    can.Print(pngdir + can.GetName() + f'_{fftag}.png')
+    can.Print(pdfdir + can.GetName() + f'_{fftag}.pdf')
 
-    gcan.Print(gcan.GetName() + f'_{generator}.png')
-    gcan.Print(gcan.GetName() + f'_{generator}.pdf')
+    sumcan.Print(pngdir + sumcan.GetName() + f'_{fftag}.png')
+    sumcan.Print(pdfdir + sumcan.GetName() + f'_{fftag}.pdf')
+    
+    gcan.Print(pngdir + gcan.GetName() + f'_{generator}_{fftag}.png')
+    gcan.Print(pdfdir + gcan.GetName() + f'_{generator}_{fftag}.pdf')
 
     stuff.append([Hs, Fs, cHs, cFs, gr, gr_conex])
 
-    ROOT.gApplication.Run()
+    if not gBatch:
+        ROOT.gApplication.Run()
 
 
 ###########################################################

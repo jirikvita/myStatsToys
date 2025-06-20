@@ -180,11 +180,14 @@ def main(argv):
     ########################
     # print
 
-    can.Print(can.GetName() + '.png')
-    can.Print(can.GetName() + '.pdf')
+    pngdir  = 'png/'
+    pdfdir  = 'pdf/'
+    
+    can.Print(pngdir + can.GetName() + '.png')
+    can.Print(pdfdir + can.GetName() + '.pdf')
 
-    gcan.Print(gcan.GetName() + '.png')
-    gcan.Print(gcan.GetName() + '.pdf')
+    gcan.Print(pngdir + gcan.GetName() + '.png')
+    gcan.Print(pdfdir + gcan.GetName() + '.pdf')
 
     stuff.append([Hs, Fs])
 
