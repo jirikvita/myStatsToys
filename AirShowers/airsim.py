@@ -148,7 +148,7 @@ def genPions(pid, E, gamma, length, x, y, world):
     # gen pions and actuially also gammas from pi0 decay;)
     pions = []
     # TODO: make some of these protons, actually, too?
-    nCharged = int(world.Tunables.PionsConst*pow(E/gGeV, world.Tunables.PionsExp)) # 10 # can be randomized say between 8 and 12?
+    nCharged = int(world.Tunables.PionsConst*pow(E/gGeV, world.Tunables.PionsExp)) # 10 # can be randomized say between 6 and 12
     PiZeroFrac = chooseFrom (1/4., 1/3.)
     nNeutral = int( PiZeroFrac*nCharged / (1. - PiZeroFrac)  ) 
     ECh = E*(1. - PiZeroFrac)
@@ -305,22 +305,21 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
         return ps
             
     elif (part.pid == 'pi' or part.pid == 'p') and part.E >= ECpiThr:
-            xi = 1/3.
-            chi = 0.
+            #xi = 1/3.
+            #chi = 0.
             if halfSteps:
                 x = part.x + length*log(2)
             else:
                 dx = exponential(length)
-                xi = exp(-dx / length)
+                #xi = exp(-dx / length)
                 x = part.x + dx
                 if x > world.x2:
                     x = world.x2
-                chi = 2.
-                while 1 - xi - chi < 0.:
-                    chi = random.random()
-            if verbose:
-                print('  ...performing pion production!')
-                
+                #chi = 2.
+                #while 1 - xi - chi < 0.:
+                #    chi = random.random()
+            #if verbose:
+            #    print('  ...performing pion production!')
             pions = genPions( part.pid, (1.-world.Tunables.Inelasticity)*part.E, gamma, length, x, y, world)
             # keep the same y for the continuing proton or proton born in pi interaction:
             proton = cpart(part.E*world.Tunables.Inelasticity, 'p', x, y, y)

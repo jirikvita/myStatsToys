@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 
 from airsim import *
@@ -68,7 +68,7 @@ def main(argv):
     print(f'...Thanks for running {sys.argv[0]}')
     print('...Returning and kiling oneself!')
     print('...So long, and thanks for all the fish!')
-    os.system('killall -9 airsim.py')
+    os.system('killall -9 run_airsim.py')
     return 0
 
 ###################################

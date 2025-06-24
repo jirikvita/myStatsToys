@@ -223,9 +223,12 @@ def main(argv):
 
     ie = 0
     txts = []
+    nDoublePeaks = {}
+    HsDouble = {}
     for E,hs in Hs.items():
         can.cd(1+ie)
-        ymax = getMaxima(hs)*1.1
+        HsDouble[E] = []
+        ymax = getMaxima(hs)*1.2
         h2 = ROOT.TH2D(f'tmp_{E}', ';x[g/cm^{2}];Particles (e/#mu)', 100, 40, 4000, 100, 0, ymax)
         h2.Draw()
         makeWhiteAxes(h2)
@@ -235,17 +238,30 @@ def main(argv):
         makeWhiteAxes(h2sum)
         Hsums.append(h2sum)
 
-        txt = ROOT.TLatex(0.65, 0.8, f'E={E/1000} TeV')
+        txt = ROOT.TLatex(0.65, 0.82, f'E={E/1000} TeV')
         txt.SetTextColor(ROOT.kWhite)
         txt.SetNDC()
         txt.Draw()
         txts.append(txt)
         opt = ' same'
+        meanMean = 0.
+        for h in hs:
+            meanMean += h.GetMean()
+            #print('mean, rms: ', h.GetMean(), h.GetRMS())
+        meanMean /= (1.*len(hs))
+        #print('meanMean ', meanMean)
+        nDoublePeaks[E] = 0.
         for h in hs:
             h.SetLineWidth(1)
             h.SetStats(0)
             #print('...drawing, mean=', h.GetMean())
-            h.Draw('hist plc' + opt)
+            #h.Draw('hist plc' + opt)
+            h.SetLineColor(ROOT.kBlue)
+            if (E/1000 >= 100 and ( h.GetRMS() / meanMean > 0.55*( 300./E + 1. ) ) ) or (E/1000 < 100 and ( h.GetRMS() / meanMean > 0.70*( 300./E + 1. ) ) ):
+                h.SetLineColor(ROOT.kRed)
+                nDoublePeaks[E] += 1
+                HsDouble[E].append(h)
+            h.Draw('hist' + opt)
             opt = ' same'
             AddToHeatMap(h2sum, h)
         #ROOT.gPad.BuildLegend()
@@ -260,9 +276,27 @@ def main(argv):
         h2sum.Draw('colz')
         ROOT.gPad.Update()
 
-        ie = ie + 1
+        ie += 1
         #
+    ie = 0
+    for E,hs in HsDouble.items():
+        can.cd(1+ie)
+        for h in hs:
+            h.Draw('same hist')
+        ie += 1
+    ie = 0
+    for E,hs in Hs.items():
+        nDoublePeaks[E] /= len(hs)
+        print('Double peaks fraction: ', nDoublePeaks[E])
+        can.cd(1+ie)
+        txt = ROOT.TLatex(0.15, 0.82, f'Double peaks frac.: {nDoublePeaks[E]:1.3f}')
+        txt.SetNDC()
+        txt.SetTextColor(ROOT.kWhite)
+        txt.Draw()
+        stuff.append(txt)
+        ie += 1
 
+        
     canname = 'GrXmean'
     gcan = ROOT.TCanvas(canname, canname, 500, 500, 800, 600)
     makeGrStyle(gr, ROOT.kAzure-3)
