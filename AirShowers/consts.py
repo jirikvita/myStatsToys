@@ -5,6 +5,12 @@ import ROOT
 gInfty = 999e999
 gEpsilon = 1e-4
 
+NA = 6.02214076e23
+
+# https://www.engineeringtoolbox.com/molecular-mass-air-d_679.html
+airA = 28.9647
+airRho = 1.233e-3 # g/cm3
+
 gkm = 1.e3
 gm = 1.
 

@@ -5,7 +5,7 @@ batch=1
 #for i in 100 1000 10000 100000 1000000 ; do
 #for i in 200000 ; do
     for i in 50000 ; do
-    for j in `seq 501 1000` ; do
+    for j in `seq 1001 2000` ; do
 	draw=1
 	#if [ $j -gt 0 ] ; then
 	#    draw=0
