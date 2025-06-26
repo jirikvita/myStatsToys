@@ -11,15 +11,6 @@ from consts import *
 
 ########################################
 
-def getMaxima(hs):
-    maxy = -1
-    for h in hs:
-        val = h.GetMaximum()
-        if val > maxy:
-            maxy = 1.*val
-    return maxy
-
-
 cans = []
 stuff = []
 
@@ -201,8 +192,10 @@ def main(argv):
                   }
     cfnames = EconexDict.values()
     conexPeakXmaxHs, cFs, MeansConex = GetHmeansFromTree(conexDir, EconexDict, 'Shower', 'Xmax')
+    
     gr_conex = ROOT.TGraphErrors()
     ip = 0
+    ConexShowerGraphs = {}
     for E,meanData in MeansConex.items():
         E = meanData.E
         mean = meanData.mean
@@ -211,10 +204,151 @@ def main(argv):
         gr_conex.SetPointError(ip, 0., meanErr)
         ip = ip+1
 
+        # get also individual conex showers as TGraphs:
+        rfile = ROOT.TFile(conexDir + EconexDict[E], 'read')
+        tree = rfile.Get('Shower')
+        graphs = getConexShowerGraphs(tree, E)
+        ConexShowerGraphs[E] = graphs
+
     txts = []
 
+
     ########################
-    # Draw conex peak Xmax distrbutions (these are NOT shower profiles!:):
+    # Draw conex profiles as graphs
+    canname = f'ConexGrProfiles'
+    cpcan = ROOT.TCanvas(canname, canname, 0, 0, 1000, 1200)
+    cans.append(cpcan)
+    cpcan.Divide(2,3)
+    cpH2s = []
+    ie = 0
+    for E,grs in ConexShowerGraphs.items():
+        cpcan.cd(1+ie)
+        ymax = getGrMaxima(grs)*1.2
+        h2 = ROOT.TH2D(f'conexProfileGr_tmp_{E}', ';x[g/cm^{2}];N', 100, 0, 4000, 100, 0, ymax)
+        h2.Draw()
+        makeWhiteAxes(h2)
+        cpH2s.append(h2)
+        opt = 'L'
+        igr = 0
+        for cgr in grs:
+            if igr > 1000:
+                break
+            cgr.Draw(opt)
+            igr += 1
+            #opt = 'L'
+        
+        mtxt = ROOT.TLatex(0.63, 0.68, f'Conex+{generator}')
+        mtxt.SetTextColor(ROOT.kWhite)
+        mtxt.SetNDC()
+        mtxt.Draw()
+        txts.append(mtxt)
+
+        ntxt = ROOT.TLatex(0.63, 0.75, f'Showers: {igr-1}')
+        ntxt.SetTextColor(ROOT.kWhite)
+        ntxt.SetNDC()
+        ntxt.Draw()
+        txts.append(ntxt)
+
+        txt = ROOT.TLatex(0.63, 0.82, f'E={E/1000} TeV')
+        txt.SetTextColor(ROOT.kWhite)
+        txt.SetNDC()
+        txt.Draw()
+        txts.append(txt)
+        
+        ie += 1
+    cpcan.Update()
+
+    ########################
+    # Draw conex profiles as histos:)
+    canname = f'ConexHistProfiles'
+    hcpcan = ROOT.TCanvas(canname, canname, 0, 0, 1000, 1200)
+    cans.append(hcpcan)
+    hcpcan.Divide(2,3)
+    hcpH2s = []
+    ConexShowerHistos = {}
+    ie = 0
+    nConexDoublePeaks = {}
+    ConexHsDouble = {}
+    for E,grs in ConexShowerGraphs.items():
+        nConexDoublePeaks[E] = 0
+        ConexHsDouble[E] = []
+        hcpcan.cd(1+ie)
+        ymax = getGrMaxima(grs)*1.2
+        h2 = ROOT.TH2D(f'conexProfileHist_tmp_{E}', ';x[g/cm^{2}];N', 100, 0, 4000, 100, 0, ymax)
+        h2.Draw()
+        makeWhiteAxes(h2)
+        hcpH2s.append(h2)
+        hs = makeHistosFromGraphs(grs, f'_{E}')
+        ConexShowerHistos[E] = hs
+        opt = 'histsame'
+        igr = 0
+        meanMean = 0.
+        for h in hs:
+            val = h.GetMean()
+            meanMean += val
+        meanMean /= (1.*len(hs))
+
+        for h in hs:
+            if igr > 1000:
+                break
+            h.SetLineColor(ROOT.kCyan)
+            if (E/1000 >= 100 and ( h.GetRMS() / meanMean > 0.55*( 300./E + 1. ) ) ) or (E/1000 < 100 and ( h.GetRMS() / meanMean > 0.70*( 300./E + 1. ) ) ):
+                h.SetLineColor(ROOT.kRed)
+                nConexDoublePeaks[E] += 1
+                ConexHsDouble[E].append(h)
+
+            h.Draw(opt)
+            igr += 1
+            #opt = 'L'
+
+        stxt = ROOT.TLatex(0.63, 0.68, f'Conex+{generator}')
+        stxt.SetTextColor(ROOT.kWhite)
+        stxt.SetNDC()
+        stxt.Draw()
+        txts.append(stxt)
+
+        ntxt = ROOT.TLatex(0.63, 0.75, f'Showers: {igr-1}')
+        ntxt.SetTextColor(ROOT.kWhite)
+        ntxt.SetNDC()
+        ntxt.Draw()
+        txts.append(ntxt)
+
+        txt = ROOT.TLatex(0.63, 0.82, f'E={E/1000} TeV')
+        txt.SetTextColor(ROOT.kWhite)
+        txt.SetNDC()
+        txt.Draw()
+        txts.append(txt)
+        
+        ie += 1
+        
+    ie = 0
+    for E,hs in ConexHsDouble.items():
+        hcpcan.cd(1+ie)
+        for h in hs:
+            h.Draw('same hist')
+        ie += 1
+    ie = 0
+    for E,hs in ConexShowerHistos.items():
+        nConexDoublePeaks[E] /= len(hs)
+        print('Double peaks fraction: ', nConexDoublePeaks[E])
+        hcpcan.cd(1+ie)
+        txt = ROOT.TLatex(0.15, 0.82, f'Double peaks frac.: {nConexDoublePeaks[E]:1.3f}')
+        txt.SetNDC()
+        txt.SetTextColor(ROOT.kWhite)
+        txt.Draw()
+        stuff.append(txt)
+        ie += 1
+
+
+    cpcan.Update()
+    cpcan.Print(cpcan.GetName() + f'_{generator}.pdf')
+    cpcan.Print(cpcan.GetName() + f'_{generator}.png')
+
+    
+    
+    
+    ########################
+    # Draw conex peak Xmax distributions (these are NOT shower profiles!:):
     canname = f'ConexPeakXmax'
     ccan = ROOT.TCanvas(canname, canname, 0, 0, 1000, 1200)
     cans.append(ccan)
@@ -238,6 +372,8 @@ def main(argv):
                 h.Scale(1./area)
             h.Draw('hist' + opt)
         ie += 1
+
+
     ccan.Update()
     
     H2s = []
@@ -274,6 +410,12 @@ def main(argv):
         h2sum = ROOT.TH2D(f'hsum_{E}', ';x[g/cm^{2}];Particles (e/#mu)', 40, 0, 4000, 25, 0, ymax)
         makeWhiteAxes(h2sum)
         Hsums.append(h2sum)
+
+        stxt = ROOT.TLatex(0.63, 0.68, 'Private sim.')
+        stxt.SetTextColor(ROOT.kWhite)
+        stxt.SetNDC()
+        stxt.Draw()
+        txts.append(stxt)
 
         txt = ROOT.TLatex(0.63, 0.82, f'E={E/1000} TeV')
         txt.SetTextColor(ROOT.kWhite)
@@ -415,6 +557,12 @@ def main(argv):
     pngdir  = 'png/'
     pdfdir  = 'pdf/'
 
+    cpcan.Print(pdfdir + cpcan.GetName() + f'_{generator}.pdf')
+    cpcan.Print(pngdir + cpcan.GetName() + f'_{generator}.png')
+    
+    hcpcan.Print(pdfdir + hcpcan.GetName() + f'_{generator}.pdf')
+    hcpcan.Print(pngdir + hcpcan.GetName() + f'_{generator}.png')
+    
     can.Print(pngdir + can.GetName() + f'_{fftag}.png')
     can.Print(pdfdir + can.GetName() + f'_{fftag}.pdf')
 
@@ -424,10 +572,14 @@ def main(argv):
     gcan.Print(pngdir + gcan.GetName() + f'_{generator}_{fftag}.png')
     gcan.Print(pdfdir + gcan.GetName() + f'_{generator}_{fftag}.pdf')
 
+    ccan.Print(pngdir + ccan.GetName() + f'_{generator}_{fftag}.png')
+    ccan.Print(pdfdir + ccan.GetName() + f'_{generator}_{fftag}.pdf')
+
     stuff.append([conexPeakXmaxHs, Hs, H2s, cH2s, Fs, cFs, gr, gr_conex])
 
     if not gBatch:
         ROOT.gApplication.Run()
+    os.system('killall -9 cmpXmean.py')
 
 
 ###########################################################

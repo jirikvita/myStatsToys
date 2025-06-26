@@ -3,6 +3,7 @@
 import random
 import ROOT
 
+
 from consts import *
 from ctypes import c_double
 
@@ -12,12 +13,97 @@ from ctypes import c_double
 import ROOT
 import math
 
+
+##########################################
+def makeHistoFromGraph(gr, tag):
+    x, y = c_double(0), c_double(0)
+    xs = []
+    for ip in range(gr.GetN()):
+        gr.GetPoint(ip, x, y)
+        xs.append(1.*x.value)
+    x1 = xs[0]
+    x2 = xs[-1]
+    n = len(xs)-1
+    name = tag + ''
+    title = ''
+    h = ROOT.TH1D(name, title, n, x1, x2);
+    for ip in range(gr.GetN()):
+        gr.GetPoint(ip, x, y)
+        yval = y.value
+        if yval > 0:
+            h.SetBinContent(ip+1, yval)
+            ey = math.sqrt(yval)
+            h.SetBinError(ip+1, ey)
+    h.SetLineColor(gr.GetLineColor())
+    #h.SetLineColor(gr.GetLineColor())
+    h.Scale(1.)
+    return h
+
+
+##########################################
+def makeHistosFromGraphs(grs, basetag):
+    hs = []
+    for igr,gr in enumerate(grs):
+        h = makeHistoFromGraph(gr, basetag + f'_{igr}')
+        hs.append(h)
+    return hs
+
+##########################################
+def getGrMaxima(grs):
+    maxy = -1
+    x, y = c_double(0), c_double(0)
+    for gr in grs:
+        for ip in range(gr.GetN()):
+            gr.GetPoint(ip, x, y)
+            if y.value > maxy:
+                maxy = 1.*y.value
+    return maxy
+
+##########################################
+def getMaxima(hs):
+    maxy = -1
+    for h in hs:
+        val = h.GetMaximum()
+        if val > maxy:
+            maxy = 1.*val
+    return maxy
+
+
+##########################################
+def getConexShowerGraphs(tree, E):
+    # Loop through entries in the tree
+    print(f'Getting conex graphs for E={E}...')
+    graphs = []
+    for i, entry in enumerate(tree):
+        x_array = entry.X  # Replace with your branch name
+        y_array = entry.N  # Replace with your branch name
+
+        # Assuming x_array and y_array are the same length
+        n_points = len(x_array)
+
+        # Create a TGraph for this event
+        graph = ROOT.TGraph(n_points)
+
+        for j in range(n_points):
+            graph.SetPoint(j, x_array[j], y_array[j])
+
+        graph.SetTitle(f"ConexShower {i} E={E}")
+        graph.SetLineColorAlpha(ROOT.kCyan, 0.1)
+        #graph.SetMarkerColorAlpha(ROOT.kRed, 0.1)
+        #graph.SetMarkerSize(0.)
+        #graph.SetMarkerStyle(20)
+        graphs.append(graph)
+
+    return graphs
+
+
+##########################################
 def getChi2(g1, g2):
     n1 = g1.GetN()
     n2 = g2.GetN()
 
     if n1 != n2:
-        raise ValueError("Graphs have different number of points!")
+        raise ValueError(f"Graphs have different number of points! {n1} vs {n2}")
 
     chi2 = 0.0
     ndf = 0
