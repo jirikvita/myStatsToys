@@ -149,7 +149,10 @@ def genPions(pid, E, gamma, length, x, y, world):
     pions = []
     # TODO: make some of these protons, actually, too?
     nCharged = int(world.Tunables.PionsConst*pow(E/gGeV, world.Tunables.PionsExp)) # 10 # can be randomized say between 6 and 12
-    PiZeroFrac = chooseFrom (1/4., 1/3.)
+    #nCharged = int(world.Tunables.PionsConst*log(E/gGeV*world.Tunables.PionsExp)) # 10 # can be randomized say between 6 and 12
+
+
+    PiZeroFrac = 1/3 # chooseFrom (1/4., 1/3.)
     nNeutral = int( PiZeroFrac*nCharged / (1. - PiZeroFrac)  ) 
     ECh = E*(1. - PiZeroFrac)
     ENeutral = E*PiZeroFrac
@@ -322,6 +325,7 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
             #    print('  ...performing pion production!')
             pions = genPions( part.pid, (1.-world.Tunables.Inelasticity)*part.E, gamma, length, x, y, world)
             # keep the same y for the continuing proton or proton born in pi interaction:
+            # todo: produce more protons!
             proton = cpart(part.E*world.Tunables.Inelasticity, 'p', x, y, y)
             newps = [proton]
             newps.extend(pions)

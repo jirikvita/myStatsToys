@@ -57,9 +57,9 @@ gdaughters = { 'e' : ['',''], 'gamma' : ['',''], 'pi' : ['mu','nu'], 'mu' : ['e'
 class tunables:
     def __init__(self):
         # fraction of energy in collision going to pions:
-        self.Inelasticity = 0.3
-        self.PionsConst = 10.
-        self.PionsExp = 0.3
+        self.Inelasticity = 0.5
+        self.PionsConst = 5.
+        self.PionsExp = 0.6
     def print(self):
         print(self.PionsConst, self.PionsExp, self.Inelasticity)
     def makeTag(self):
