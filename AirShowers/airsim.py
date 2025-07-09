@@ -16,7 +16,10 @@ import os, sys, getopt
 import random
 from math import pow, log, exp, sqrt
 from numpy.random import exponential as exponential
-    
+from numpy.random import poisson as Poisson
+
+
+
 from utils import *
 from consts import *
 
@@ -147,9 +150,11 @@ def DrawParticle(part, world, halfSteps, verbose = 0):
 
 def genPions(pid, E, gamma, length, x, y, world):
     SFy, gammaySF, piySF = world.SFy, world.gammaySF, world.piySF
-    # gen pions and actuially also gammas from pi0 decay;)
+    # gen pions and actually also gammas from pi0 decay;)
     pions = []
+    
     # TODO: make some of these protons, actually, too?
+    # or see later:)
     nCharged = int(world.Tunables.PionsConst*pow(E/gGeV, world.Tunables.PionsExp)) # 10 # can be randomized say between 6 and 12
     #nCharged = int(world.Tunables.PionsConst*log(E/gGeV*world.Tunables.PionsExp)) # 10 # can be randomized say between 6 and 12
 
@@ -164,16 +169,20 @@ def genPions(pid, E, gamma, length, x, y, world):
     world.h1NchE.Fill(E, nCharged)
     world.h1Npi0E.Fill(E, nNeutral)
     
-    # make some additinal protons, addition to the leading one already done before
+    # make some additinal protons, addition to the leading one already done before in place where calling genPions!
     protonsToMake = 0
+    # hmmm, seems like we're doing this only for protons, but we should
+    # produce fast hadrons also in pion collisions! TODO! and COMPARE!
+    # so try commenting this line:
     if pid != 'pi':
-        protonsToMake = 1
+        # produce more protons than 1, some random Poisson distr with mu of 1?
+        protonsToMake = 1 ## CMP to: Poisson(lam=1), COMPARE! and vary this parameter? ==> another tunable?;)
     for ipi in range(0, nCharged):
         newpid = 'pi'
         if protonsToMake > 0:
             newpid = 'p'
             protonsToMake = protonsToMake - 1
-        Epi = ECh / nCharged # to randomize later
+        Epi = ECh / nCharged # to randomize later! TODO!
         #print('Epi ch.', Epi)
         yrnd = getRndSign()*random.random() / gamma
         pions.append( cpart(Epi, newpid, x, y, y + yrnd*SFy*length*piySF) )
