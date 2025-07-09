@@ -21,11 +21,11 @@ geV = 1e-9
 
 # https://pdg.lbl.gov/2023/AtomicNuclearProperties/HTML/air_dry_1_atm.html
 
-gX0 = 36.62 # air; g/cm2
+gX0 = 36.62 # air; g/cm2 # Mattews: 37
 gIntLengthGamma = gX0*9./7.
 
 # inelastic
-gPiIntLength = 122. # g/cm2
+gPiIntLength = 122. # g/cm2 # Mattews 2005: 120
 # elastic:
 gPiCollisionLength = 88.5 # g/cm2
 
@@ -39,12 +39,12 @@ gctau = { 'e' : gInfty, 'gamma' : gInfty, 'pi' : 7.8*gm, 'mu' : 660*gm, 'p' : gI
 gmass = { 'e' : 0.511*gMeV, 'gamma' : 0, 'pi' : 139.6*gMeV, 'mu' : 105.7*gMeV, 'nu' : 0., 'p' : 938.3*gMeV}
 
 # critical energy for the EM shower, for electrons
-gECEM = 87.92*gMeV
+gECEM = 87.92*gMeV # Matthews 2005: 85
 gECpair = 2*gmass['e']
 
 
 # critical energy to produce pions:
-ECpiThr = 20*gGeV
+ECpiThr = 20*gGeV # as Matthews 2005
 
 gcol = { 'e' : ROOT.kGreen+2, 'gamma' : ROOT.kAzure-3, 'pi' : ROOT.kRed + 2, 'mu' : ROOT.kMagenta+3, 'nu' : ROOT.kGray+2, 'p' : ROOT.kRed}
 glst = { 'e' : 1, 'gamma' : 2, 'pi' : 1, 'mu' : 2, 'nu' : 3, 'p' : 1}

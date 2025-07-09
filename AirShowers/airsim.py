@@ -56,7 +56,9 @@ class cworld():
     def Draw(self):
         print('Drawing the world...')
         canname = 'ShowerVis'
-        self.can = ROOT.TCanvas(canname, canname, 0, 0, 1200, 600)
+        cw, ch = 1200, 600
+        #cw, ch = 1600, 1400
+        self.can = ROOT.TCanvas(canname, canname, 0, 0, cw, ch)
         self.can.Draw()
         self.can.cd()
         
@@ -260,6 +262,10 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
             xi = exp(-dx / length)
         E1 = xi*part.E
         E2 = (1-xi)*part.E
+        # randomize whether radiated photon goes up or down;)
+        if random.random() < 0.5:
+            dy1, dy2 = dy2, dy1
+        
         p1 = cpart(E1, 'gamma', x, y, y + (dy1 + rnd1)*SFy*length / gamma )
         p2 = cpart(E2, 'e',     x, y, y + (dy2 + rnd2)*SFy*length / gamma * elySF)
         part.xend = x # terminate the parent particle
@@ -523,7 +529,10 @@ def doAllDrawing(world, primary, E0, particles, halfSteps, tag, gtag, h1Nx, part
             gtag = gtag + '_partialDraw'
         print(f'Drawn lines: {len(lines):10,}')
         # draw label
+        ###
         txt = ROOT.TLatex(0.02, 0.95, 'Primary: {}; E={:1.1f} TeV, particles: {:1.2f}M, steps={:1.0f}, muons stable: {}'.format(glabel[primary.pid], E0/1000., len(particles) / 1e6, world.steps, not world.decayMuons) )
+        #txt = ROOT.TLatex(0.02, 0.95, 'Primary: {}; E={:1.1f} TeV, steps={:1.0f}, muons stable: {}'.format(glabel[primary.pid], E0/1000., world.steps, not world.decayMuons) )
+        #txt.SetTextSize(0.04)
         #txt = ROOT.TLatex(0.02, 0.95, 'Primary: {}; E={:1.1f} TeV, particles: {:1.2f}M'.format(glabel[primary.pid], E0/1000., len(particles) / 1e6))
         txt.SetTextColor(ROOT.kWhite)
         #txt.SetTextSize(0.03)

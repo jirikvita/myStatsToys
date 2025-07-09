@@ -126,7 +126,8 @@ def main(argv):
 
     SetMyStyle()
 
-    Es = [ int(pow(10,n)) for n in range(2,8)]
+    #Es = [ int(pow(10,n)) for n in range(2,8)]
+    Es = [ int(pow(10,n)) for n in range(2,7)]
     #Es = [100, 1000, 10000, 50000, 100000, 1000000]
     #Es.append(250000)
     print(Es)
@@ -163,7 +164,7 @@ def main(argv):
         
         
     Hs, Fs, MeansAirSim = GetHmeans(Es, fnames, hbasename, Nshowers)
-    ftag = fnames[E].split('/')[0].replace('root_','').replace('_',' ')
+    ftag = fnames[E].split('/')[-2].replace('root_','').replace('_',' ')
     fftag = ftag.replace(' ','_')
     
     ip = 0
@@ -188,7 +189,7 @@ def main(argv):
                    #50000: f'conex_p_E_13.5_{generator}_merged.root',
                    100000: f'conex_p_E_14_{generator}_merged.root',
                    1000000: f'conex_p_E_15_{generator}_merged.root',
-                   10000000: f'conex_p_E_16_{generator}_merged.root',
+                   ###10000000: f'conex_p_E_16_{generator}_merged.root',
                   }
     cfnames = EconexDict.values()
     conexPeakXmaxHs, cFs, MeansConex = GetHmeansFromTree(conexDir, EconexDict, 'Shower', 'Xmax')
@@ -554,8 +555,8 @@ def main(argv):
 
     ########################
     # print
-    pngdir  = 'png/'
-    pdfdir  = 'pdf/'
+    pngdir  = 'png_nPiLogEi/'
+    pdfdir  = 'pdf_nPiLogEi/'
 
     cpcan.Print(pdfdir + cpcan.GetName() + f'_{generator}.pdf')
     cpcan.Print(pngdir + cpcan.GetName() + f'_{generator}.png')

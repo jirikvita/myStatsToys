@@ -19,12 +19,14 @@ def main(argv):
     E0 = E*gGeV #1e14*geV
     primaryPID = 'p'
     randomizeY = True
+    
+    # regulates whether split energies to two daughter particles evenly after X0*ln(2) or by exp decay law:
     halfSteps = False
 
     ROOT.gStyle.SetOptTitle(0)
     SetMyStyle()
-    world = cworld()
 
+    world = cworld()
     x, y = 0.*gkm, 0.*gm
     yend = 0*gm # dummy
     primary = cpart(E0, primaryPID, x, y, yend)
