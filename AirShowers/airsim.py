@@ -626,7 +626,7 @@ def processArgs(argv):
 def makeTags(primary, E0, iteration, useLog = True):
     tag = ''
     if useLog:
-        tag = '_{}_logE_{:1.0f}'.format(primary.pid, log10(E0)+9 )
+        tag = '_{}_logE_{:1.1f}'.format(primary.pid, log10(E0)+9 )
     else:
         tag = '_{}_E{:1.0f}GeV'.format(primary.pid, E0)
     rtag = tag + ''

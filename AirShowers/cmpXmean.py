@@ -127,9 +127,12 @@ def main(argv):
     SetMyStyle()
 
     #Es = [ int(pow(10,n)) for n in range(2,8)]
-    Es = [ int(pow(10,n)) for n in range(3,6)]
+    #Es = [ int(pow(10,n)) for n in range(3,6)]
     #Es = [100, 1000, 10000, 50000, 100000, 1000000]
     #Es.append(250000)
+
+    Es = [11, 12, 13, 14]
+
     print(Es)
     
     hbasename = 'h1Nx'
@@ -149,19 +152,7 @@ def main(argv):
         ROOT.gROOT.SetBatch(1)
 
     for E in Es:
-
-        fnames[E] = f'{rootdir}/histos_p_E{E}GeV_tmp.root'
-        
-        # HACKS:
-        #fnames[E] = f'root_Inel_0.45_C_10.0_piExp_0.2_I/histos_p_E{E}GeV.root'
-        #fnames[E] = f'root_Inel_0.45_C_10.0_piExp_0.2_II/histos_p_E{E}GeV.root'
-        #fnames[E] = f'root_Inel_0.35_C_10.0_piExp_0.2/histos_p_E{E}GeV_tmp.root'
-        #fnames[E] = f'root_Inel_0.35_C_8.0_piExp_0.15/histos_p_E{E}GeV_tmp.root'
-        #fnames[E] = f'root_Inel_0.3_C_10.0_piExp_0.25/histos_p_E{E}GeV_tmp.root'
-        #fnames[E] = f'root_Inel_0.3_C_10.0_piExp_0.2/histos_p_E{E}GeV_tmp.root'
-        #fnames[E] = f'root_Inel_0.45_C_6.0_piExp_0.2/histos_p_E{E}GeV_tmp.root'
-        #fnames[E] = f'root_Inel_0.25_C_10.0_piExp_0.2/histos_p_E{E}GeV_tmp.root'
-        
+        fnames[E] = f'{rootdir}/histos_p_logE_{E}_tmp.root'
         
     Hs, Fs, MeansAirSim = GetHmeans(Es, fnames, hbasename, Nshowers)
     ftag = fnames[E].split('/')[-2].replace('root_','').replace('_',' ')
@@ -177,19 +168,18 @@ def main(argv):
         E = meanData.E
         mean = meanData.mean
         meanErr = meanData.meanErr
-        gr.SetPoint(ip, log10(E) + 9, mean)
+        gr.SetPoint(ip, E, mean)
         gr.SetPointError(ip, 0., meanErr)
         ip = ip+1
 
 
     conexDir='conex/simulated_showers/uniqueE_low/merged/' #'/home/qitek/install/conex/conex2r6.40/simulated_showers/uniqueE_low/merged'
-    EconexDict = { #100: f'conex_p_E_11_{generator}_merged.root',
-                   1000: f'conex_p_E_12_{generator}_merged.root',
-                   10000: f'conex_p_E_13_{generator}_merged.root',
-                   #50000: f'conex_p_E_13.5_{generator}_merged.root',
-                   100000: f'conex_p_E_14_{generator}_merged.root',
-                   1000000: f'conex_p_E_15_{generator}_merged.root',
-                   ###10000000: f'conex_p_E_16_{generator}_merged.root',
+    EconexDict = { 11: f'conex_p_E_11_{generator}_merged.root',
+                   12: f'conex_p_E_12_{generator}_merged.root',
+                   13: f'conex_p_E_13_{generator}_merged.root',
+                   14: f'conex_p_E_14_{generator}_merged.root',
+                   #15: f'conex_p_E_15_{generator}_merged.root',
+                   ###16: f'conex_p_E_16_{generator}_merged.root',
                   }
     cfnames = EconexDict.values()
     conexPeakXmaxHs, cFs, MeansConex = GetHmeansFromTree(conexDir, EconexDict, 'Shower', 'Xmax')
@@ -201,7 +191,7 @@ def main(argv):
         E = meanData.E
         mean = meanData.mean
         meanErr = meanData.meanErr
-        gr_conex.SetPoint(ip, log10(E) + 9, mean)
+        gr_conex.SetPoint(ip, E, mean)
         gr_conex.SetPointError(ip, 0., meanErr)
         ip = ip+1
 
@@ -250,7 +240,7 @@ def main(argv):
         ntxt.Draw()
         txts.append(ntxt)
 
-        txt = ROOT.TLatex(0.63, 0.82, f'E={E/1000} TeV')
+        txt = ROOT.TLatex(0.63, 0.82, f'logE={E}')
         txt.SetTextColor(ROOT.kWhite)
         txt.SetNDC()
         txt.Draw()
@@ -293,7 +283,8 @@ def main(argv):
             if igr > 1000:
                 break
             h.SetLineColor(ROOT.kCyan)
-            if (E/1000 >= 100 and ( h.GetRMS() / meanMean > 0.55*( 300./E + 1. ) ) ) or (E/1000 < 100 and ( h.GetRMS() / meanMean > 0.70*( 300./E + 1. ) ) ):
+            realE = pow(10, E)
+            if (realE/1000 >= 100 and ( h.GetRMS() / meanMean > 0.55*( 300./realE + 1. ) ) ) or (realE/1000 < 100 and ( h.GetRMS() / meanMean > 0.70*( 300./realE + 1. ) ) ):
                 h.SetLineColor(ROOT.kRed)
                 nConexDoublePeaks[E] += 1
                 ConexHsDouble[E].append(h)
@@ -314,7 +305,7 @@ def main(argv):
         ntxt.Draw()
         txts.append(ntxt)
 
-        txt = ROOT.TLatex(0.63, 0.82, f'E={E/1000} TeV')
+        txt = ROOT.TLatex(0.63, 0.82, f'logE={E}')
         txt.SetTextColor(ROOT.kWhite)
         txt.SetNDC()
         txt.Draw()
@@ -418,7 +409,7 @@ def main(argv):
         stxt.Draw()
         txts.append(stxt)
 
-        txt = ROOT.TLatex(0.63, 0.82, f'E={E/1000} TeV')
+        txt = ROOT.TLatex(0.63, 0.82, f'logE={E}')
         txt.SetTextColor(ROOT.kWhite)
         txt.SetNDC()
         txt.Draw()

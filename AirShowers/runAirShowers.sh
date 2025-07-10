@@ -2,9 +2,7 @@
 # jk 6.9.2024
 
 batch=1
-for i in 100 1000 10000 100000  ; do
-###for i in 100 1000 10000 100000 1000000 ; do
-#for i in 200000 ; do
+for i in 11 11.5 12 12.5 13 13.5 14 14.5 15 15.5 16  ; do
     for j in `seq 0 500` ; do
 	draw=0
 	#if [ $j -gt 0 ] ; then

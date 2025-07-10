@@ -21,17 +21,19 @@ geV = 1e-9 # GeV
 
 # https://pdg.lbl.gov/2023/AtomicNuclearProperties/HTML/air_dry_1_atm.html
 
-gX0 = 36.62 # air; g/cm2 # Mattews: 37
+gX0 = 37. # 36.62 # air; g/cm2 # Mattews: 37
 gIntLengthGamma = gX0*9./7.
 
 # inelastic
-gPiIntLength = 122. # g/cm2 # Mattews 2005: 120
+gPiIntLength = 120. # 122 g/cm2 # Mattews 2005: 120
+
 # elastic:
-gPiCollisionLength = 88.5 # g/cm2
+#gPiCollisionLength = 88.5 # g/cm2
 
 # inelastic
 gHadIntLength = 80. # 90.1 # g/cm2 # Leroy-Rancoita: 80
-# elastic
+
+# elastic -- not needed
 #gHadCollisionLength = 61.3 # g/cm2
 
 gLength = { 'e' : gX0, 'gamma' : gIntLengthGamma, 'pi' : gPiIntLength, 'mu' : gInfty, 'nu' : gInfty, 'p' : gHadIntLength}
