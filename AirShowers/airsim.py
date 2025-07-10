@@ -18,8 +18,6 @@ from math import pow, log, exp, sqrt
 from numpy.random import exponential as exponential
 from numpy.random import poisson as Poisson
 
-
-
 from utils import *
 from consts import *
 
@@ -27,10 +25,9 @@ cans = []
 stuff = []
 
 
-
 ##########################################
 class cworld():
-    def __init__(self):
+    def __init__(self, debug = 0):
         self.can = None
         self.x0 = 0.0
         self.y0 = 0.
@@ -49,6 +46,8 @@ class cworld():
                 
         self.maxgen = 0
         self.steps = 0
+
+        self.debug = debug
 
         self.Tunables = tunables()
         return
@@ -87,17 +86,37 @@ class cworld():
         self.outfile = ROOT.TFile(rootdir + 'histos' + rtag + '_tmp.root', ropt)   
         self.h1Nx = ROOT.TH1D(hname, htitle, nb, x1, x2)
 
-        E1, E2 = 20*gGeV, 1e6*gGeV
-        n1, n2 = 0, 50
+        self.h1s = {}
+        self.h2s = {}
+        
+        E1, E2 = 0.*gGeV, 1e3*gGeV
+        n1, n2 = 0, 400
+        nb = 100
         hname, htitle = 'Nhad0vsE', ';E[GeV];N_{had}'
-        self.h1NhadE = ROOT.TH2D(hname, htitle, nb, E1, E2, nb, n1, n2)
-        hname, htitle = 'Nch0vsE', ';E[GeV];N_{ch}'
-        self.h1NchE = ROOT.TH2D(hname, htitle, nb, E1, E2, nb, n1, n2)
-        hname, htitle = 'Npi0vsE', ';E[GeV];N_{#pi0}'
-        self.h1Npi0E = ROOT.TH2D(hname, htitle, nb, E1, E2, nb, n1, n2)
-        hname, htitle = 'NpvsE', ';E[GeV];N_{p}'
-        self.h1NpE = ROOT.TH2D(hname, htitle, nb, E1, E2, nb, n1, n2)
+        self.h2s["NhadE"] = ROOT.TH2D(hname, htitle, nb, E1, E2, nb, n1, n2)
 
+        hname, htitle = 'Nch0vsE', ';E[GeV];N_{ch}'
+        self.h2s["NchE"] = ROOT.TH2D(hname, htitle, nb, E1, E2, nb, n1, n2)
+        hname, htitle = 'Npi0vsE', ';E[GeV];N_{#pi0}'
+        self.h2s["Npi0E"] = ROOT.TH2D(hname, htitle, nb, E1, E2, nb, n1, n2)
+        hname, htitle = 'NpvsE', ';E[GeV];N_{p}'
+        self.h2s["NpE"] = ROOT.TH2D(hname, htitle, nb, E1, E2, nb, n1, n2)
+
+        nb = 400
+        hname, htitle = 'Nhad', ';N_{had}'
+        self.h1s["Nhad"] = ROOT.TH1D(hname, htitle, nb, n1, n2)
+        hname, htitle = 'Nch', ';N_{ch}'
+        self.h1s["Nch"] = ROOT.TH1D(hname, htitle, nb, n1, n2)
+        hname, htitle = 'Npi0', ';N_{#pi0}'
+        self.h1s["Npi0"] = ROOT.TH1D(hname, htitle, nb, n1, n2)
+        hname, htitle = 'Np', ';N_{p}'
+        self.h1s["Np"] = ROOT.TH1D(hname, htitle, int(nb/10), n1, int(n2/10))
+        
+        for hn,h1 in self.h1s.items():
+            makeDarkAxes(h1)
+        for hn,h2 in self.h2s.items():
+            makeDarkAxes(h2)
+        
 ##########################################
 class cpart:
     
@@ -148,58 +167,128 @@ def DrawParticle(part, world, halfSteps, verbose = 0):
 
 ##########################################
 
-def genPions(pid, E, gamma, length, x, y, world):
+def genHadrons(pid, E, gamma, length, x, y, world, nMaxIters = 100):
     SFy, gammaySF, piySF = world.SFy, world.gammaySF, world.piySF
     # gen pions and actually also gammas from pi0 decay;)
-    pions = []
-    
-    # TODO: make some of these protons, actually, too?
-    # or see later:)
-    nCharged = int(world.Tunables.PionsConst*pow(E/gGeV, world.Tunables.PionsExp)) # 10 # can be randomized say between 6 and 12
-    #nCharged = int(world.Tunables.PionsConst*log(E/gGeV*world.Tunables.PionsExp)) # 10 # can be randomized say between 6 and 12
+    # and some additional protons, too;)
+    hadrons_and_photons = []
 
+    # exp. not good, rather indicative of total number of pions produced;)
+    #nCharged = int( Poisson(world.Tunables.PionsConst)*pow(E/gGeV, world.Tunables.PionsExp))
+    # DEFAULT LOG!
+    nCharged = int( Poisson(world.Tunables.PionsConst)*log(E/gGeV)) #*world.Tunables.PionsExp)) 
 
-    PiZeroFrac = 1/3 # chooseFrom (1/4., 1/3.)
+    PiZeroFrac = random.uniform(1/4., 1/3.)
     nNeutral = int( PiZeroFrac*nCharged / (1. - PiZeroFrac)  ) 
     ECh = E*(1. - PiZeroFrac)
     ENeutral = E*PiZeroFrac
+
+    Ntot = nCharged + nNeutral
+
     #print('PiZeroFrac , nCharged, nNeutral: ',  PiZeroFrac , nCharged, nNeutral)
 
-    world.h1NhadE.Fill(E, nCharged + nNeutral)
-    world.h1NchE.Fill(E, nCharged)
-    world.h1Npi0E.Fill(E, nNeutral)
+    if world.debug:
+        print(f'E={E:0.1f}, pi0 frac. {PiZeroFrac:1.3f}, Asking for: nCharged={nCharged}, nNeutral={nNeutral}, Ntot={nCharged+nNeutral}')
     
-    # make some additinal protons, addition to the leading one already done before in place where calling genPions!
+    # make some additinal protons, addition to the leading one already done before in place where calling genHadrons!
     protonsToMake = 0
     # hmmm, seems like we're doing this only for protons, but we should
     # produce fast hadrons also in pion collisions! TODO! and COMPARE!
     # so try commenting this line:
-    if pid != 'pi':
-        # produce more protons than 1, some random Poisson distr with mu of 1?
-        protonsToMake = 1 ## CMP to: Poisson(lam=1), COMPARE! and vary this parameter? ==> another tunable?;)
+    #if pid != 'pi':
+    # produce more protons than 1, some random Poisson distr with mu of 1?
+    protonsToMake = Poisson(lam=1) # COMPARE! and vary this parameter? ==> another tunable?;)
+    # heuristics:
+    # make sure at least one additional proton produced for impinging proton
+    if pid == 'p' and protonsToMake == 0:
+        protonsToMake = 1
+    Esum = 0.
     for ipi in range(0, nCharged):
         newpid = 'pi'
         if protonsToMake > 0:
             newpid = 'p'
             protonsToMake = protonsToMake - 1
-        Epi = ECh / nCharged # to randomize later! TODO!
-        #print('Epi ch.', Epi)
+        #Epi = ECh / nCharged # to randomize later! TODO!
+        x0 = 1.*ECh
+        lmb = ECh / nCharged
+        if nCharged > 2:
+            lmb = E *(nCharged-1) / (nCharged-2) / nCharged
+        ymax = ymax_pdf(x0, lmb)
+        Epi = 999*ECh
+        iter = 0
+        while Esum + Epi > ECh:
+            Epi = sample_from_custom_pdf(x0, lmb, ymax)
+            if world.debug > 2:
+                print(f'    ...ipi: {ipi}/{nCharged}, iter {iter}: E={E:0.1f} Esum={Esum:0.1f} Epi={Epi:0.1f}')
+            iter += 1
+            if iter > nMaxIters:
+                break
+        # make the last particle, assure E conservation:
+        if iter > nMaxIters:
+            Epi = ECh - Esum
+        Esum += Epi
+        if world.debug > 2 and Epi > 20*gGeV:
+            print(f'   ....Epi={Epi} part={newpid}')
         yrnd = getRndSign()*random.random() / gamma
-        pions.append( cpart(Epi, newpid, x, y, y + yrnd*SFy*length*piySF) )
+        hadrons_and_photons.append( cpart(Epi, newpid, x, y, y + yrnd*SFy*length*piySF) )
+        if iter > nMaxIters:
+            break
 
-    world.h1NpE.Fill(E, protonsToMake + 1)
+    if ipi < nCharged:
+        nCharged = 1*ipi
+        
+    world.h2s["NpE"].Fill(E, protonsToMake + 1)
+    world.h1s["Np"].Fill(protonsToMake + 1)
 
     # and now pi0 --> gamma gamma:
+    Esum = 0.
     for ipi in range(0, nNeutral ):
-        Epi = ENeutral / nNeutral # to randmize later
+        #Epi = ENeutral / nNeutral # to randmize later
+        x0 = 1.*ENeutral
+        lmb = ENeutral / nNeutral
+        if nNeutral > 2:
+            lmb = E *(nNeutral-1) / (nNeutral-2) / nNeutral
+        ymax = ymax_pdf(x0, lmb)
+        Epi = 999*ENeutral
+        iter = 0
+        while Esum + Epi >  ENeutral:
+            Epi = sample_from_custom_pdf(x0, lmb, ymax)
+            if world.debug > 2:
+                print(f'    ...ipi: {ipi}/{nNeutral}, iter {iter}: E={E:0.1f} Esum={Esum:0.1f} Epi={Epi:0.1f}')
+            iter += 1
+            if iter > nMaxIters:
+                break
+        # make the last particle, assure E conservation:
+        if iter > nMaxIters:
+            Epi = ENeutral - Esum
+        Esum += Epi
+        
         #print('Epi neutr.', Epi)
         yrnd = getRndSign()*random.random() / gamma
         zeta = random.random()
         # TODO: zeta as a random number drawn from the lab photons energy distribution?
-        pions.append( cpart(    zeta*Epi, 'gamma', x, y, y + yrnd*SFy*length / gammaySF) )
-        pions.append( cpart((1-zeta)*Epi, 'gamma', x, y, y - yrnd*SFy*length / gammaySF) )
+        hadrons_and_photons.append( cpart(    zeta*Epi, 'gamma', x, y, y + yrnd*SFy*length / gammaySF) )
+        hadrons_and_photons.append( cpart((1-zeta)*Epi, 'gamma', x, y, y - yrnd*SFy*length / gammaySF) )
+        if iter > nMaxIters:
+            break
 
-    return pions
+    if ipi < nNeutral:
+        nNeutral = 1*ipi
+        
+    if world.debug:
+        print(f'                          Generated: nCharged={nCharged}, nNeutral={nNeutral}, Ntot={nCharged+nNeutral}')
+
+        
+    world.h2s["NhadE"].Fill(E, Ntot)
+    world.h2s["NchE"].Fill(E, nCharged)
+    world.h2s["Npi0E"].Fill(E, nNeutral)
+
+    world.h1s["Nhad"].Fill(Ntot)
+    world.h1s["Nch"].Fill(nCharged)
+    world.h1s["Npi0"].Fill(nNeutral)
+    
+
+    return hadrons_and_photons
 
 ##########################################
 def twoParticleDecay(part, gamma, world, dy1, rnd1, dy2, rnd2, addSFy):
@@ -338,10 +427,13 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
                 #    chi = random.random()
             #if verbose:
             #    print('  ...performing pion production!')
-            pions = genPions( part.pid, (1.-world.Tunables.Inelasticity)*part.E, gamma, length, x, y, world)
-            # keep the same y for the continuing proton or proton born in pi interaction:
-            # todo: produce more protons!
-            proton = cpart(part.E*world.Tunables.Inelasticity, 'p', x, y, y)
+            #inelasticity = world.Tunables.Inelasticity
+            inelasticity = random.gauss(world.Tunables.Inelasticity, world.Tunables.sigmaInelasticity)
+            if inelasticity < 0. or inelasticity > 1.:
+                inelasticity = world.Tunables.Inelasticity
+            pions = genHadrons( part.pid, inelasticity*part.E, gamma, length, x, y, world)
+            # keep the same y for the continuing proton or leading proton born in pi interaction:
+            proton = cpart(part.E*(1. - inelasticity), 'p', x, y, y)
             newps = [proton]
             newps.extend(pions)
             part.xend = x # terminate the parent particle
@@ -432,6 +524,7 @@ def DrawResults(world, particles, halfSteps):
         if (ipart-1) % 1000000 == 0 and ipart > 0:
             print(f'{ipart-1:10,} / {len(particles):10,}; drawn: {drawn:10,}')
         if drawn < NmaxDraw:
+            #if (part.E > 0.1*gGeV) and (drawn < Ncut or (drawn >= Ncut and random.random() < drawFrac)):
             if drawn < Ncut or (drawn >= Ncut and random.random() < drawFrac):
                 line = DrawParticle(part, world, halfSteps)
                 drawn = drawn + 1
@@ -539,7 +632,12 @@ def doAllDrawing(world, primary, E0, particles, halfSteps, tag, gtag, h1Nx, part
         print(f'Drawn lines: {len(lines):10,}')
         # draw label
         ###
-        txt = ROOT.TLatex(0.02, 0.95, 'Primary: {}; E={:1.1f} TeV, particles: {:1.2f}M, steps={:1.0f}, muons stable: {}'.format(glabel[primary.pid], E0/1000., len(particles) / 1e6, world.steps, not world.decayMuons) )
+        muonStr = 'stable muons'
+        if world.decayMuons:
+            muonStr = 'decayed muons'
+        txt = ROOT.TLatex(0.02, 0.95, 'Primary: {}; E={:1.1f} TeV, particles: {:1.2f}M, steps={:1.0f}, {}'.format(glabel[primary.pid], E0/1000., len(particles) / 1e6, world.steps, muonStr) )
+
+
         #txt = ROOT.TLatex(0.02, 0.95, 'Primary: {}; E={:1.1f} TeV, steps={:1.0f}, muons stable: {}'.format(glabel[primary.pid], E0/1000., world.steps, not world.decayMuons) )
         #txt.SetTextSize(0.04)
         #txt = ROOT.TLatex(0.02, 0.95, 'Primary: {}; E={:1.1f} TeV, particles: {:1.2f}M'.format(glabel[primary.pid], E0/1000., len(particles) / 1e6))

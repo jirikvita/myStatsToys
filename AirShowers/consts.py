@@ -14,10 +14,10 @@ airRho = 1.233e-3 # g/cm3
 gkm = 1.e3
 gm = 1.
 
-gMeV = 1.e-3
-gGeV = 1. # eV
-gTeV = 1.e3 # eV
-geV = 1e-9
+gMeV = 1.e-3 # GeV
+gGeV = 1. # GeV
+gTeV = 1.e3 # GeV
+geV = 1e-9 # GeV
 
 # https://pdg.lbl.gov/2023/AtomicNuclearProperties/HTML/air_dry_1_atm.html
 
@@ -57,14 +57,16 @@ gdaughters = { 'e' : ['',''], 'gamma' : ['',''], 'pi' : ['mu','nu'], 'mu' : ['e'
 class tunables:
     def __init__(self):
         # fraction of energy in collision going to pions:
-        self.Inelasticity = 0.5
-        self.PionsConst = 5.
-        self.PionsExp = 0.6
+        self.Inelasticity = 0.7
+        self.sigmaInelasticity = 0.15
+        self.PionsConst = 100.
+        #self.PionsExp = 0.6
     def print(self):
         print(self.PionsConst, self.PionsExp, self.Inelasticity)
     def makeTag(self):
-        tag = f'_Inel_{self.Inelasticity}_C_{self.PionsConst}_piExp_{self.PionsExp}'
+        tag = f'_Inel_{self.Inelasticity}_C_{self.PionsConst}_sigmaInel_{self.sigmaInelasticity}' #_piExp_{self.PionsExp}'
         return tag
         
         
 ##########################################
+

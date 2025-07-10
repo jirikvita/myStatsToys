@@ -26,7 +26,9 @@ def main(argv):
     ROOT.gStyle.SetOptTitle(0)
     SetMyStyle()
 
-    world = cworld()
+    debug = 0
+    world = cworld(debug)
+    
     x, y = 0.*gkm, 0.*gm
     yend = 0*gm # dummy
     primary = cpart(E0, primaryPID, x, y, yend)

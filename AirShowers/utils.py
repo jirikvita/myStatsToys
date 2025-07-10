@@ -15,6 +15,32 @@ import math
 
 
 ##########################################
+# 10.7.2025
+# custom quadratic * exp PDF for energy distribution of hadrons
+
+def ymax_pdf(x0, lmb):
+    return custom_pdf(xmax_pdf(x0, lmb), x0, lmb)
+
+def xmax_pdf(x0, lmb):
+    return lmb + x0/2. - math.sqrt( math.pow(lmb, 2) + math.pow(x0/2., 2))
+
+def custom_pdf(x, x0, lmb):
+    y = 1. / (  2*lmb**3*(1 - math.exp(-x0/lmb)) - lmb**2*x0*(1 + math.exp(-x0/lmb)) ) * x * (x - x0) * math.exp(-x/lmb)
+    return y 
+
+def sample_from_custom_pdf(x0, lmb, ymax):
+    while True:
+        x = random.uniform(0., x0)
+        y = random.uniform(0., ymax)
+        if y < custom_pdf(x, x0, lmb):
+            return x
+
+## Example: Generate 10 samples
+#samples = [sample_from_custom_pdf() for _ in range(10)]
+#print(samples)
+
+
+##########################################
 def makeHistoFromGraph(gr, tag):
     x, y = c_double(0), c_double(0)
     xs = []
@@ -147,11 +173,33 @@ def makeGrStyle(gr, col = ROOT.kAzure-3):
     gr.SetLineColor(gr.GetMarkerColor())
     gr.SetLineWidth(1)
     gr.SetLineStyle(1)
-    
+
+
+        
+##########################################
+def makeDarkAxes(h2):
+    #h2.SetStats(0)
+        
+    h2.GetXaxis().SetAxisColor(ROOT.kBlack)
+    h2.GetXaxis().SetLabelColor(ROOT.kBlack)
+    h2.GetXaxis().SetTitleColor(ROOT.kBlack)
+
+    h2.GetYaxis().SetAxisColor(ROOT.kBlack)
+    h2.GetYaxis().SetLabelColor(ROOT.kBlack)
+    h2.GetYaxis().SetTitleColor(ROOT.kBlack)
+
+    h2.GetZaxis().SetAxisColor(ROOT.kBlack)
+    h2.GetZaxis().SetLabelColor(ROOT.kBlack)
+    h2.GetZaxis().SetTitleColor(ROOT.kBlack)
+
 ##########################################
 def makeWhiteAxes(h2):
     h2.SetStats(0)
         
+    h2.GetXaxis().SetAxisColor(ROOT.kWhite)
+    h2.GetXaxis().SetLabelColor(ROOT.kWhite)
+    h2.GetXaxis().SetTitleColor(ROOT.kWhite)
+
     h2.GetYaxis().SetAxisColor(ROOT.kWhite)
     h2.GetYaxis().SetLabelColor(ROOT.kWhite)
     h2.GetYaxis().SetTitleColor(ROOT.kWhite)
