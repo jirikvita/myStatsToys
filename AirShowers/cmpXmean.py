@@ -46,8 +46,8 @@ def GetHmeans(Es, fnames, hbasename, Nshowers):
                 means.append(mean)
                 #print(mean)
                 h.Rebin(Rebin)
-                #if E < 10e3:
-                #    h.Rebin(2)
+                if E < 10e4:
+                    h.Rebin(2)
                 Hs[E].append(h)
             except:
                 pass
@@ -127,7 +127,7 @@ def main(argv):
     SetMyStyle()
 
     #Es = [ int(pow(10,n)) for n in range(2,8)]
-    Es = [ int(pow(10,n)) for n in range(2,7)]
+    Es = [ int(pow(10,n)) for n in range(3,6)]
     #Es = [100, 1000, 10000, 50000, 100000, 1000000]
     #Es.append(250000)
     print(Es)
@@ -183,7 +183,7 @@ def main(argv):
 
 
     conexDir='conex/simulated_showers/uniqueE_low/merged/' #'/home/qitek/install/conex/conex2r6.40/simulated_showers/uniqueE_low/merged'
-    EconexDict = { 100: f'conex_p_E_11_{generator}_merged.root',
+    EconexDict = { #100: f'conex_p_E_11_{generator}_merged.root',
                    1000: f'conex_p_E_12_{generator}_merged.root',
                    10000: f'conex_p_E_13_{generator}_merged.root',
                    #50000: f'conex_p_E_13.5_{generator}_merged.root',

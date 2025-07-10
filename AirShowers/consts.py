@@ -30,16 +30,16 @@ gPiIntLength = 122. # g/cm2 # Mattews 2005: 120
 gPiCollisionLength = 88.5 # g/cm2
 
 # inelastic
-gHadIntLength = 90.1 # g/cm2
+gHadIntLength = 80. # 90.1 # g/cm2 # Leroy-Rancoita: 80
 # elastic
-gHadCollisionLength = 61.3 # g/cm2
+#gHadCollisionLength = 61.3 # g/cm2
 
 gLength = { 'e' : gX0, 'gamma' : gIntLengthGamma, 'pi' : gPiIntLength, 'mu' : gInfty, 'nu' : gInfty, 'p' : gHadIntLength}
 gctau = { 'e' : gInfty, 'gamma' : gInfty, 'pi' : 7.8*gm, 'mu' : 660*gm, 'p' : gInfty }
 gmass = { 'e' : 0.511*gMeV, 'gamma' : 0, 'pi' : 139.6*gMeV, 'mu' : 105.7*gMeV, 'nu' : 0., 'p' : 938.3*gMeV}
 
 # critical energy for the EM shower, for electrons
-gECEM = 87.92*gMeV # Matthews 2005: 85
+gECEM = 87.92*gMeV # Matthews 2005: 85 # Leroy-Rancoita: 81
 gECpair = 2*gmass['e']
 
 
@@ -57,14 +57,15 @@ gdaughters = { 'e' : ['',''], 'gamma' : ['',''], 'pi' : ['mu','nu'], 'mu' : ['e'
 class tunables:
     def __init__(self):
         # fraction of energy in collision going to pions:
-        self.Inelasticity = 0.7
-        self.sigmaInelasticity = 0.15
+        self.Inelasticity = 0.65
+        self.sigmaInelasticity = 0.2
         self.PionsConst = 100.
+        self.sigmaPionConst = 30.
         #self.PionsExp = 0.6
     def print(self):
         print(self.PionsConst, self.PionsExp, self.Inelasticity)
     def makeTag(self):
-        tag = f'_Inel_{self.Inelasticity}_C_{self.PionsConst}_sigmaInel_{self.sigmaInelasticity}' #_piExp_{self.PionsExp}'
+        tag = f'_Inel_{self.Inelasticity}_sigmaInel_{self.sigmaInelasticity}_C_{self.PionsConst}_Csigma_{self.sigmaPionConst}' #_piExp_{self.PionsExp}'
         return tag
         
         

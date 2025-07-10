@@ -11,7 +11,7 @@
 
 import ROOT
 
-from math import sqrt, pow, log, exp
+from math import sqrt, pow, log, exp, log10
 import os, sys, getopt
 import random
 from math import pow, log, exp, sqrt
@@ -88,30 +88,36 @@ class cworld():
 
         self.h1s = {}
         self.h2s = {}
+
+        if iteration == 0:
+            ROOT.gDirectory.mkdir('Nhists')
+        ROOT.gDirectory.cd('Nhists')
         
         E1, E2 = 0.*gGeV, 1e3*gGeV
-        n1, n2 = 0, 400
-        nb = 100
-        hname, htitle = 'Nhad0vsE', ';E[GeV];N_{had}'
+        n1, n2 = 0, 1000
+        nb = n2
+        hname, htitle = f'Nhad0vsE_{iteration}', ';E[GeV];N_{had}'
         self.h2s["NhadE"] = ROOT.TH2D(hname, htitle, nb, E1, E2, nb, n1, n2)
 
-        hname, htitle = 'Nch0vsE', ';E[GeV];N_{ch}'
+        hname, htitle = f'Nch0vsE_{iteration}', ';E[GeV];N_{ch}'
         self.h2s["NchE"] = ROOT.TH2D(hname, htitle, nb, E1, E2, nb, n1, n2)
-        hname, htitle = 'Npi0vsE', ';E[GeV];N_{#pi0}'
+        hname, htitle = f'Npi0vsE_{iteration}', ';E[GeV];N_{#pi0}'
         self.h2s["Npi0E"] = ROOT.TH2D(hname, htitle, nb, E1, E2, nb, n1, n2)
-        hname, htitle = 'NpvsE', ';E[GeV];N_{p}'
+        hname, htitle = f'NpvsE_{iteration}', ';E[GeV];N_{p}'
         self.h2s["NpE"] = ROOT.TH2D(hname, htitle, nb, E1, E2, nb, n1, n2)
 
         nb = 400
-        hname, htitle = 'Nhad', ';N_{had}'
+        hname, htitle = f'Nhad_{iteration}', ';N_{had}'
         self.h1s["Nhad"] = ROOT.TH1D(hname, htitle, nb, n1, n2)
-        hname, htitle = 'Nch', ';N_{ch}'
+        hname, htitle = f'Nch_{iteration}', ';N_{ch}'
         self.h1s["Nch"] = ROOT.TH1D(hname, htitle, nb, n1, n2)
-        hname, htitle = 'Npi0', ';N_{#pi0}'
+        hname, htitle = f'Npi0_{iteration}', ';N_{#pi0}'
         self.h1s["Npi0"] = ROOT.TH1D(hname, htitle, nb, n1, n2)
-        hname, htitle = 'Np', ';N_{p}'
+        hname, htitle = f'Np_{iteration}', ';N_{p}'
         self.h1s["Np"] = ROOT.TH1D(hname, htitle, int(nb/10), n1, int(n2/10))
-        
+
+        ROOT.gDirectory.cd('../')
+
         for hn,h1 in self.h1s.items():
             makeDarkAxes(h1)
         for hn,h2 in self.h2s.items():
@@ -176,8 +182,11 @@ def genHadrons(pid, E, gamma, length, x, y, world, nMaxIters = 100):
     # exp. not good, rather indicative of total number of pions produced;)
     #nCharged = int( Poisson(world.Tunables.PionsConst)*pow(E/gGeV, world.Tunables.PionsExp))
     # DEFAULT LOG!
-    nCharged = int( Poisson(world.Tunables.PionsConst)*log(E/gGeV)) #*world.Tunables.PionsExp)) 
-
+    # nCharged = int( Poisson(world.Tunables.PionsConst)*log(E/gGeV)) #*world.Tunables.PionsExp))
+    nCharged = -1
+    while  nCharged < 0: 
+        nCharged = int( random.gauss(world.Tunables.PionsConst, world.Tunables.sigmaPionConst)*log(E/gGeV)) #*world.Tunables.PionsExp)) 
+    
     PiZeroFrac = random.uniform(1/4., 1/3.)
     nNeutral = int( PiZeroFrac*nCharged / (1. - PiZeroFrac)  ) 
     ECh = E*(1. - PiZeroFrac)
@@ -203,12 +212,13 @@ def genHadrons(pid, E, gamma, length, x, y, world, nMaxIters = 100):
     if pid == 'p' and protonsToMake == 0:
         protonsToMake = 1
     Esum = 0.
+    protonsToProduce = 0 + protonsToMake
     for ipi in range(0, nCharged):
         newpid = 'pi'
         if protonsToMake > 0:
             newpid = 'p'
             protonsToMake = protonsToMake - 1
-        #Epi = ECh / nCharged # to randomize later! TODO!
+        #Epi = ECh / nCharged
         x0 = 1.*ECh
         lmb = ECh / nCharged
         if nCharged > 2:
@@ -237,8 +247,8 @@ def genHadrons(pid, E, gamma, length, x, y, world, nMaxIters = 100):
     if ipi < nCharged:
         nCharged = 1*ipi
         
-    world.h2s["NpE"].Fill(E, protonsToMake + 1)
-    world.h1s["Np"].Fill(protonsToMake + 1)
+    world.h2s["NpE"].Fill(E, protonsToProduce + 1)
+    world.h1s["Np"].Fill(protonsToProduce + 1)
 
     # and now pi0 --> gamma gamma:
     Esum = 0.
@@ -266,7 +276,8 @@ def genHadrons(pid, E, gamma, length, x, y, world, nMaxIters = 100):
         #print('Epi neutr.', Epi)
         yrnd = getRndSign()*random.random() / gamma
         zeta = random.random()
-        # TODO: zeta as a random number drawn from the lab photons energy distribution?
+        # uniform distribution within doppler boundaries
+        # is actually well approximated for large gamma and beta of 1 by U(0, Epi0)
         hadrons_and_photons.append( cpart(    zeta*Epi, 'gamma', x, y, y + yrnd*SFy*length / gammaySF) )
         hadrons_and_photons.append( cpart((1-zeta)*Epi, 'gamma', x, y, y - yrnd*SFy*length / gammaySF) )
         if iter > nMaxIters:
@@ -428,9 +439,9 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
             #if verbose:
             #    print('  ...performing pion production!')
             #inelasticity = world.Tunables.Inelasticity
-            inelasticity = random.gauss(world.Tunables.Inelasticity, world.Tunables.sigmaInelasticity)
-            if inelasticity < 0. or inelasticity > 1.:
-                inelasticity = world.Tunables.Inelasticity
+            inelasticity = -1
+            while inelasticity > 1 or inelasticity < 0:
+                inelasticity = random.gauss(world.Tunables.Inelasticity, world.Tunables.sigmaInelasticity)
             pions = genHadrons( part.pid, inelasticity*part.E, gamma, length, x, y, world)
             # keep the same y for the continuing proton or leading proton born in pi interaction:
             proton = cpart(part.E*(1. - inelasticity), 'p', x, y, y)
@@ -612,8 +623,12 @@ def processArgs(argv):
     return E,iteration,gBatch,doDraw 
 
 ##########################################
-def makeTags(primary, E0, iteration):
-    tag = '_{}_E{:1.0f}GeV'.format(primary.pid, E0)
+def makeTags(primary, E0, iteration, useLog = True):
+    tag = ''
+    if useLog:
+        tag = '_{}_logE_{:1.0f}'.format(primary.pid, log10(E0)+9 )
+    else:
+        tag = '_{}_E{:1.0f}GeV'.format(primary.pid, E0)
     rtag = tag + ''
     tag = tag + '_iter{}'.format(iteration)
     gtag = tag + ''

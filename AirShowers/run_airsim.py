@@ -42,21 +42,20 @@ def main(argv):
     particles = Simulate(doDraw, primary, world, E0, randomizeY, halfSteps)
 
     # get/make some stuff needed
-    print('Getting some stats...')
-    jmax,maxx    = getMaxX(particles)
-
-    # fill histogrammes
-    print('Counting drawn particles...')
-    partCounts = {}
-    for pid in glabel:
-        partCounts[pid] = 0
-    for part in particles:
-        pid = part.pid
-        partCounts[pid] = partCounts[pid] + 1
-
-
-    for pid in partCounts:
-        print(f'{pid:6}: {partCounts[pid]:10,}')
+    #print('Getting some stats...')
+    #jmax,maxx    = getMaxX(particles)
+    
+    if doDraw:
+        print('Counting drawn particles...')
+        partCounts = {}
+        for pid in glabel:
+            partCounts[pid] = 0
+        for part in particles:
+            pid = part.pid
+            partCounts[pid] = partCounts[pid] + 1
+        for pid in partCounts:
+            print(f'{pid:6}: {partCounts[pid]:10,}')
+            
     spitSomeInfo(primary, E0, particles, world)
     if doDraw:
         can, h2, lines, partialDraw, statcan, txt = doAllDrawing(world, primary, E0, particles, halfSteps, tag, gtag, world.h1Nx, partCounts)
@@ -72,7 +71,7 @@ def main(argv):
     print(f'...Thanks for running {sys.argv[0]}')
     print('...Returning and kiling oneself!')
     print('...So long, and thanks for all the fish!')
-    os.system('killall -9 run_airsim.py')
+    #os.system('killall -9 run_airsim.py')
     return 0
 
 ###################################
