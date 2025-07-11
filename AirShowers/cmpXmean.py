@@ -24,11 +24,14 @@ def AddToHeatMap(h2, h):
 
 
 ########################################
+# actually, getting maximum of shower development for each shower,
+# i.e. really Xmax, by highest bin, so no mean X, 
+# but then computing the mean of these Xmax values;)
 def GetHmeans(Es, fnames, hbasename, Nshowers):
     Fs = []
     Hs = {}
     Means = {}
-    Rebin = 2
+    Rebin = 4
         
     for E in Es:
         infile = None
@@ -46,15 +49,15 @@ def GetHmeans(Es, fnames, hbasename, Nshowers):
                 means.append(mean)
                 #print(mean)
                 h.Rebin(Rebin)
-                if E < 10e4:
-                    h.Rebin(2)
+                #if E < 10e4:
+                #    h.Rebin(2)
                 Hs[E].append(h)
             except:
                 pass
                 #print(f'Error getting {hname} from {fname}')
 
         meanMean, meanErr = GetMeanAndError(means)
-        Means[E] = showerAverResults(E, meanMean, meanErr)
+        Means[E] = showerAverResults(E, meanMean, meanErr, means)
 
     return Hs, Fs, Means
         
@@ -74,9 +77,14 @@ def GetHmeansFromTree(conexDir, EconexDict, treename, varname):
         tree = rfile.Get(treename)
         hname = f'h_{E}'
         tree.Draw(f'{varname} >> {hname}', f'{varname} < 4000')
+        # this is already a histogram ox Xmax'es!
         h = ROOT.gDirectory.Get(hname)
         #try:
-        mean = h.GetBinCenter(h.GetMaximumBin()) #h.GetMean()
+        # so we should NOT take maximum of the Xmax histo, but a mean!!!
+        #mean = h.GetBinCenter(h.GetMaximumBin()) #h.GetMean()
+        #err = h.GetMeanError()
+        # so the mean:
+        mean = h.GetMean()
         err = h.GetMeanError()
         means.append(mean)
         #print(mean)
@@ -85,7 +93,7 @@ def GetHmeansFromTree(conexDir, EconexDict, treename, varname):
         #    h.Rebin(2)
         Hs[E].append(h)
         #meanMean, meanErr = GetMeanAndError(means)
-        Means[E] = showerAverResults(E, mean, err)
+        Means[E] = showerAverResults(E, mean, err, means)
         #except:
         #    print(f'Error getting conex {hname} from {fname}')
 
@@ -100,10 +108,10 @@ def GetMeanAndError(means):
     np = len(means)
     meanMean = sum(means) / np
     for i in range(0, len(means)):
-        meanSqSum = pow(means[i] - meanMean, 2)
+        meanSqSum += pow(means[i] - meanMean, 2)
     meanErr = 0.
     if np > 1 and meanSqSum > 0:
-        meanErr = sqrt(meanSqSum / (np - 1))
+        meanErr = sqrt(meanSqSum / (np - 1) / np)
         
     return meanMean, meanErr
 
@@ -112,10 +120,11 @@ def GetMeanAndError(means):
 ########################################
 
 class showerAverResults:
-    def __init__(self, E, mean, meanErr):
+    def __init__(self, E, mean, meanErr, means):
         self.E = E
         self.mean = mean
         self.meanErr = meanErr
+        self.means = means
   
 ########################################
 ########################################
@@ -131,7 +140,8 @@ def main(argv):
     #Es = [100, 1000, 10000, 50000, 100000, 1000000]
     #Es.append(250000)
 
-    Es = [11, 12, 13, 14]
+    Es = [#11, 11.5,
+          12, 12.5, 13, 13.5, 14, 14.5]
 
     print(Es)
     
@@ -152,20 +162,19 @@ def main(argv):
         ROOT.gROOT.SetBatch(1)
 
     for E in Es:
-        fnames[E] = f'{rootdir}/histos_p_logE_{E}_tmp.root'
+        fnames[E] = f'{rootdir}/histos_p_logE_{E:1.1f}_tmp.root'
         
     Hs, Fs, MeansAirSim = GetHmeans(Es, fnames, hbasename, Nshowers)
     ftag = fnames[E].split('/')[-2].replace('root_','').replace('_',' ')
     fftag = ftag.replace(' ','_')
     
-    ip = 0
     print('Got following lengths:')
     for E in Hs:
         print(f'{E}: {len(Hs[E])}')
     
     gr = ROOT.TGraphErrors()
+    ip = 0
     for E,meanData in MeansAirSim.items():
-        E = meanData.E
         mean = meanData.mean
         meanErr = meanData.meanErr
         gr.SetPoint(ip, E, mean)
@@ -174,12 +183,18 @@ def main(argv):
 
 
     conexDir='conex/simulated_showers/uniqueE_low/merged/' #'/home/qitek/install/conex/conex2r6.40/simulated_showers/uniqueE_low/merged'
-    EconexDict = { 11: f'conex_p_E_11_{generator}_merged.root',
+    EconexDict = { #11: f'conex_p_E_11_{generator}_merged.root',
+                   #11.5: f'conex_p_E_11.5_{generator}_merged.root',
                    12: f'conex_p_E_12_{generator}_merged.root',
+                   12.5: f'conex_p_E_12.5_{generator}_merged.root',
                    13: f'conex_p_E_13_{generator}_merged.root',
+                   13.5: f'conex_p_E_13.5_{generator}_merged.root',
                    14: f'conex_p_E_14_{generator}_merged.root',
+                   14.5: f'conex_p_E_14.5_{generator}_merged.root',
                    #15: f'conex_p_E_15_{generator}_merged.root',
+                   #15.5: f'conex_p_E_15.5_{generator}_merged.root',
                    ###16: f'conex_p_E_16_{generator}_merged.root',
+                   ###16.5: f'conex_p_E_16.5_{generator}_merged.root',
                   }
     cfnames = EconexDict.values()
     conexPeakXmaxHs, cFs, MeansConex = GetHmeansFromTree(conexDir, EconexDict, 'Shower', 'Xmax')
@@ -188,7 +203,6 @@ def main(argv):
     ip = 0
     ConexShowerGraphs = {}
     for E,meanData in MeansConex.items():
-        E = meanData.E
         mean = meanData.mean
         meanErr = meanData.meanErr
         gr_conex.SetPoint(ip, E, mean)
@@ -202,7 +216,7 @@ def main(argv):
         ConexShowerGraphs[E] = graphs
 
     txts = []
-
+    
 
     ########################
     # Draw conex profiles as graphs
@@ -365,7 +379,6 @@ def main(argv):
             h.Draw('hist' + opt)
         ie += 1
 
-
     ccan.Update()
     
     H2s = []
@@ -397,7 +410,7 @@ def main(argv):
         makeWhiteAxes(h2)
         H2s.append(h2)
 
-        HsPeakXmax[E] = ROOT.TH1D(f'AirSimPeakXmax_{E}', ';X_{max}[g/cm^{2}];showers', 150, 0, 1500)
+        HsPeakXmax[E] = ROOT.TH1D(f'AirSimPeakXmax_{E}', ';X_{max}[g/cm^{2}];showers', 75, 0, 1500)
 
         h2sum = ROOT.TH2D(f'hsum_{E}', ';x[g/cm^{2}];Particles (e/#mu)', 40, 0, 4000, 25, 0, ymax)
         makeWhiteAxes(h2sum)
@@ -423,8 +436,11 @@ def main(argv):
 
         opt = ' same'
         meanMean = 0.
-        for h in hs:
-            val = h.GetMean()
+        # no filling by means of shower profiles,
+        # but actually filling by already found Xmax vals!
+        for val in MeansAirSim[E].means:
+            #for h in hs:
+            #val = h.GetMean()
             meanMean += val
             HsPeakXmax[E].Fill(val)
             #print('mean, rms: ', h.GetMean(), h.GetRMS())
@@ -436,8 +452,9 @@ def main(argv):
             h.SetStats(0)
             #print('...drawing, mean=', h.GetMean())
             #h.Draw('hist plc' + opt)
-            h.SetLineColor(ROOT.kBlue)
-            if (E/1000 >= 100 and ( h.GetRMS() / meanMean > 0.55*( 300./E + 1. ) ) ) or (E/1000 < 100 and ( h.GetRMS() / meanMean > 0.70*( 300./E + 1. ) ) ):
+            h.SetLineColor(ROOT.kAzure-3)
+            realE = pow(10, E)
+            if (realE/1000 >= 100 and ( h.GetRMS() / meanMean > 0.55*( 300./realE + 1. ) ) ) or (realE/1000 < 100 and ( h.GetRMS() / meanMean > 0.70*( 300./realE + 1. ) ) ):
                 h.SetLineColor(ROOT.kRed)
                 nDoublePeaks[E] += 1
                 HsDouble[E].append(h)
@@ -486,7 +503,7 @@ def main(argv):
             h.Scale(1./area)
         h.SetLineWidth(1)
         h.SetStats(0)
-        h.SetLineColor(ROOT.kBlue)
+        h.SetLineColor(ROOT.kAzure-3)
         h.Draw('hist same')
         ie += 1
     ccan.Update()
@@ -546,8 +563,8 @@ def main(argv):
 
     ########################
     # print
-    pngdir  = 'png_nPiLogEi/'
-    pdfdir  = 'pdf_nPiLogEi/'
+    pngdir  = 'png_tuning/'
+    pdfdir  = 'pdf_tuning/'
 
     cpcan.Print(pdfdir + cpcan.GetName() + f'_{generator}.pdf')
     cpcan.Print(pngdir + cpcan.GetName() + f'_{generator}.png')
