@@ -242,10 +242,11 @@ def genHadrons(pid, E, gamma, length, x, y, world, nMaxIters = 100):
         yrnd = getRndSign()*random.random() / gamma
         hadrons_and_photons.append( cpart(Epi, newpid, x, y, y + yrnd*SFy*length*piySF) )
         if iter > nMaxIters:
+            nCharged = 1*ipi
             break
 
-    if ipi < nCharged:
-        nCharged = 1*ipi
+    #if ipi < nCharged:
+    #    nCharged = 1*ipi
         
     world.h2s["NpE"].Fill(E, protonsToProduce + 1)
     world.h1s["Np"].Fill(protonsToProduce + 1)
@@ -281,10 +282,11 @@ def genHadrons(pid, E, gamma, length, x, y, world, nMaxIters = 100):
         hadrons_and_photons.append( cpart(    zeta*Epi, 'gamma', x, y, y + yrnd*SFy*length / gammaySF) )
         hadrons_and_photons.append( cpart((1-zeta)*Epi, 'gamma', x, y, y - yrnd*SFy*length / gammaySF) )
         if iter > nMaxIters:
+            nNeutral = 1*ipi
             break
 
-    if ipi < nNeutral:
-        nNeutral = 1*ipi
+    #if ipi < nNeutral:
+    #    nNeutral = 1*ipi
         
     if world.debug:
         print(f'                          Generated: nCharged={nCharged}, nNeutral={nNeutral}, Ntot={nCharged+nNeutral}')
@@ -438,11 +440,33 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
                 #    chi = random.random()
             #if verbose:
             #    print('  ...performing pion production!')
-            #inelasticity = world.Tunables.Inelasticity
+            
             inelasticity = -1
             while inelasticity > 1 or inelasticity < 0:
                 inelasticity = random.gauss(world.Tunables.Inelasticity, world.Tunables.sigmaInelasticity)
-            pions = genHadrons( part.pid, inelasticity*part.E, gamma, length, x, y, world)
+            
+            didInteraction = False
+            if self.doNewPhysics:
+                hadXsect = 
+                NPxsect = world.Tunables.MZprimeHadXsectFraction*hadXsect
+                NewPhysXsectFrac = NPxsect / (NPxsect + hadXsect)
+                Ethr = world.Tunables.MZprime**2 / (2*gmass['p'])
+                if  fabs( (part.E - Ethr) < world.Tunables.GammaZprime) :
+                    # do 2 leading particles based on decay mode:
+                    # TODO!
+                    if world.Tunables.decayMode == decayMode.PiPi:
+                        #
+                        pass
+                    elif world.Tunables.decayMode == decayMode.MuMu:
+                        #
+                        pass
+                    elif world.Tunables.decayMode == decayMode.ee:
+                        #
+                        pass
+                    didInteraction = True
+                    pass
+            if not didInteraction:
+                pions = genHadrons( part.pid, inelasticity*part.E, gamma, length, x, y, world)
             # keep the same y for the continuing proton or leading proton born in pi interaction:
             proton = cpart(part.E*(1. - inelasticity), 'p', x, y, y)
             newps = [proton]

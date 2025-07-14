@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import ROOT
+from enum import Enum
 
 gInfty = 999e999
 gEpsilon = 1e-4
@@ -52,18 +53,41 @@ gcol = { 'e' : ROOT.kGreen+2, 'gamma' : ROOT.kAzure-3, 'pi' : ROOT.kRed + 2, 'mu
 glst = { 'e' : 1, 'gamma' : 2, 'pi' : 1, 'mu' : 2, 'nu' : 3, 'p' : 1}
 glwd = { 'e' : 1, 'gamma' : 1, 'pi' : 1, 'mu' : 1, 'nu' : 1, 'p' : 1}
 glabel = {'e' : 'e^{#pm}', 'gamma' : '#gamma', 'pi' : '#pi^{#pm}', 'mu' : '#mu^{#pm}', 'nu' : '#nu/#bar{#nu}', 'p' : 'p/#bar{p}'}
-gdaughters = { 'e' : ['',''], 'gamma' : ['',''], 'pi' : ['mu','nu'], 'mu' : ['e','nu'], 'nu' : ['',''], 'p' : ['','']}
+
+# TODO!
+gdaughters = { 'e' : ['',''], 'gamma' : ['',''], 'pi' : ['mu','nu'], 'mu' : ['e','nu'], 'nu' : ['',''], 'p' : ['',''], 'Zprime' : ['', '']}
+
+
 
 ##########################################
 
+class decayModes(Enum):
+    kPiPi = 0
+    kMuMu = 1
+    kee = 2
+
+
 class tunables:
     def __init__(self):
+
+        # hadroproduction parameters
         # fraction of energy in collision going to pions:
         self.Inelasticity = 0.65
         self.sigmaInelasticity = 0.2
+        # for the pion number logarithmic dependence on energy
         self.PionsConst = 100.
         self.sigmaPionConst = 30.
-        #self.PionsExp = 0.6
+        
+        # new physics
+        self.doNewPhysics = False
+        self.MZprimeHadXsectFraction = 0.1
+        self.MZprime = 10000*gGeV
+        self.GammaZprime = 0.1*self.MZprime
+        self.decayMode = decayModes.kPiPi
+        #self.decayMode = decayModes.kMumu
+        #self.decayMode = decayModes.kee
+        
+        
     def print(self):
         print(self.PionsConst, self.PionsExp, self.Inelasticity)
     def makeTag(self):
