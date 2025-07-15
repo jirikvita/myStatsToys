@@ -304,7 +304,7 @@ def genHadrons(pid, E, gamma, length, x, y, world, nMaxIters = 100):
     return hadrons_and_photons
 
 ##########################################
-def twoParticleDecay(part, gamma, world, dy1, rnd1, dy2, rnd2, addSFy):
+def twoParticleDecay(part, gamma, world, dy1, rnd1, dy2, rnd2, addSFy, pid0 = '', pid1 = ''):
     SFy = world.SFy * addSFy
     # decay the pion to a muon
     # less transverse separation
@@ -322,8 +322,10 @@ def twoParticleDecay(part, gamma, world, dy1, rnd1, dy2, rnd2, addSFy):
     if part.pid == 'mu':
         # hack the y of muons to be smaller, like pions
         length = gLength['pi']
-    p1 = cpart(E1, gdaughters[part.pid][0], x, y, y + (dy1 + rnd1)*SFy*length)
-    p2 = cpart(E2, gdaughters[part.pid][1], x, y, y + (dy2 + rnd2)*SFy*length)
+    if pid0 == '': pid0 = gdaughters[part.pid][0]
+    if pid1 == '': pid1 = gdaughters[part.pid][1]
+    p1 = cpart(E1, pid0, x, y, y + (dy1 + rnd1)*SFy*length)
+    p2 = cpart(E2, pid1, x, y, y + (dy2 + rnd2)*SFy*length)
     
     return [p1, p2], x
 
@@ -445,27 +447,30 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
             while inelasticity > 1 or inelasticity < 0:
                 inelasticity = random.gauss(world.Tunables.Inelasticity, world.Tunables.sigmaInelasticity)
             
-            didInteraction = False
-            if self.doNewPhysics:
-                hadXsect = 
-                NPxsect = world.Tunables.MZprimeHadXsectFraction*hadXsect
-                NewPhysXsectFrac = NPxsect / (NPxsect + hadXsect)
-                Ethr = world.Tunables.MZprime**2 / (2*gmass['p'])
-                if  fabs( (part.E - Ethr) < world.Tunables.GammaZprime) :
-                    # do 2 leading particles based on decay mode:
-                    # TODO!
-                    if world.Tunables.decayMode == decayMode.PiPi:
-                        #
-                        pass
-                    elif world.Tunables.decayMode == decayMode.MuMu:
-                        #
-                        pass
-                    elif world.Tunables.decayMode == decayMode.ee:
-                        #
-                        pass
-                    didInteraction = True
+            pions = []
+            if world.Tunables.doNewPhysics:
+                doNewPhysics = random.random() < world.Tunables.MZprimeHadXsectFraction
+                Ethr = pow(world.Tunables.MZprime, 2) / (2.*gmass['p'])
+                #if world.debug > 0
+                #print(f'Zprime resonance? E={part.E}, mass: {world.Tunables.MZprime} GeV, Ethr={Ethr} GeV')
+
+                if doNewPhysics and abs(part.E - Ethr) < world.Tunables.GammaZprime:
+                    pid0, pid1 = -1, -1
+                    if world.Tunables.decayMode == decayModes.kPiPi:
+                        pid0, pid1 = 'pi', 'pi'
+                    elif world.Tunables.decayMode == decayModes.kMuMu:
+                        pid0, pid1 = 'mu', 'mu'
+                    elif world.Tunables.decayMode == decayModes.kee:
+                        pid0, pid1 = 'e', 'e'
+                    print(f'Zprime resonance! E={part.E:.2f}, mass: {world.Tunables.MZprime:.0f} GeV, Ethr={Ethr:.2f} GeV')
+                    # NEED TO RECOMPUTE THE gamma factor?
+                    # care about additional particles produced in the interaction...?!?!?!
+                    # add some Feynman x and compute how much energy goes to proton remnants?
+                    gamma = part.E / world.Tunables.MZprime
+                    pions, xend = twoParticleDecay(part, gamma, world, dy1, rnd1, dy2, rnd2, addSFy, pid0, pid1)
+                    part.xend = xend # terminate the parent particle
                     pass
-            if not didInteraction:
+            if len(pions) == 0:
                 pions = genHadrons( part.pid, inelasticity*part.E, gamma, length, x, y, world)
             # keep the same y for the continuing proton or leading proton born in pi interaction:
             proton = cpart(part.E*(1. - inelasticity), 'p', x, y, y)
@@ -618,7 +623,7 @@ def processArgs(argv):
             E = Ereq
         #else:
         #    print(f'Wrong custom energy E={Ereq} GeV, using default E={E} GeV')
-        print(f'Using custom energy             E: {E} GeV')
+        print(f'Using custom energy             E: {E:.0f} GeV = 10^{log10(E)+9:1.1f} eV')
 
     iteration = 0
     if len(argv) > 2:

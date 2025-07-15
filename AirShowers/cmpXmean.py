@@ -141,7 +141,8 @@ def main(argv):
     #Es.append(250000)
 
     Es = [#11, 11.5,
-          12, 12.5, 13, 13.5, 14, 14.5]
+          12, 12.5, 13, 13.5, 14, 14.5, 15, 15.5
+    ]
 
     print(Es)
     
@@ -191,8 +192,8 @@ def main(argv):
                    13.5: f'conex_p_E_13.5_{generator}_merged.root',
                    14: f'conex_p_E_14_{generator}_merged.root',
                    14.5: f'conex_p_E_14.5_{generator}_merged.root',
-                   #15: f'conex_p_E_15_{generator}_merged.root',
-                   #15.5: f'conex_p_E_15.5_{generator}_merged.root',
+                   15: f'conex_p_E_15_{generator}_merged.root',
+                   15.5: f'conex_p_E_15.5_{generator}_merged.root',
                    ###16: f'conex_p_E_16_{generator}_merged.root',
                    ###16.5: f'conex_p_E_16.5_{generator}_merged.root',
                   }

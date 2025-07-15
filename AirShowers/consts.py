@@ -65,7 +65,11 @@ class decayModes(Enum):
     kPiPi = 0
     kMuMu = 1
     kee = 2
+decays = {decayModes.kPiPi: 'pipi',
+          decayModes.kMuMu: 'mumu',
+          decayModes.kee: 'ee'}
 
+##########################################
 
 class tunables:
     def __init__(self):
@@ -79,9 +83,9 @@ class tunables:
         self.sigmaPionConst = 30.
         
         # new physics
-        self.doNewPhysics = False
+        self.doNewPhysics = True
         self.MZprimeHadXsectFraction = 0.1
-        self.MZprime = 10000*gGeV
+        self.MZprime = 10*gGeV
         self.GammaZprime = 0.1*self.MZprime
         self.decayMode = decayModes.kPiPi
         #self.decayMode = decayModes.kMumu
@@ -92,6 +96,8 @@ class tunables:
         print(self.PionsConst, self.PionsExp, self.Inelasticity)
     def makeTag(self):
         tag = f'_Inel_{self.Inelasticity}_sigmaInel_{self.sigmaInelasticity}_C_{self.PionsConst}_Csigma_{self.sigmaPionConst}' #_piExp_{self.PionsExp}'
+        if self.doNewPhysics:
+            tag += f'_Zprime_{self.MZprime}_Gamma_{self.GammaZprime}_mode_{decays[self.decayMode]}_xsectFrac_{self.MZprimeHadXsectFraction:1.2f}'
         return tag
         
         
