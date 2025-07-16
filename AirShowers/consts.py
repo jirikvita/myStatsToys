@@ -54,8 +54,7 @@ glst = { 'e' : 1, 'gamma' : 2, 'pi' : 1, 'mu' : 2, 'nu' : 3, 'p' : 1}
 glwd = { 'e' : 1, 'gamma' : 1, 'pi' : 1, 'mu' : 1, 'nu' : 1, 'p' : 1}
 glabel = {'e' : 'e^{#pm}', 'gamma' : '#gamma', 'pi' : '#pi^{#pm}', 'mu' : '#mu^{#pm}', 'nu' : '#nu/#bar{#nu}', 'p' : 'p/#bar{p}'}
 
-# TODO!
-gdaughters = { 'e' : ['',''], 'gamma' : ['',''], 'pi' : ['mu','nu'], 'mu' : ['e','nu'], 'nu' : ['',''], 'p' : ['',''], 'Zprime' : ['', '']}
+gdaughters = { 'e' : ['',''], 'gamma' : ['',''], 'pi' : ['mu','nu'], 'mu' : ['e','nu'], 'nu' : ['',''], 'p' : ['',''] }
 
 
 
@@ -85,7 +84,7 @@ class tunables:
         # new physics
         self.doNewPhysics = True
         self.MZprimeHadXsectFraction = 0.1
-        self.MZprime = 10*gGeV
+        self.MZprime = 1000*gGeV
         self.GammaZprime = 0.1*self.MZprime
         self.decayMode = decayModes.kPiPi
         #self.decayMode = decayModes.kMumu
@@ -99,7 +98,18 @@ class tunables:
         if self.doNewPhysics:
             tag += f'_Zprime_{self.MZprime}_Gamma_{self.GammaZprime}_mode_{decays[self.decayMode]}_xsectFrac_{self.MZprimeHadXsectFraction:1.2f}'
         return tag
-        
+    
+    def Print(self):
+        print(f'Inelasticity      : {self.Inelasticity}')
+        print(f'sigmaInelasticity : {self.sigmaInelasticity}')
+        print(f'PionsConst        : {self.PionsConst}')
+        print(f'sigmaPionConst    : {self.sigmaPionConst}')
+        print(f'doNewPhysics      : {self.doNewPhysics}')
+        if self.doNewPhysics:
+            print(f'MZprimeHadXsectFraction : {self.MZprimeHadXsectFraction}')
+            print(f'MZprime                 : {self.MZprime}')
+            print(f'GammaZprime             : {self.GammaZprime}')
+            print(f'decayMode               : {decays[self.decayMode]}')
         
 ##########################################
 

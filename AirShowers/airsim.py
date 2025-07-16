@@ -51,7 +51,10 @@ class cworld():
 
         self.Tunables = tunables()
         return
-    
+
+    def PrintPars(self):
+        self.Tunables.Print()
+   
     #def UpdateMaxGen(self):
     #    self.maxgen = self.maxgen + 1
     
@@ -94,8 +97,8 @@ class cworld():
         ROOT.gDirectory.cd('Nhists')
         
         E1, E2 = 0.*gGeV, 1e3*gGeV
-        n1, n2 = 0, 1000
-        nb = n2
+        n1, n2 = -0.5, 999.5
+        nb = 1000
         hname, htitle = f'Nhad0vsE_{iteration}', ';E[GeV];N_{had}'
         self.h2s["NhadE"] = ROOT.TH2D(hname, htitle, nb, E1, E2, nb, n1, n2)
 
@@ -115,6 +118,11 @@ class cworld():
         self.h1s["Npi0"] = ROOT.TH1D(hname, htitle, nb, n1, n2)
         hname, htitle = f'Np_{iteration}', ';N_{p}'
         self.h1s["Np"] = ROOT.TH1D(hname, htitle, int(nb/10), n1, int(n2/10))
+
+        hname, htitle = f'doNewPhys_{iteration}', ';do new physics'
+        self.h1s["doNewPhys"] = ROOT.TH1D(hname, htitle, 2, -0.5, 1.5)
+        hname, htitle = f'logEforNewPhys_{iteration}', ';logE for new physics'
+        self.h1s["logEforNewPhys"] = ROOT.TH1D(hname, htitle, 1600, 0, 20)
 
         ROOT.gDirectory.cd('../')
 
@@ -449,27 +457,30 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
             
             pions = []
             if world.Tunables.doNewPhysics:
-                doNewPhysics = random.random() < world.Tunables.MZprimeHadXsectFraction
                 Ethr = pow(world.Tunables.MZprime, 2) / (2.*gmass['p'])
                 #if world.debug > 0
-                #print(f'Zprime resonance? E={part.E}, mass: {world.Tunables.MZprime} GeV, Ethr={Ethr} GeV')
-
-                if doNewPhysics and abs(part.E - Ethr) < world.Tunables.GammaZprime:
-                    pid0, pid1 = -1, -1
-                    if world.Tunables.decayMode == decayModes.kPiPi:
-                        pid0, pid1 = 'pi', 'pi'
-                    elif world.Tunables.decayMode == decayModes.kMuMu:
-                        pid0, pid1 = 'mu', 'mu'
-                    elif world.Tunables.decayMode == decayModes.kee:
-                        pid0, pid1 = 'e', 'e'
-                    print(f'Zprime resonance! E={part.E:.2f}, mass: {world.Tunables.MZprime:.0f} GeV, Ethr={Ethr:.2f} GeV')
-                    # NEED TO RECOMPUTE THE gamma factor?
-                    # care about additional particles produced in the interaction...?!?!?!
-                    # add some Feynman x and compute how much energy goes to proton remnants?
-                    gamma = part.E / world.Tunables.MZprime
-                    pions, xend = twoParticleDecay(part, gamma, world, dy1, rnd1, dy2, rnd2, addSFy, pid0, pid1)
-                    part.xend = xend # terminate the parent particle
-                    pass
+                #print(f'Zprime resonance? E = {part.E:10.0f} GeV = 10^{log10(part.E)+9:.2f} eV, mass: {world.Tunables.MZprime} GeV, Ethr = {Ethr:.0f} GeV = 10^{log10(Ethr)+9:1.2f} eV')
+                if abs(part.E - Ethr) < world.Tunables.GammaZprime:
+                    doNewPhysics = random.random() < world.Tunables.MZprimeHadXsectFraction
+                    world.h1s["doNewPhys"].Fill(1*doNewPhysics)
+                    world.h1s["logEforNewPhys"].Fill(log10(part.E) + 9)
+                    #print(f'  ...do new physics? {doNewPhysics}')
+                    if doNewPhysics:
+                        pid0, pid1 = -1, -1
+                        if world.Tunables.decayMode == decayModes.kPiPi:
+                            pid0, pid1 = 'pi', 'pi'
+                        elif world.Tunables.decayMode == decayModes.kMuMu:
+                            pid0, pid1 = 'mu', 'mu'
+                        elif world.Tunables.decayMode == decayModes.kee:
+                            pid0, pid1 = 'e', 'e'
+                        print(f'    ...Zprime resonance! E={part.E:.2f}, mass: {world.Tunables.MZprime:.0f} GeV, Ethr={Ethr:.2f} GeV')
+                        # recpompute gamma factor
+                        # care about additional particles produced in the interaction...?!?!?!
+                        # add some Feynman x and compute how much energy goes to proton remnants?
+                        gamma = part.E / world.Tunables.MZprime
+                        pions, xend = twoParticleDecay(part, gamma, world, dy1, rnd1, dy2, rnd2, addSFy, pid0, pid1)
+                        part.xend = xend # terminate the parent particle
+                        pass
             if len(pions) == 0:
                 pions = genHadrons( part.pid, inelasticity*part.E, gamma, length, x, y, world)
             # keep the same y for the continuing proton or leading proton born in pi interaction:
@@ -606,11 +617,11 @@ def processArgs(argv):
 
     print(argv)
     if len(argv) > 1 and argv[1] == '-h':
-        print(f'Usage: {argv[0]} [E(GeV)=100GeV] [iteration=0] [batch=0] [draw=1]')
+        print(f'Usage: {argv[0]} [logE(eV)=13.5] [iteration=0] [batch=0] [draw=1]')
         return -1, 0, 0, 0
 
     print(f'*** Running {argv[0]}')
-    E = 500 # GeV
+    E =  5*pow(10, 2) # 500 GeV
     if len(argv) > 1:
         Ereq = float(argv[1])
         #if Ereq <= 1000000 and Ereq >= 30:
@@ -623,7 +634,7 @@ def processArgs(argv):
             E = Ereq
         #else:
         #    print(f'Wrong custom energy E={Ereq} GeV, using default E={E} GeV')
-        print(f'Using custom energy             E: {E:.0f} GeV = 10^{log10(E)+9:1.1f} eV')
+        print(f'Using custom energy             E: {E/1000.:.0f} TeV = 10^{log10(E)+9:1.1f} eV')
 
     iteration = 0
     if len(argv) > 2:
