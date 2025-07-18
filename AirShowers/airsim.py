@@ -422,7 +422,7 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
         return [p1, p2]
     
     # decay the pions
-    elif part.pid == 'pi' and part.E < ECpiThr:
+    elif (part.pid == 'pi' or part.pid == 'Pi') and part.E < ECpiThr:
         ps, xend = twoParticleDecay(part, gamma, world, dy1, rnd1, dy2, rnd2, addSFy)
         # terminate muons and neutrinos:
         if len(ps) == 0:
@@ -434,7 +434,7 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
         #world.UpdateMaxGen()
         return ps
             
-    elif (part.pid == 'pi' or part.pid == 'p') and part.E >= ECpiThr:
+    elif (part.pid == 'pi' or part.pid == 'Pi' or part.pid == 'p') and part.E >= ECpiThr:
             #xi = 1/3.
             #chi = 0.
             if halfSteps:
@@ -468,7 +468,7 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
                     if doNewPhysics:
                         pid0, pid1 = -1, -1
                         if world.Tunables.decayMode == decayModes.kPiPi:
-                            pid0, pid1 = 'pi', 'pi'
+                            pid0, pid1 = 'Pi', 'Pi'
                         elif world.Tunables.decayMode == decayModes.kMuMu:
                             pid0, pid1 = 'mu', 'mu'
                         elif world.Tunables.decayMode == decayModes.kee:
@@ -540,7 +540,7 @@ def Simulate(doDraw, primary, world, E0, randomizeY, halfSteps):
         newparticles = todoparticles
         for part in newparticles:
             pid = part.pid
-            if pid == 'e' or pid == 'pi' or pid == 'p':
+            if pid == 'e' or pid == 'pi' or pid == 'Pi' or pid == 'p':
                 # we do not have the xend information at this point
                 # so cannot average x and xend...
                 world.h1Nx.Fill(part.x - primary.xend)
@@ -557,13 +557,14 @@ def DrawResults(world, particles, halfSteps):
     print('Drawing particles...')
     h2.Draw()
     drawn = 0
-    Ncut = 1e7
+    Ncut = 3e6
     NmaxDraw = 1e8 # must be bigger than Ncut!
-    drawFrac = 0.3
+    drawFrac = 0.1
     partialDraw = len(particles) > Ncut
     ipart = 0
 
-    requids = ['pi', 'p']
+    # first draw elentrons and photons, muons and neutrinos
+    requids = ['Pi', 'pi', 'p']
     skipmode = True
     for part in particles:
         if len(requids) > 0:
@@ -583,6 +584,7 @@ def DrawResults(world, particles, halfSteps):
                 lines.append(line)
                 
     skipmode = False
+    # then draw pions
     requids = ['pi']
     for part in particles:
         if len(requids) > 0:
@@ -596,7 +598,22 @@ def DrawResults(world, particles, halfSteps):
         line = DrawParticle(part, world, halfSteps)
         lines.append(line)
 
+    # now protons
     requids = ['p']
+    for part in particles:
+        if len(requids) > 0:
+            if part.pid in requids and skipmode:
+                continue
+            if not part.pid in requids and not skipmode:
+                continue
+        ipart = ipart + 1
+        if (ipart-1) % 1000000 == 0 and ipart > 0:
+            print(f'{ipart-1:10,} / {len(particles):10,}; drawn: {drawn:10,}')
+        line = DrawParticle(part, world, halfSteps)
+        lines.append(line)
+        
+    # and last pions produced in resonance new physics interactions ;-)
+    requids = ['Pi']
     for part in particles:
         if len(requids) > 0:
             if part.pid in requids and skipmode:

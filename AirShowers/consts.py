@@ -3,6 +3,8 @@
 import ROOT
 from enum import Enum
 
+from math import log10, pow, sqrt
+
 gInfty = 999e999
 gEpsilon = 1e-4
 
@@ -37,9 +39,26 @@ gHadIntLength = 80. # 90.1 # g/cm2 # Leroy-Rancoita: 80
 # elastic -- not needed
 #gHadCollisionLength = 61.3 # g/cm2
 
-gLength = { 'e' : gX0, 'gamma' : gIntLengthGamma, 'pi' : gPiIntLength, 'mu' : gInfty, 'nu' : gInfty, 'p' : gHadIntLength}
-gctau = { 'e' : gInfty, 'gamma' : gInfty, 'pi' : 7.8*gm, 'mu' : 660*gm, 'p' : gInfty }
-gmass = { 'e' : 0.511*gMeV, 'gamma' : 0, 'pi' : 139.6*gMeV, 'mu' : 105.7*gMeV, 'nu' : 0., 'p' : 938.3*gMeV}
+gLength = { 'e' : gX0,
+            'gamma' : gIntLengthGamma,
+            'pi' : gPiIntLength,
+            'Pi' : gPiIntLength,
+            'mu' : gInfty,
+            'nu' : gInfty,
+            'p' : gHadIntLength}
+gctau = { 'e' : gInfty,
+          'gamma' : gInfty,
+          'pi' : 7.8*gm,
+          'Pi' : 7.8*gm,
+          'mu' : 660*gm,
+          'p' : gInfty }
+gmass = { 'e' : 0.511*gMeV,
+          'gamma' : 0,
+          'pi' : 139.6*gMeV,
+          'Pi' : 139.6*gMeV,
+          'mu' : 105.7*gMeV,
+          'nu' : 0.,
+          'p' : 938.3*gMeV}
 
 # critical energy for the EM shower, for electrons
 gECEM = 87.92*gMeV # Matthews 2005: 85 # Leroy-Rancoita: 81
@@ -49,12 +68,18 @@ gECpair = 2*gmass['e']
 # critical energy to produce pions:
 ECpiThr = 20*gGeV # as Matthews 2005
 
-gcol = { 'e' : ROOT.kGreen+2, 'gamma' : ROOT.kAzure-3, 'pi' : ROOT.kRed + 2, 'mu' : ROOT.kMagenta+3, 'nu' : ROOT.kGray+2, 'p' : ROOT.kRed}
-glst = { 'e' : 1, 'gamma' : 2, 'pi' : 1, 'mu' : 2, 'nu' : 3, 'p' : 1}
-glwd = { 'e' : 1, 'gamma' : 1, 'pi' : 1, 'mu' : 1, 'nu' : 1, 'p' : 1}
-glabel = {'e' : 'e^{#pm}', 'gamma' : '#gamma', 'pi' : '#pi^{#pm}', 'mu' : '#mu^{#pm}', 'nu' : '#nu/#bar{#nu}', 'p' : 'p/#bar{p}'}
+gcol = { 'e' : ROOT.kGreen+2,
+         'gamma' : ROOT.kAzure-3,
+         'pi' : ROOT.kRed + 2,
+         'Pi' : ROOT.kYellow,
+         'mu' : ROOT.kMagenta+3,
+         'nu' : ROOT.kGray+2, 'p' : ROOT.kRed}
 
-gdaughters = { 'e' : ['',''], 'gamma' : ['',''], 'pi' : ['mu','nu'], 'mu' : ['e','nu'], 'nu' : ['',''], 'p' : ['',''] }
+glst = { 'e' : 1, 'gamma' : 2, 'pi' : 1, 'Pi' : 1, 'mu' : 2, 'nu' : 3, 'p' : 1}
+glwd = { 'e' : 1, 'gamma' : 1, 'pi' : 1, 'Pi' : 1, 'mu' : 1, 'nu' : 1, 'p' : 1}
+glabel = {'e' : 'e^{#pm}', 'gamma' : '#gamma', 'pi' : '#pi^{#pm}', 'Pi' : 'res. #pi^{#pm}', 'mu' : '#mu^{#pm}', 'nu' : '#nu/#bar{#nu}', 'p' : 'p/#bar{p}'}
+
+gdaughters = { 'e' : ['',''], 'gamma' : ['',''], 'pi' : ['mu','nu'], 'Pi' : ['mu','nu'], 'mu' : ['e','nu'], 'nu' : ['',''], 'p' : ['',''] }
 
 
 
@@ -75,7 +100,7 @@ class tunables:
 
         # hadroproduction parameters
         # fraction of energy in collision going to pions:
-        self.Inelasticity = 0.65
+        self.Inelasticity = 0.55
         self.sigmaInelasticity = 0.2
         # for the pion number logarithmic dependence on energy
         self.PionsConst = 100.
@@ -84,7 +109,7 @@ class tunables:
         # new physics
         self.doNewPhysics = True
         self.MZprimeHadXsectFraction = 0.1
-        self.MZprime = 1000*gGeV
+        self.MZprime = 10*gGeV
         self.GammaZprime = 0.1*self.MZprime
         self.decayMode = decayModes.kPiPi
         #self.decayMode = decayModes.kMumu
@@ -110,6 +135,7 @@ class tunables:
             print(f'MZprime                 : {self.MZprime}')
             print(f'GammaZprime             : {self.GammaZprime}')
             print(f'decayMode               : {decays[self.decayMode]}')
+            print(f'Ethr                    : 10^{log10(pow(self.MZprime,2)/2)+9:.1f} eV')
         
 ##########################################
 

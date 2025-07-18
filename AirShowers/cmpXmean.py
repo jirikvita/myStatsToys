@@ -22,23 +22,28 @@ def AddToHeatMap(h2, h):
         y = h.GetBinContent(ibin)
         h2.Fill(x,y)
 
+########################################
 
+def suspectedWideShower(realE, meanMean, h):
+    #return (realE/1000 >= 100 and ( h.GetRMS() / meanMean > 0.55*( 300./realE + 1. ) ) ) or (realE/1000 < 100 and ( h.GetRMS() / meanMean > 0.70*( 300./realE + 1. ) ) ):
+    return  h.GetRMS() / meanMean > 0.80
+        
 ########################################
 # actually, getting maximum of shower development for each shower,
 # i.e. really Xmax, by highest bin, so no mean X, 
 # but then computing the mean of these Xmax values;)
-def GetHmeans(Es, fnames, hbasename, Nshowers):
+def GetHmeans(logEs, fnames, hbasename, Nshowers):
     Fs = []
     Hs = {}
     Means = {}
     Rebin = 4
         
-    for E in Es:
+    for logE in logEs:
         infile = None
-        fname = fnames[E]
+        fname = fnames[logE]
         infile = ROOT.TFile(fname, 'read')
         Fs.append(infile)
-        Hs[E] = []
+        Hs[logE] = []
         means = []
         for i in range(0,Nshowers):
             hname = hbasename + f'_{i}'
@@ -49,15 +54,15 @@ def GetHmeans(Es, fnames, hbasename, Nshowers):
                 means.append(mean)
                 #print(mean)
                 h.Rebin(Rebin)
-                #if E < 10e4:
+                #if logE < 10e4:
                 #    h.Rebin(2)
-                Hs[E].append(h)
+                Hs[logE].append(h)
             except:
                 pass
                 #print(f'Error getting {hname} from {fname}')
 
         meanMean, meanErr = GetMeanAndError(means)
-        Means[E] = showerAverResults(E, meanMean, meanErr, means)
+        Means[logE] = showerAverResults(logE, meanMean, meanErr, means)
 
     return Hs, Fs, Means
         
@@ -66,16 +71,16 @@ def GetHmeansFromTree(conexDir, EconexDict, treename, varname):
     Fs = []
     Hs = {}
     Means = {}
-    for E in EconexDict:
-        Hs[E] = []
+    for logE in EconexDict:
+        Hs[logE] = []
         means = []
         
-        fname = EconexDict[E]
+        fname = EconexDict[logE]
         rfile = ROOT.TFile(conexDir + fname, 'read')
         Fs.append(rfile)
 
         tree = rfile.Get(treename)
-        hname = f'h_{E}'
+        hname = f'h_{logE}'
         tree.Draw(f'{varname} >> {hname}', f'{varname} < 4000')
         # this is already a histogram ox Xmax'es!
         h = ROOT.gDirectory.Get(hname)
@@ -89,11 +94,11 @@ def GetHmeansFromTree(conexDir, EconexDict, treename, varname):
         means.append(mean)
         #print(mean)
         #h.Rebin(Rebin)
-        #if E < 10e3:
+        #if logE < 10e3:
         #    h.Rebin(2)
-        Hs[E].append(h)
+        Hs[logE].append(h)
         #meanMean, meanErr = GetMeanAndError(means)
-        Means[E] = showerAverResults(E, mean, err, means)
+        Means[logE] = showerAverResults(logE, mean, err, means)
         #except:
         #    print(f'Error getting conex {hname} from {fname}')
 
@@ -120,8 +125,8 @@ def GetMeanAndError(means):
 ########################################
 
 class showerAverResults:
-    def __init__(self, E, mean, meanErr, means):
-        self.E = E
+    def __init__(self, logE, mean, meanErr, means):
+        self.logE = logE
         self.mean = mean
         self.meanErr = meanErr
         self.means = means
@@ -135,16 +140,18 @@ def main(argv):
 
     SetMyStyle()
 
-    #Es = [ int(pow(10,n)) for n in range(2,8)]
-    #Es = [ int(pow(10,n)) for n in range(3,6)]
-    #Es = [100, 1000, 10000, 50000, 100000, 1000000]
-    #Es.append(250000)
+    #logEs = [ int(pow(10,n)) for n in range(2,8)]
+    #logEs = [ int(pow(10,n)) for n in range(3,6)]
+    #logEs = [100, 1000, 10000, 50000, 100000, 1000000]
+    #logEs.append(250000)
 
-    Es = [#11, 11.5,
+    logEs = [#11, 11.5,
           12, 12.5, 13, 13.5, 14, 14.5, 15, 15.5
     ]
 
-    print(Es)
+    cnx, cny = 3, 3
+    cw, ch = 1400, 1200
+    print(logEs)
     
     hbasename = 'h1Nx'
     Nshowers = 2000
@@ -162,23 +169,23 @@ def main(argv):
         gBatch = True
         ROOT.gROOT.SetBatch(1)
 
-    for E in Es:
-        fnames[E] = f'{rootdir}/histos_p_logE_{E:1.1f}_tmp.root'
+    for logE in logEs:
+        fnames[logE] = f'{rootdir}/histos_p_logE_{logE:1.1f}_tmp.root'
         
-    Hs, Fs, MeansAirSim = GetHmeans(Es, fnames, hbasename, Nshowers)
-    ftag = fnames[E].split('/')[-2].replace('root_','').replace('_',' ')
+    Hs, Fs, MeansAirSim = GetHmeans(logEs, fnames, hbasename, Nshowers)
+    ftag = fnames[logE].split('/')[-2].replace('root_','').replace('_',' ')
     fftag = ftag.replace(' ','_')
     
     print('Got following lengths:')
-    for E in Hs:
-        print(f'{E}: {len(Hs[E])}')
+    for logE in Hs:
+        print(f'{logE}: {len(Hs[logE])}')
     
     gr = ROOT.TGraphErrors()
     ip = 0
-    for E,meanData in MeansAirSim.items():
+    for logE,meanData in MeansAirSim.items():
         mean = meanData.mean
         meanErr = meanData.meanErr
-        gr.SetPoint(ip, E, mean)
+        gr.SetPoint(ip, logE, mean)
         gr.SetPointError(ip, 0., meanErr)
         ip = ip+1
 
@@ -203,18 +210,18 @@ def main(argv):
     gr_conex = ROOT.TGraphErrors()
     ip = 0
     ConexShowerGraphs = {}
-    for E,meanData in MeansConex.items():
+    for logE,meanData in MeansConex.items():
         mean = meanData.mean
         meanErr = meanData.meanErr
-        gr_conex.SetPoint(ip, E, mean)
+        gr_conex.SetPoint(ip, logE, mean)
         gr_conex.SetPointError(ip, 0., meanErr)
         ip = ip+1
 
         # get also individual conex showers as TGraphs:
-        rfile = ROOT.TFile(conexDir + EconexDict[E], 'read')
+        rfile = ROOT.TFile(conexDir + EconexDict[logE], 'read')
         tree = rfile.Get('Shower')
-        graphs = getConexShowerGraphs(tree, E)
-        ConexShowerGraphs[E] = graphs
+        graphs = getConexShowerGraphs(tree, logE)
+        ConexShowerGraphs[logE] = graphs
 
     txts = []
     
@@ -222,15 +229,15 @@ def main(argv):
     ########################
     # Draw conex profiles as graphs
     canname = f'ConexGrProfiles'
-    cpcan = ROOT.TCanvas(canname, canname, 0, 0, 1000, 1200)
+    cpcan = ROOT.TCanvas(canname, canname, 0, 0, cw, ch)
     cans.append(cpcan)
-    cpcan.Divide(2,3)
+    cpcan.Divide(cnx, cny)
     cpH2s = []
     ie = 0
-    for E,grs in ConexShowerGraphs.items():
+    for logE,grs in ConexShowerGraphs.items():
         cpcan.cd(1+ie)
         ymax = getGrMaxima(grs)*1.2
-        h2 = ROOT.TH2D(f'conexProfileGr_tmp_{E}', ';x[g/cm^{2}];N', 100, 0, 4000, 100, 0, ymax)
+        h2 = ROOT.TH2D(f'conexProfileGr_tmp_{logE}', ';x[g/cm^{2}];N', 100, 0, 4000, 100, 0, ymax)
         h2.Draw()
         makeWhiteAxes(h2)
         cpH2s.append(h2)
@@ -255,7 +262,7 @@ def main(argv):
         ntxt.Draw()
         txts.append(ntxt)
 
-        txt = ROOT.TLatex(0.63, 0.82, f'logE={E}')
+        txt = ROOT.TLatex(0.63, 0.82, f'logE={logE}')
         txt.SetTextColor(ROOT.kWhite)
         txt.SetNDC()
         txt.Draw()
@@ -267,25 +274,25 @@ def main(argv):
     ########################
     # Draw conex profiles as histos:)
     canname = f'ConexHistProfiles'
-    hcpcan = ROOT.TCanvas(canname, canname, 0, 0, 1000, 1200)
+    hcpcan = ROOT.TCanvas(canname, canname, 0, 0, cw, ch)
     cans.append(hcpcan)
-    hcpcan.Divide(2,3)
+    hcpcan.Divide(cnx, cny)
     hcpH2s = []
     ConexShowerHistos = {}
     ie = 0
     nConexDoublePeaks = {}
     ConexHsDouble = {}
-    for E,grs in ConexShowerGraphs.items():
-        nConexDoublePeaks[E] = 0
-        ConexHsDouble[E] = []
+    for logE,grs in ConexShowerGraphs.items():
+        nConexDoublePeaks[logE] = 0
+        ConexHsDouble[logE] = []
         hcpcan.cd(1+ie)
         ymax = getGrMaxima(grs)*1.2
-        h2 = ROOT.TH2D(f'conexProfileHist_tmp_{E}', ';x[g/cm^{2}];N', 100, 0, 4000, 100, 0, ymax)
+        h2 = ROOT.TH2D(f'conexProfileHist_tmp_{logE}', ';x[g/cm^{2}];N', 100, 0, 4000, 100, 0, ymax)
         h2.Draw()
         makeWhiteAxes(h2)
         hcpH2s.append(h2)
-        hs = makeHistosFromGraphs(grs, f'_{E}')
-        ConexShowerHistos[E] = hs
+        hs = makeHistosFromGraphs(grs, f'_{logE}')
+        ConexShowerHistos[logE] = hs
         opt = 'histsame'
         igr = 0
         meanMean = 0.
@@ -298,11 +305,11 @@ def main(argv):
             if igr > 1000:
                 break
             h.SetLineColor(ROOT.kCyan)
-            realE = pow(10, E)
-            if (realE/1000 >= 100 and ( h.GetRMS() / meanMean > 0.55*( 300./realE + 1. ) ) ) or (realE/1000 < 100 and ( h.GetRMS() / meanMean > 0.70*( 300./realE + 1. ) ) ):
+            realE = pow(10, logE)
+            if suspectedWideShower(realE, meanMean, h):
                 h.SetLineColor(ROOT.kRed)
-                nConexDoublePeaks[E] += 1
-                ConexHsDouble[E].append(h)
+                nConexDoublePeaks[logE] += 1
+                ConexHsDouble[logE].append(h)
 
             h.Draw(opt)
             igr += 1
@@ -320,7 +327,7 @@ def main(argv):
         ntxt.Draw()
         txts.append(ntxt)
 
-        txt = ROOT.TLatex(0.63, 0.82, f'logE={E}')
+        txt = ROOT.TLatex(0.63, 0.82, f'logE={logE}')
         txt.SetTextColor(ROOT.kWhite)
         txt.SetNDC()
         txt.Draw()
@@ -329,17 +336,17 @@ def main(argv):
         ie += 1
         
     ie = 0
-    for E,hs in ConexHsDouble.items():
+    for logE,hs in ConexHsDouble.items():
         hcpcan.cd(1+ie)
         for h in hs:
             h.Draw('same hist')
         ie += 1
     ie = 0
-    for E,hs in ConexShowerHistos.items():
-        nConexDoublePeaks[E] /= len(hs)
-        print('Double peaks fraction: ', nConexDoublePeaks[E])
+    for logE,hs in ConexShowerHistos.items():
+        nConexDoublePeaks[logE] /= len(hs)
+        print('Double peaks fraction: ', nConexDoublePeaks[logE])
         hcpcan.cd(1+ie)
-        txt = ROOT.TLatex(0.15, 0.82, f'Double peaks frac.: {nConexDoublePeaks[E]:1.3f}')
+        txt = ROOT.TLatex(0.15, 0.82, f'Double peaks frac.: {nConexDoublePeaks[logE]:1.3f}')
         txt.SetNDC()
         txt.SetTextColor(ROOT.kWhite)
         txt.Draw()
@@ -357,15 +364,15 @@ def main(argv):
     ########################
     # Draw conex peak Xmax distributions (these are NOT shower profiles!:):
     canname = f'ConexPeakXmax'
-    ccan = ROOT.TCanvas(canname, canname, 0, 0, 1000, 1200)
+    ccan = ROOT.TCanvas(canname, canname, 0, 0, cw, ch)
     cans.append(ccan)
-    ccan.Divide(2,3)
+    ccan.Divide(cnx, cny)
     cH2s = []
     ie = 0
-    for E,hs in conexPeakXmaxHs.items():
+    for logE,hs in conexPeakXmaxHs.items():
         ccan.cd(1+ie)
         ymax = getMaxima(hs)*1.2
-        h2 = ROOT.TH2D(f'ctmp_{E}', ';X_{max}[g/cm^{2}];showers', 150, 0, 1500, 100, 0, 0.25)
+        h2 = ROOT.TH2D(f'ctmp_{logE}', ';X_{max}[g/cm^{2}];showers', 150, 0, 1500, 100, 0, 0.25)
         h2.Draw()
         makeWhiteAxes(h2)
         cH2s.append(h2)
@@ -385,14 +392,14 @@ def main(argv):
     H2s = []
     Hsums = []
     canname = f'CmpXmean'
-    can = ROOT.TCanvas(canname, canname, 0, 0, 1000, 1200)
+    can = ROOT.TCanvas(canname, canname, 0, 0, cw, ch)
     cans.append(can)
-    can.Divide(2,3)
+    can.Divide(cnx, cny)
 
     canname = f'SumXmean'
-    sumcan = ROOT.TCanvas(canname, canname, 600, 0, 1000, 1200)
+    sumcan = ROOT.TCanvas(canname, canname, 600, 0, cw, ch)
     cans.append(sumcan)
-    sumcan.Divide(2,3)
+    sumcan.Divide(cnx, cny)
 
 
     ########################
@@ -402,18 +409,18 @@ def main(argv):
     HsDouble = {}
     # for histograms of peak Xmax vals, to be compared to already plotted conex;-)
     HsPeakXmax = {}
-    for E,hs in Hs.items():
+    for logE,hs in Hs.items():
         can.cd(1+ie)
-        HsDouble[E] = []
+        HsDouble[logE] = []
         ymax = getMaxima(hs)*1.2
-        h2 = ROOT.TH2D(f'tmp_{E}', ';x[g/cm^{2}];Particles (e/#pi/p)', 100, 40, 4000, 100, 0, ymax)
+        h2 = ROOT.TH2D(f'tmp_{logE}', ';x[g/cm^{2}];Particles (e/#pi/p)', 100, 40, 4000, 100, 0, ymax)
         h2.Draw()
         makeWhiteAxes(h2)
         H2s.append(h2)
 
-        HsPeakXmax[E] = ROOT.TH1D(f'AirSimPeakXmax_{E}', ';X_{max}[g/cm^{2}];showers', 75, 0, 1500)
+        HsPeakXmax[logE] = ROOT.TH1D(f'AirSimPeakXmax_{logE}', ';X_{max}[g/cm^{2}];showers', 75, 0, 1500)
 
-        h2sum = ROOT.TH2D(f'hsum_{E}', ';x[g/cm^{2}];Particles (e/#mu)', 40, 0, 4000, 25, 0, ymax)
+        h2sum = ROOT.TH2D(f'hsum_{logE}', ';x[g/cm^{2}];Particles (e/#mu)', 40, 0, 4000, 25, 0, ymax)
         makeWhiteAxes(h2sum)
         Hsums.append(h2sum)
 
@@ -423,7 +430,7 @@ def main(argv):
         stxt.Draw()
         txts.append(stxt)
 
-        txt = ROOT.TLatex(0.63, 0.82, f'logE={E}')
+        txt = ROOT.TLatex(0.63, 0.82, f'logE={logE}')
         txt.SetTextColor(ROOT.kWhite)
         txt.SetNDC()
         txt.Draw()
@@ -439,26 +446,27 @@ def main(argv):
         meanMean = 0.
         # no filling by means of shower profiles,
         # but actually filling by already found Xmax vals!
-        for val in MeansAirSim[E].means:
+        for val in MeansAirSim[logE].means:
             #for h in hs:
             #val = h.GetMean()
             meanMean += val
-            HsPeakXmax[E].Fill(val)
+            HsPeakXmax[logE].Fill(val)
             #print('mean, rms: ', h.GetMean(), h.GetRMS())
         meanMean /= (1.*len(hs))
         #print('meanMean ', meanMean)
-        nDoublePeaks[E] = 0.
+        nDoublePeaks[logE] = 0.
         for h in hs:
             h.SetLineWidth(1)
             h.SetStats(0)
             #print('...drawing, mean=', h.GetMean())
             #h.Draw('hist plc' + opt)
             h.SetLineColor(ROOT.kAzure-3)
-            realE = pow(10, E)
-            if (realE/1000 >= 100 and ( h.GetRMS() / meanMean > 0.55*( 300./realE + 1. ) ) ) or (realE/1000 < 100 and ( h.GetRMS() / meanMean > 0.70*( 300./realE + 1. ) ) ):
+            realE = pow(10, logE)
+            if suspectedWideShower(realE, meanMean, h):
+            
                 h.SetLineColor(ROOT.kRed)
-                nDoublePeaks[E] += 1
-                HsDouble[E].append(h)
+                nDoublePeaks[logE] += 1
+                HsDouble[logE].append(h)
             h.Draw('hist' + opt)
             opt = ' same'
             AddToHeatMap(h2sum, h)
@@ -477,17 +485,17 @@ def main(argv):
         ie += 1
         #
     ie = 0
-    for E,hs in HsDouble.items():
+    for logE,hs in HsDouble.items():
         can.cd(1+ie)
         for h in hs:
             h.Draw('same hist')
         ie += 1
     ie = 0
-    for E,hs in Hs.items():
-        nDoublePeaks[E] /= len(hs)
-        print('Double peaks fraction: ', nDoublePeaks[E])
+    for logE,hs in Hs.items():
+        nDoublePeaks[logE] /= len(hs)
+        print('Double peaks fraction: ', nDoublePeaks[logE])
         can.cd(1+ie)
-        txt = ROOT.TLatex(0.15, 0.82, f'Double peaks frac.: {nDoublePeaks[E]:1.3f}')
+        txt = ROOT.TLatex(0.15, 0.82, f'Double peaks frac.: {nDoublePeaks[logE]:1.3f}')
         txt.SetNDC()
         txt.SetTextColor(ROOT.kWhite)
         txt.Draw()
@@ -497,7 +505,7 @@ def main(argv):
 
     # plot histo of peak Xmax for AirSim into already plotted conex;-)
     ie = 0
-    for E,h in HsPeakXmax.items():
+    for logE,h in HsPeakXmax.items():
         ccan.cd(1+ie)
         area = h.Integral()
         if area > 0:
