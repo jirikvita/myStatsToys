@@ -109,7 +109,7 @@ class tunables:
         # new physics
         self.doNewPhysics = True
         self.MZprimeHadXsectFraction = 0.1
-        self.MZprime = 1000*gGeV
+        self.MZprime = 100*gGeV
         self.GammaZprime = 0.1*self.MZprime
         self.decayMode = decayModes.kPiPi
         #self.decayMode = decayModes.kMumu
