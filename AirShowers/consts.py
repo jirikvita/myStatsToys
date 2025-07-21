@@ -103,13 +103,13 @@ class tunables:
         self.Inelasticity = 0.55
         self.sigmaInelasticity = 0.2
         # for the pion number logarithmic dependence on energy
-        self.PionsConst = 100.
+        self.PionsConst = 120.
         self.sigmaPionConst = 30.
         
         # new physics
         self.doNewPhysics = True
         self.MZprimeHadXsectFraction = 0.1
-        self.MZprime = 10*gGeV
+        self.MZprime = 1000*gGeV
         self.GammaZprime = 0.1*self.MZprime
         self.decayMode = decayModes.kPiPi
         #self.decayMode = decayModes.kMumu
@@ -132,8 +132,8 @@ class tunables:
         print(f'doNewPhysics      : {self.doNewPhysics}')
         if self.doNewPhysics:
             print(f'MZprimeHadXsectFraction : {self.MZprimeHadXsectFraction}')
-            print(f'MZprime                 : {self.MZprime}')
-            print(f'GammaZprime             : {self.GammaZprime}')
+            print(f'MZprime                 : {self.MZprime} GeV')
+            print(f'GammaZprime             : {self.GammaZprime} GeV')
             print(f'decayMode               : {decays[self.decayMode]}')
             print(f'Ethr                    : 10^{log10(pow(self.MZprime,2)/2)+9:.1f} eV')
         

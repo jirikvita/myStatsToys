@@ -145,6 +145,12 @@ class cpart:
         #self.interacted = interacted
         
 ##########################################
+def checkResonantEnergy(E, world):
+    Ethr0 = pow(world.Tunables.MZprime - world.Tunables.GammaZprime, 2) / (2.*gmass['p'])
+    Ethr1 = pow(world.Tunables.MZprime + world.Tunables.GammaZprime, 2) / (2.*gmass['p'])
+    return E > Ethr0 and E < Ethr1
+
+##########################################                    
 
 def DrawParticle(part, world, halfSteps, verbose = 0):
     if verbose:
@@ -460,7 +466,7 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
                 Ethr = pow(world.Tunables.MZprime, 2) / (2.*gmass['p'])
                 #if world.debug > 0
                 #print(f'Zprime resonance? E = {part.E:10.0f} GeV = 10^{log10(part.E)+9:.2f} eV, mass: {world.Tunables.MZprime} GeV, Ethr = {Ethr:.0f} GeV = 10^{log10(Ethr)+9:1.2f} eV')
-                if abs(part.E - Ethr) < world.Tunables.GammaZprime:
+                if checkResonantEnergy(part.E, world):
                     doNewPhysics = random.random() < world.Tunables.MZprimeHadXsectFraction
                     world.h1s["doNewPhys"].Fill(1*doNewPhysics)
                     world.h1s["logEforNewPhys"].Fill(log10(part.E) + 9)
