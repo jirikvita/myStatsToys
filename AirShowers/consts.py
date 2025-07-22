@@ -112,7 +112,7 @@ class tunables:
         self.MZprime = 100*gGeV
         self.GammaZprime = 0.1*self.MZprime
         self.decayMode = decayModes.kPiPi
-        #self.decayMode = decayModes.kMumu
+        #self.decayMode = decayModes.kMuMu
         #self.decayMode = decayModes.kee
         
         
