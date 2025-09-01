@@ -7,7 +7,7 @@ from airsim import *
 
 def main(argv):
 
-    dirs = ['png', 'pdf', 'root']
+    dirs = ['png', 'pdf']
     for dir in dirs:
         os.system(f'mkdir -p {dir}')
     

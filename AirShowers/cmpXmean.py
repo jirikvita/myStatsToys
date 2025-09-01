@@ -146,7 +146,9 @@ def main(argv):
     #logEs.append(250000)
 
     logEs = [#11, 11.5,
-          12, 12.5, 13, 13.5, 14, 14.5, 15, 15.5
+        # 12, 12.5, 13, 13.5, 14, 14.5, 15,
+        15.5,
+        16.0,
     ]
 
     cnx, cny = 3, 3
@@ -193,15 +195,15 @@ def main(argv):
     conexDir='conex/simulated_showers/uniqueE_low/merged/' #'/home/qitek/install/conex/conex2r6.40/simulated_showers/uniqueE_low/merged'
     EconexDict = { #11: f'conex_p_E_11_{generator}_merged.root',
                    #11.5: f'conex_p_E_11.5_{generator}_merged.root',
-                   12: f'conex_p_E_12_{generator}_merged.root',
-                   12.5: f'conex_p_E_12.5_{generator}_merged.root',
-                   13: f'conex_p_E_13_{generator}_merged.root',
-                   13.5: f'conex_p_E_13.5_{generator}_merged.root',
-                   14: f'conex_p_E_14_{generator}_merged.root',
-                   14.5: f'conex_p_E_14.5_{generator}_merged.root',
-                   15: f'conex_p_E_15_{generator}_merged.root',
+                   #12: f'conex_p_E_12_{generator}_merged.root',
+                   #12.5: f'conex_p_E_12.5_{generator}_merged.root',
+                   #13: f'conex_p_E_13_{generator}_merged.root',
+                   #13.5: f'conex_p_E_13.5_{generator}_merged.root',
+                   #14: f'conex_p_E_14_{generator}_merged.root',
+                   #14.5: f'conex_p_E_14.5_{generator}_merged.root',
+                   #15: f'conex_p_E_15_{generator}_merged.root',
                    15.5: f'conex_p_E_15.5_{generator}_merged.root',
-                   ###16: f'conex_p_E_16_{generator}_merged.root',
+                   16: f'conex_p_E_16_{generator}_merged.root',
                    ###16.5: f'conex_p_E_16.5_{generator}_merged.root',
                   }
     cfnames = EconexDict.values()

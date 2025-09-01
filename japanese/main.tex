@@ -1,0 +1,21 @@
+% usage:
+%  xelatex main
+
+
+\documentclass[11pt]{article}
+
+% For Japanese text + furigana
+\usepackage{zxjatype}    % Japanese typesetting
+\usepackage[ipaex]{zxjafont}
+\usepackage{ruby}        % Furigana support
+
+\setlength{\parindent}{0pt}
+
+\begin{document}
+
+極小\ruby{素粒子}{そりゅうし}、極大\ruby{宇宙}{うちゅう}を\ruby{解明}{かいめい}する\ruby{次世代計画}{じせだいけいかく}。\\
+\ruby{次世代}{じせだい}のニュートリノ\ruby{研究}{けんきゅう}、さらには\ruby{陽子崩壊}{ようしほうかい}の\ruby{観測}{かんそく}を\ruby{目指}{めざ}す。
+
+\end{document}
+
+

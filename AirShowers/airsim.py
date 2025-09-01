@@ -92,7 +92,7 @@ class cworld():
         self.h1s = {}
         self.h2s = {}
 
-        if iteration == 0:
+        if iteration == 0:f
             ROOT.gDirectory.mkdir('Nhists')
         ROOT.gDirectory.cd('Nhists')
         
