@@ -3,6 +3,7 @@
 import ROOT
 import csv
 
+from math import sqrt
 
 
 stuff = []
@@ -24,7 +25,7 @@ h2_logE = ROOT.TH2D('logE',';true log_{10}(E/eV);predicted log_{10}(E/eV);', nbi
 rmin = -0.2
 rmax = -rmin
 hres_Xmax = ROOT.TH2D('Xmax_res',';true X_{max} [g/cm^{2}];(predicted-true)/true;,', 100, Xmax1, Xmax2, 100, rmin, rmax)
-rmin = -0.02
+rmin = -0.03
 rmax = -rmin
 hres_logE = ROOT.TH2D('logE_res',';true log_{10}(E/eV);(predicted-true)/true;', 100, logE1, logE2, 100, rmin, rmax) 
 
@@ -90,9 +91,10 @@ for h2,tag in h2s.items():
     for i in range(1, prof.GetNbinsX() + 1):
         x_center = prof.GetBinCenter(i)
         y_mean   = prof.GetBinContent(i)
-        if prof.GetBinEntries(i) > 0:  # only valid bins
+        N   = prof.GetBinEntries(i)
+        if N > 0:  # only valid bins
             res = (y_mean - x_center) / x_center
-            err = prof.GetBinError(i) / x_center
+            err = sqrt(N) * prof.GetBinError(i) / x_center
             # print(f'res: {res}')
             residuals.SetPoint(ip, x_center, res)
             residuals.SetPointError(ip, 0, err)

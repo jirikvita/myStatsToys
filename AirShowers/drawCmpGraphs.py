@@ -66,7 +66,7 @@ def main(argv):
     can = ROOT.TCanvas(canname, canname, 0, 0, cw, ch)
 
     ymax = 2200
-    h2 = ROOT.TH2D(f'h_tmp', ';log(E);x[g/cm^{2}];', 100, 11, 16.5, 25, 0, ymax)
+    h2 = ROOT.TH2D(f'h_tmp', ';log(E);x[g/cm^{2}];', 500, 11, 16.5, 25, 0, ymax)
     h2.SetStats(0)
     makeWhiteAxes(h2)
     stuff.append(h2)
@@ -87,7 +87,7 @@ def main(argv):
     stuff.append([leg, can, h2, grs, gr_conex])
 
     pngdir = 'png_graphs/'
-    pdfdir = 'png_graphs/'
+    pdfdir = 'pdf_graphs/'
     os.system(f'mkdir -p {pngdir} {pdfdir}')
     can.Print(pngdir + can.GetName() + f'_{generator}.png')
     can.Print(pdfdir + can.GetName() + f'_{generator}.pdf')
