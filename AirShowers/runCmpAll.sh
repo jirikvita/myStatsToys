@@ -1,9 +1,11 @@
 #!/bin/bash
 
 for gen in EPOS SIBYLL ; do
-  for i in `ls | grep root_Inel | grep -v old` ; do
-#  for i in `ls nPiLogEi/ | grep root_Inel | grep -v old` ; do
-      #if [ -d nPiLogEi/$i ] ; then
+    # no Zprime:
+    #for i in `ls | grep root_Inel | grep -v old | grep -v Zprime` ; do
+    # Zprime
+    for i in `ls | grep root_Inel | grep -v old | grep Zprime` ; do
+	#if [ -d nPiLogEi/$i ] ; then
 	#  echo "*** nPiLogEi/$i ***"
   	#  ./cmpXmean.py nPiLogEi/$i $gen -b
       #fi

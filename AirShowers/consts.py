@@ -24,7 +24,9 @@ geV = 1e-9 # GeV
 
 # https://pdg.lbl.gov/2023/AtomicNuclearProperties/HTML/air_dry_1_atm.html
 
+# radiation length
 gX0 = 37. # 36.62 # air; g/cm2 # Mattews: 37
+# photon pair conversion length
 gIntLengthGamma = gX0*9./7.
 
 # inelastic
@@ -71,15 +73,18 @@ ECpiThr = 20*gGeV # as Matthews 2005
 gcol = { 'e' : ROOT.kGreen+2,
          'gamma' : ROOT.kAzure-3,
          'pi' : ROOT.kRed + 2,
-         'Pi' : ROOT.kYellow,
+         #'Pi' : ROOT.kYellow,
          'mu' : ROOT.kMagenta+3,
          'nu' : ROOT.kGray+2, 'p' : ROOT.kRed}
 
 glst = { 'e' : 1, 'gamma' : 2, 'pi' : 1, 'Pi' : 1, 'mu' : 2, 'nu' : 3, 'p' : 1}
 glwd = { 'e' : 1, 'gamma' : 1, 'pi' : 1, 'Pi' : 1, 'mu' : 1, 'nu' : 1, 'p' : 1}
-glabel = {'e' : 'e^{#pm}', 'gamma' : '#gamma', 'pi' : '#pi^{#pm}', 'Pi' : 'res. #pi^{#pm}', 'mu' : '#mu^{#pm}', 'nu' : '#nu/#bar{#nu}', 'p' : 'p/#bar{p}'}
+glabel = {'e' : 'e^{#pm}', 'gamma' : '#gamma', 'pi' : '#pi^{#pm}',
+          #'Pi' : 'res. #pi^{#pm}',
+          'mu' : '#mu^{#pm}', 'nu' : '#nu/#bar{#nu}', 'p' : 'p/#bar{p}'}
 
-gdaughters = { 'e' : ['',''], 'gamma' : ['',''], 'pi' : ['mu','nu'], 'Pi' : ['mu','nu'], 'mu' : ['e','nu'], 'nu' : ['',''], 'p' : ['',''] }
+gdaughters = { 'e' : ['',''], 'gamma' : ['',''], 'pi' : ['mu','nu'], 'Pi' : ['mu','nu'],
+               'mu' : ['e','nu'], 'nu' : ['',''], 'p' : ['',''] }
 
 
 
@@ -107,7 +112,7 @@ class tunables:
         self.sigmaPionConst = 30.
         
         # new physics
-        self.doNewPhysics = True
+        self.doNewPhysics = False
         self.MZprimeHadXsectFraction = 0.1
         self.MZprime = 100*gGeV
         self.GammaZprime = 0.1*self.MZprime

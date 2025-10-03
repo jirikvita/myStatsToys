@@ -28,6 +28,8 @@ syllabs = [ 'a', 'i', 'u', 'e', 'o',
             'ba', 'bi', 'bu', 'be', 'bo',
             'pa', 'pi', 'pu', 'pe', 'po',
 
+            ]
+add = [
             'kya', 'kyu', 'kyo',
             'sya', 'syu', 'syo',
             'cya', 'cyu', 'cyo',
@@ -96,14 +98,15 @@ katakana = {
              
              'ra' : '\u30E9', 'ri' : '\u30EA', 'ru' : '\u30EB', 're' : '\u30EC', 'ro' : '\u30ED',
              'wa' : '\u30EF', 'O' : '\u30F2', 'n' : '\u30F3',
-             
+
              'ga' : '\u30AC', 'gi' : '\u30AE', 'gu' : '\u30B0', 'ge' : '\u30B2', 'go' : '\u30B4',
              'za' : '\u30B6', 'ji' : '\u30B8', 'zu' : '\u30BA', 'ze' : '\u30BC', 'zo' : '\u30BE',
              'da' : '\u30C0', 'Ji' : '\u30C2', 'Zu' : '\u30C5', 'de' : '\u30C7', 'do' : '\u30C9',
 
              'ba' : '\u30D0', 'bi' : '\u30D3', 'bu' : '\u30D6', 'be' : '\u30D9', 'bo' : '\u30DC',
              'pa' : '\u30D1', 'pi' : '\u30D4', 'pu' : '\u30D7', 'pe' : '\u30DA', 'po' : '\u30DD',
-
+}
+add = {
              'kya' : '\u30AD\u30E3', 'kyu' : '\u30AD\u30E5', 'kyo' : '\u30AD\u30E7',
              'sya' : '\u30B7\u30E3', 'syu' : '\u30B7\u30E5', 'syo' : '\u30B7\u30E7',
              'cya' : '\u30C1\u30E3', 'cyu' : '\u30C1\u30E5', 'cyo' : '\u30C1\u30E7',
@@ -113,10 +116,10 @@ katakana = {
              'ja'  : '\u30B8\u30E3', 'ju'  : '\u30B8\u30E5', 'jo'  : '\u30B8\u30E7',
              'bya' : '\u30D3\u30E3', 'byu' : '\u30D3\u30E5', 'byo' : '\u30D3\u30E7',
              'pya' : '\u30D4\u30E3', 'pyu' : '\u30D4\u30E5', 'pyo' : '\u30D4\u30E7',
-    
 }
 
 ###########################################################
+
 
 def find_key(syllabet, val):
     for key in syllabet:

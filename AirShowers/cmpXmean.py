@@ -1,6 +1,8 @@
 #!/usr/bin/python
 
-#jk 6.9.2024
+# jk 6.9.2024
+# jk 3.10.2025
+
 import ROOT
 from math import pow, log10, pow, sqrt
 
@@ -146,7 +148,7 @@ def main(argv):
     #logEs.append(250000)
 
     logEs = [#11, 11.5,
-        # 12, 12.5, 13, 13.5, 14, 14.5, 15,
+        12, 12.5, 13, 13.5, 14, 14.5, 15,
         15.5,
         16.0,
     ]
@@ -159,30 +161,40 @@ def main(argv):
     Nshowers = 2000
     fnames = {}
 
-    if len(argv) < 3:
-        print(f'Usage:   {argv[0]} rootdir model=EPOS,SIBYLL')
+    if len(argv) < 2:
+        print(f'Usage:   {argv[0]} rootdir [model=EPOS,SIBYLL] [-b] (batch mode)')
         print(f'Example: {argv[0]} root_Inel_0.3_C_10.0_piExp_0.2 SIBYLL')
         return()
     
     rootdir = argv[1]
-    generator = argv[2] # EPOS, SIBYLL
+    
+    generator = 'EPOS'
+    if len(argv) > 2:
+        generator = argv[2] # EPOS, SIBYLL
+
     gBatch = False
     if len(argv) > 3 and argv[3] == '-b':
         gBatch = True
         ROOT.gROOT.SetBatch(1)
 
+    primary = 'p'
+    if 'primaryEl' in rootdir:
+        primary = 'e'
     for logE in logEs:
-        fnames[logE] = f'{rootdir}/histos_p_logE_{logE:1.1f}_tmp.root'
+        fnames[logE] = f'{rootdir}/histos_{primary}_logE_{logE:1.1f}_tmp.root'
         
     Hs, Fs, MeansAirSim = GetHmeans(logEs, fnames, hbasename, Nshowers)
     ftag = fnames[logE].split('/')[-2].replace('root_','').replace('_',' ')
     fftag = ftag.replace(' ','_')
+    #if primary != 'p':
+    #    ftag = ftag + '_' + primary
     
     print('Got following lengths:')
     for logE in Hs:
         print(f'{logE}: {len(Hs[logE])}')
     
     gr = ROOT.TGraphErrors()
+    gr.SetName('gr_airsim')
     ip = 0
     for logE,meanData in MeansAirSim.items():
         mean = meanData.mean
@@ -191,25 +203,26 @@ def main(argv):
         gr.SetPointError(ip, 0., meanErr)
         ip = ip+1
 
-
     conexDir='conex/simulated_showers/uniqueE_low/merged/' #'/home/qitek/install/conex/conex2r6.40/simulated_showers/uniqueE_low/merged'
-    EconexDict = { #11: f'conex_p_E_11_{generator}_merged.root',
-                   #11.5: f'conex_p_E_11.5_{generator}_merged.root',
-                   #12: f'conex_p_E_12_{generator}_merged.root',
-                   #12.5: f'conex_p_E_12.5_{generator}_merged.root',
-                   #13: f'conex_p_E_13_{generator}_merged.root',
-                   #13.5: f'conex_p_E_13.5_{generator}_merged.root',
-                   #14: f'conex_p_E_14_{generator}_merged.root',
-                   #14.5: f'conex_p_E_14.5_{generator}_merged.root',
-                   #15: f'conex_p_E_15_{generator}_merged.root',
-                   15.5: f'conex_p_E_15.5_{generator}_merged.root',
-                   16: f'conex_p_E_16_{generator}_merged.root',
-                   ###16.5: f'conex_p_E_16.5_{generator}_merged.root',
+    EconexDict = {
+        #11: f'conex_p_E_11_{generator}_merged.root',
+        #11.5: f'conex_p_E_11.5_{generator}_merged.root',
+        12: f'conex_p_E_12_{generator}_merged.root',
+        12.5: f'conex_p_E_12.5_{generator}_merged.root',
+        13: f'conex_p_E_13_{generator}_merged.root',
+        13.5: f'conex_p_E_13.5_{generator}_merged.root',
+        14: f'conex_p_E_14_{generator}_merged.root',
+        14.5: f'conex_p_E_14.5_{generator}_merged.root',
+        15: f'conex_p_E_15_{generator}_merged.root',
+        15.5: f'conex_p_E_15.5_{generator}_merged.root',
+        16: f'conex_p_E_16_{generator}_merged.root',
+        ###16.5: f'conex_p_E_16.5_{generator}_merged.root',
                   }
     cfnames = EconexDict.values()
     conexPeakXmaxHs, cFs, MeansConex = GetHmeansFromTree(conexDir, EconexDict, 'Shower', 'Xmax')
     
     gr_conex = ROOT.TGraphErrors()
+    gr_conex.SetName('gr_conex')
     ip = 0
     ConexShowerGraphs = {}
     for logE,meanData in MeansConex.items():
@@ -597,6 +610,19 @@ def main(argv):
 
     stuff.append([conexPeakXmaxHs, Hs, H2s, cH2s, Fs, cFs, gr, gr_conex])
 
+    print('Writing graphs to output file....')
+    rootdir = 'graphs/'
+    os.system(f'mkdir -p {rootdir}')
+    outfilename = rootdir + f'graphs_{generator}_{fftag}.root'
+    outfile = ROOT.TFile(outfilename, 'recreate')
+    grs_to_save = [gr, gr_conex]
+    for savegr in grs_to_save:
+        savegr.Write()
+    print('...closing output file...')
+    outfile.Close()
+    print('DONE!')
+        
+    
     if not gBatch:
         ROOT.gApplication.Run()
     os.system('killall -9 cmpXmean.py')
