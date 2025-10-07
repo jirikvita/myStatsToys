@@ -71,9 +71,10 @@ class cworld():
         nb = 1000
         self.h2 = ROOT.TH2D("worldhisto", ";x[g/cm^{2}];y[arb.];", nb, self.x1, self.x2, nb, self.y1, self.y2)
         self.h2.SetStats(0)
-        self.h2.GetYaxis().SetAxisColor(ROOT.kWhite)
-        self.h2.GetYaxis().SetLabelColor(ROOT.kWhite)
-        self.h2.GetYaxis().SetTitleColor(ROOT.kWhite)
+        if self.useDarkStyle:
+            self.h2.GetYaxis().SetAxisColor(ROOT.kWhite)
+            self.h2.GetYaxis().SetLabelColor(ROOT.kWhite)
+            self.h2.GetYaxis().SetTitleColor(ROOT.kWhite)
 
         self.h2.Draw()
         return self.can, self.h2
@@ -719,7 +720,8 @@ def doAllDrawing(world, primary, E0, particles, halfSteps, tag, gtag, h1Nx, part
         #txt = ROOT.TLatex(0.02, 0.95, 'Primary: {}; E={:1.1f} TeV, steps={:1.0f}, muons stable: {}'.format(glabel[primary.pid], E0/1000., world.steps, not world.decayMuons) )
         #txt.SetTextSize(0.04)
         #txt = ROOT.TLatex(0.02, 0.95, 'Primary: {}; E={:1.1f} TeV, particles: {:1.2f}M'.format(glabel[primary.pid], E0/1000., len(particles) / 1e6))
-        txt.SetTextColor(ROOT.kWhite)
+        if world.useDarkStyle:
+            txt.SetTextColor(ROOT.kWhite)
         #txt.SetTextSize(0.03)
         txt.SetNDC()
         txt.Draw()
@@ -743,7 +745,8 @@ def doAllDrawing(world, primary, E0, particles, halfSteps, tag, gtag, h1Nx, part
         pns = 'Nmax', 'X0', 'Xmax', 'lambda'
         fname = 'fit'
         fun = ROOT.TF1(fname, form, h1Nx.GetXaxis().GetXmin(), h1Nx.GetXaxis().GetXmax())
-        fun.SetLineColor(ROOT.kWhite)
+        if world.useDarkStyle:
+            fun.SetLineColor(ROOT.kWhite)
         fun.SetLineWidth(2)
         fun.SetLineStyle(2)
         pvs = [h1Nx.GetMaximum()/8., 0., h1Nx.GetMean(), 150.]
@@ -755,10 +758,10 @@ def doAllDrawing(world, primary, E0, particles, halfSteps, tag, gtag, h1Nx, part
         h1Nx.Fit(fun, '', '0')
         fun.Draw('same')
         adjustStats(h1Nx)
-        
-        h1Nx.GetYaxis().SetAxisColor(ROOT.kWhite)
-        h1Nx.GetYaxis().SetLabelColor(ROOT.kWhite)
-        h1Nx.GetYaxis().SetTitleColor(ROOT.kWhite)
+        if world.useDarkStyle:
+            h1Nx.GetYaxis().SetAxisColor(ROOT.kWhite)
+            h1Nx.GetYaxis().SetLabelColor(ROOT.kWhite)
+            h1Nx.GetYaxis().SetTitleColor(ROOT.kWhite)
         stuff.append(txt)
         statcan.Update()
 

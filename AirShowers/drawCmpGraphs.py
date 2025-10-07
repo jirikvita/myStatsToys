@@ -27,11 +27,11 @@ def main(argv):
     generator = 'EPOS'
     gfilenames = {
         f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0.root' : ROOT.kBlue,
-        #f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0_Zprime_100.0_Gamma_10.0_mode_ee_xsectFrac_0.10.root' : ROOT.k,
+        f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0_Zprime_100.0_Gamma_10.0_mode_ee_xsectFrac_0.10.root' : ROOT.kCyan,
         f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0_Zprime_100.0_Gamma_10.0_mode_ee_xsectFrac_1.00.root' : ROOT.kCyan,
-        #f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0_Zprime_100.0_Gamma_10.0_mode_mumu_xsectFrac_0.10.root' : ROOT.k,
+        f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0_Zprime_100.0_Gamma_10.0_mode_mumu_xsectFrac_0.10.root' : ROOT.kMagenta,
         f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0_Zprime_100.0_Gamma_10.0_mode_mumu_xsectFrac_1.00.root' : ROOT.kMagenta,
-        #f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0_Zprime_100.0_Gamma_10.0_mode_pipi_xsectFrac_0.10.root' : ROOT.k,
+        f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0_Zprime_100.0_Gamma_10.0_mode_pipi_xsectFrac_0.10.root' : ROOT.kYellow,
         f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0_Zprime_100.0_Gamma_10.0_mode_pipi_xsectFrac_1.00.root' : ROOT.kYellow,
         f'graphs_{generator}_primaryEl_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0.root' : ROOT.kWhite,
     }
@@ -44,6 +44,9 @@ def main(argv):
        grAirSim = gfile.Get('gr_airsim')
        grAirSim.SetLineColor(col)
        grAirSim.SetMarkerColor(col)
+       if 'Frac_0.' in gfilename:
+           grAirSim.SetLineStyle(2)
+           grAirSim.SetMarkerStyle(24)
 
        tag = gfilename.replace(f'graphs_{generator}_', '').replace('.root', '').replace('_', ' ').replace('Gamma','#Gamma=')
        tag = tag.replace('sigmaInel','#sigma_{Inel}').replace('Csigma','#sigma_{C}').replace('xsectFrac','frac_{Z\'}').replace('mode','Z\'#rightarrow')
@@ -59,6 +62,8 @@ def main(argv):
 
            gr_conex.SetLineColor(ROOT.kRed)
            gr_conex.SetMarkerColor(ROOT.kRed)
+            
+
 
     SetMyStyle()
     cw, ch = 1200, 800

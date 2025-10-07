@@ -23,18 +23,23 @@ def main(argv):
     # regulates whether split energies to two daughter particles evenly after X0*ln(2) or by exp decay law:
     halfSteps = False
 
+    useDarkStyle = True
+    
     ROOT.gStyle.SetOptTitle(0)
-    SetMyStyle()
+    if useDarkStyle:
+        SetMyStyle()
+    ROOT.gStyle.SetOptStat(1110)
 
     debug = 0
     world = cworld(debug)
+    world.decayMuons = False
+    world.useDarkStyle = useDarkStyle
     
     x, y = 0.*gkm, 0.*gm
     yend = 0*gm # dummy
     primary = cpart(E0, primaryPID, x, y, yend)
     tag, rtag, gtag, ropt = makeTags(primary, E0, iteration)
 
-    world.decayMuons = False
     tuneTag = world.Tunables.makeTag()
     world.makeOutHistos(iteration, rtag, ropt, f'root{tuneTag}/')
     world.PrintPars()
