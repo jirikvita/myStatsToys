@@ -75,16 +75,18 @@ gcol = { 'e' : ROOT.kGreen+2,
          'pi' : ROOT.kRed + 2,
          #'Pi' : ROOT.kYellow,
          'mu' : ROOT.kMagenta+3,
-         'nu' : ROOT.kGray+2, 'p' : ROOT.kRed}
+         'nu' : ROOT.kGray+2, 'p' : ROOT.kRed,
+         'A56' : ROOT.kRed}
 
-glst = { 'e' : 1, 'gamma' : 2, 'pi' : 1, 'Pi' : 1, 'mu' : 2, 'nu' : 3, 'p' : 1}
-glwd = { 'e' : 1, 'gamma' : 1, 'pi' : 1, 'Pi' : 1, 'mu' : 1, 'nu' : 1, 'p' : 1}
+glst = { 'e' : 1, 'gamma' : 2, 'pi' : 1, 'Pi' : 1, 'mu' : 2, 'nu' : 3, 'p' : 1, 'A56' : 1}
+glwd = { 'e' : 1, 'gamma' : 1, 'pi' : 1, 'Pi' : 1, 'mu' : 1, 'nu' : 1, 'p' : 1, 'A56' : 1}
 glabel = {'e' : 'e^{#pm}', 'gamma' : '#gamma', 'pi' : '#pi^{#pm}',
           #'Pi' : 'res. #pi^{#pm}',
-          'mu' : '#mu^{#pm}', 'nu' : '#nu/#bar{#nu}', 'p' : 'p/#bar{p}'}
+          'mu' : '#mu^{#pm}', 'nu' : '#nu/#bar{#nu}', 'p' : 'p/#bar{p}',
+          'A56' : 'Fe'}
 
 gdaughters = { 'e' : ['',''], 'gamma' : ['',''], 'pi' : ['mu','nu'], 'Pi' : ['mu','nu'],
-               'mu' : ['e','nu'], 'nu' : ['',''], 'p' : ['',''] }
+               'mu' : ['e','nu'], 'nu' : ['',''], 'p' : ['',''], 'A56' : ['',''] }
 
 
 

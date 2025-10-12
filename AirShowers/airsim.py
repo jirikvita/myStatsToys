@@ -352,15 +352,20 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
         return []
     y = part.yend
     pid = part.pid
-    length = gLength[part.pid]
+    
     gammaySF = world.gammaySF
     elySF = world.elySF
-    
+
+    length = -1.
     gamma = 1
-    if gmass[pid] > gEpsilon:
-        gamma = part.E / gmass[pid]
-    else:
-        gamma = part.E / gmass['e'] * gammaySF
+
+    if not 'A' in part.pid[0]:
+        length = gLength[part.pid]
+    
+        if gmass[pid] > gEpsilon:
+            gamma = part.E / gmass[pid]
+        else:
+            gamma = part.E / gmass['e'] * gammaySF
     
     SFy = world.SFy
     rnd1 = 0.
@@ -511,8 +516,18 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
         #part.interacted = True
         #world.UpdateMaxGen()
         return ps
-    if verbose:
-        print('  ...nothing done!') #
+    elif part.pid[0] == 'A':
+        # expect nucleus ID of type A56 meaning Fe56:)
+        part.xend = part.x
+        A = int(part.pid[1:])
+        print(f'Splitting primary nucleus to {A} protons!')
+        ps = []
+        for i in range(0, A):
+            ps.append( cpart(part.E / A, 'p', part.x, part.y, part.y) )
+        return ps
+    else:
+        if verbose:
+            print('  ...nothing done!') #
     return []
 
 ##########################################
@@ -714,7 +729,12 @@ def doAllDrawing(world, primary, E0, particles, halfSteps, tag, gtag, h1Nx, part
         muonStr = 'stable muons'
         if world.decayMuons:
             muonStr = 'decayed muons'
-        txt = ROOT.TLatex(0.02, 0.95, 'Primary: {}; E={:1.1f} TeV, particles: {:1.2f}M, steps={:1.0f}, {}'.format(glabel[primary.pid], E0/1000., len(particles) / 1e6, world.steps, muonStr) )
+        label = ''
+        try:
+            label = glabel[primary.pid]
+        except:
+            label = primary.pid
+        txt = ROOT.TLatex(0.02, 0.95, 'Primary: {}; E={:1.1f} TeV, particles: {:1.2f}M, steps={:1.0f}, {}'.format(label, E0/1000., len(particles) / 1e6, world.steps, muonStr) )
 
 
         #txt = ROOT.TLatex(0.02, 0.95, 'Primary: {}; E={:1.1f} TeV, steps={:1.0f}, muons stable: {}'.format(glabel[primary.pid], E0/1000., world.steps, not world.decayMuons) )
@@ -783,7 +803,13 @@ def doAllDrawing(world, primary, E0, particles, halfSteps, tag, gtag, h1Nx, part
 
 ##########################################
 def spitSomeInfo(primary, E0, particles, world):
-    print('Primary: {}; E={:1.1f} TeV, particles: {:1.2f}M, steps={:1.0f}'.format(glabel[primary.pid], E0/1000., len(particles) / 1e6, world.steps))
+    label = ''
+    try:
+        label = glabel[primary.pid]
+    except:
+        label = primary.pid
+
+    print('Primary: {}; E={:1.1f} TeV, particles: {:1.2f}M, steps={:1.0f}'.format(label, E0/1000., len(particles) / 1e6, world.steps))
     #print('Primary: {}; E={:1.1f} TeV, particles: {:1.2f}M'.format(glabel[primary.pid], E0/1000., len(particles) / 1e6))
 
 ##########################################

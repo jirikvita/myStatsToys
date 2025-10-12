@@ -17,7 +17,9 @@ def main(argv):
 
     # Primary particle energy!
     E0 = E*gGeV #1e14*geV
-    primaryPID = 'p'
+    #primaryPID = 'p'
+    #primaryPID = 'e'
+    primaryPID = 'A56'
     randomizeY = True
     
     # regulates whether split energies to two daughter particles evenly after X0*ln(2) or by exp decay law:
@@ -58,7 +60,10 @@ def main(argv):
             partCounts[pid] = 0
         for part in particles:
             pid = part.pid
-            partCounts[pid] = partCounts[pid] + 1
+            try:
+                partCounts[pid] = partCounts[pid] + 1
+            except:
+                print(f"Don't know how to count {pid}")
         for pid in partCounts:
             print(f'{pid:6}: {partCounts[pid]:10,}')
             
