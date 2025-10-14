@@ -26,7 +26,10 @@ def main(argv):
     #generator = 'SIBYLL'
     generator = 'EPOS'
     gfilenames = {
+
         f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0.root' : ROOT.kBlue,
+        f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0_A56.root' : ROOT.kBlue + 1,
+        
         f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0_Zprime_100.0_Gamma_10.0_mode_ee_xsectFrac_0.10.root' : ROOT.kCyan,
         f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0_Zprime_100.0_Gamma_10.0_mode_ee_xsectFrac_1.00.root' : ROOT.kCyan,
         f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0_Zprime_100.0_Gamma_10.0_mode_mumu_xsectFrac_0.10.root' : ROOT.kMagenta,
@@ -36,7 +39,7 @@ def main(argv):
         f'graphs_{generator}_primaryEl_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0.root' : ROOT.kWhite,
     }
 
-    gr_conex = None
+    grs_conex = []
     grs = {}
     for gfilename,col in gfilenames.items():
        gfile = ROOT.TFile(grdir + gfilename, 'read')
@@ -50,7 +53,7 @@ def main(argv):
 
        tag = gfilename.replace(f'graphs_{generator}_', '').replace('.root', '').replace('_', ' ').replace('Gamma','#Gamma=')
        tag = tag.replace('sigmaInel','#sigma_{Inel}').replace('Csigma','#sigma_{C}').replace('xsectFrac','frac_{Z\'}').replace('mode','Z\'#rightarrow')
-       tag = tag.replace('mumu','#mu#mu').replace('pipi','#pi#pi').replace('Zprime 100.0','m_{Z\'}=100 GeV').replace('10.0','10 GeV')
+       tag = tag.replace('mumu','#mu#mu').replace('pipi','#pi#pi').replace('Zprime 100.0','m_{Z\'}=100 GeV').replace('10.0','10 GeV').replace('A56','Fe')
        grs[tag] = grAirSim
        funs = grAirSim.GetListOfFunctions()
        funs.Clear()
@@ -62,7 +65,7 @@ def main(argv):
 
            gr_conex.SetLineColor(ROOT.kRed)
            gr_conex.SetMarkerColor(ROOT.kRed)
-            
+           grs_conex.append(gr_conex)
 
 
     SetMyStyle()
@@ -81,15 +84,16 @@ def main(argv):
 
     can.cd()
     h2.Draw()
-    gr_conex.Draw('PL')
-    leg.AddEntry(gr_conex, f'Conex+{generator}', 'PL')
+    for gr_conex in grs_conex:
+        gr_conex.Draw('PL')
+        leg.AddEntry(gr_conex, f'Conex+{generator}', 'PL')
 
     for tag,gr in grs.items():
         gr.Draw('PL')
         leg.AddEntry(gr, tag, 'PL')
 
     leg.Draw()
-    stuff.append([leg, can, h2, grs, gr_conex])
+    stuff.append([leg, can, h2, grs, grs_conex])
 
     pngdir = 'png_graphs/'
     pdfdir = 'pdf_graphs/'

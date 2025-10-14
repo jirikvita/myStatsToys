@@ -164,6 +164,8 @@ def DrawParticle(part, world, halfSteps, verbose = 0):
         if halfSteps:
             x1 = min(part.x + gLength[part.pid], world.x2)
         else:
+            # random choice from falling exponencial distrinution, see
+            # https://numpy.org/doc/2.1/reference/random/generated/numpy.random.exponential.html
             x1 = min(part.x + exponential(gLength[part.pid]), world.x2)
 
     #X1, Y1, X2, Y2 = x0 + xscale*part.x, y0 + yscale*part.y, x0 + xscale*x1, y0 + yscale*y1
@@ -327,6 +329,8 @@ def twoParticleDecay(part, gamma, world, dy1, rnd1, dy2, rnd2, addSFy, pid0 = ''
     rnd2 = -rnd1
 
     length = gamma*gctau[part.pid]
+    # random choice from falling exponencial distrinution, see
+    # https://numpy.org/doc/2.1/reference/random/generated/numpy.random.exponential.html
     dx = exponential(length)
     y = part.y
     x = min(part.x + dx, world.x2)
@@ -390,9 +394,15 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
         if halfSteps:
             x = part.x + length*log(2)
         else:
-            dx = exponential(length)
+            # random choice from falling exponencial distrinution, see
+            # https://numpy.org/doc/2.1/reference/random/generated/numpy.random.exponential.html
+            dx = 100*length
+            while dx > 2*length:
+                dx = exponential(length)
             x = min(part.x + dx, world.x2)
             xi = exp(-dx / length)
+            if xi > 1:
+                print(f'Error! Electrons: Fractional energy of interaction product over one! f={xi}')
         E1 = xi*part.E
         E2 = (1-xi)*part.E
         # randomize whether radiated photon goes up or down;)
@@ -415,11 +425,17 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
         if halfSteps:
             x = part.x + length*log(2)
         else:
-            dx = exponential(length)
+            # random choice from falling exponencial distrinution, see
+            # https://numpy.org/doc/2.1/reference/random/generated/numpy.random.exponential.html
+            dx = 100*length
+            while dx > 2*length:
+                dx = exponential(length)
             x = part.x + dx
             if x > world.x2:
                 x = world.x2
             xi = exp(-dx / length)
+            if xi > 1:
+                print(f'Error! Photons: Fractional energy of interaction product over one! f={xi}')
             # TODO: xi as a random number drawn from distribution
             # C*(1 - 4/3*x*(1-x)), C = 9/7?
             # TF1 b("b", "9./7.5*(1 - 4/3*x*(1-x))", 0, 1);
