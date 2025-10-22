@@ -164,7 +164,7 @@ def DrawParticle(part, world, halfSteps, verbose = 0):
         if halfSteps:
             x1 = min(part.x + gLength[part.pid], world.x2)
         else:
-            # random choice from falling exponencial distrinution, see
+            # random choice from falling exponential distribution, see
             # https://numpy.org/doc/2.1/reference/random/generated/numpy.random.exponential.html
             x1 = min(part.x + exponential(gLength[part.pid]), world.x2)
 
@@ -308,7 +308,10 @@ def genHadrons(pid, E, gamma, length, x, y, world, nMaxIters = 100):
     if world.debug:
         print(f'                          Generated: nCharged={nCharged}, nNeutral={nNeutral}, Ntot={nCharged+nNeutral}')
 
-        
+    # to recompute!
+    # bugfixed 20th Oct 2025!
+    Ntot = nCharged + nNeutral
+    # fill number of generated particle at this energy of the incident particle during the shower evolution
     world.h2s["NhadE"].Fill(E, Ntot)
     world.h2s["NchE"].Fill(E, nCharged)
     world.h2s["Npi0E"].Fill(E, nNeutral)
@@ -328,8 +331,9 @@ def twoParticleDecay(part, gamma, world, dy1, rnd1, dy2, rnd2, addSFy, pid0 = ''
     rnd1 = getRndSign()*random.random() / gamma
     rnd2 = -rnd1
 
+    # take into account the Lorentz gamma factor
     length = gamma*gctau[part.pid]
-    # random choice from falling exponencial distrinution, see
+    # random choice from falling exponential distribution, see
     # https://numpy.org/doc/2.1/reference/random/generated/numpy.random.exponential.html
     dx = exponential(length)
     y = part.y
@@ -394,10 +398,10 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
         if halfSteps:
             x = part.x + length*log(2)
         else:
-            # random choice from falling exponencial distrinution, see
+            # random choice from falling exponential distribution, see
             # https://numpy.org/doc/2.1/reference/random/generated/numpy.random.exponential.html
-            dx = 100*length
-            while dx > 2*length:
+            dx = 10*world.Tunables.maxNlengthsEM*length
+            while dx > world.Tunables.maxNlengthsEM*length:
                 dx = exponential(length)
             x = min(part.x + dx, world.x2)
             xi = exp(-dx / length)
@@ -425,10 +429,10 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
         if halfSteps:
             x = part.x + length*log(2)
         else:
-            # random choice from falling exponencial distrinution, see
+            # random choice from falling exponential distribution, see
             # https://numpy.org/doc/2.1/reference/random/generated/numpy.random.exponential.html
-            dx = 100*length
-            while dx > 2*length:
+            dx = 10*world.Tunables.maxNlengthsEM*length
+            while dx > world.Tunables.maxNlengthsEM*length:
                 dx = exponential(length)
             x = part.x + dx
             if x > world.x2:
@@ -468,7 +472,9 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
             if halfSteps:
                 x = part.x + length*log(2)
             else:
-                dx = exponential(length)
+                dx = 10*world.Tunables.maxNlengthsHad*length
+                while dx > world.Tunables.maxNlengthsHad*length:
+                    dx = exponential(length)
                 #xi = exp(-dx / length)
                 x = part.x + dx
                 if x > world.x2:
