@@ -26,6 +26,9 @@ geV = 1e-9 # GeV
 
 # radiation length
 gX0 = 37. # 36.62 # air; g/cm2 # Mattews: 37
+### HACK: Fe!
+#gX0 = 13.8
+
 # photon pair conversion length
 gIntLengthGamma = gX0*9./7.
 
@@ -64,6 +67,9 @@ gmass = { 'e' : 0.511*gMeV,
 
 # critical energy for the EM shower, for electrons
 gECEM = 87.92*gMeV # Matthews 2005: 85 # Leroy-Rancoita: 81
+### HACK: Fe!
+#gECEM = 22.4*gMeV
+
 gECpair = 2*gmass['e']
 
 
@@ -123,8 +129,8 @@ class tunables:
         #self.decayMode = decayModes.kee
 
         # max. number of int. lengths to allo the interaction to happen acc. to exp. law
-        self.maxNlengthsEM = 999
-        self.maxNlengthsHad = 999
+        self.maxNlengthsEM = 1.5
+        self.maxNlengthsHad = 1.5
         
     def print(self):
         print(self.PionsConst, self.PionsExp, self.Inelasticity)

@@ -40,8 +40,8 @@ class cworld():
         self.piySF = 0.08
         self.deltaY = 0.7 # particles fork visual factor
 
-        self.x1, self.x2 = 0., 4000. #g/cm2  #self.xscale*50
-        DY = 1.
+        self.x1, self.x2 = 0., 4000. #/ 5 # HACK FOR FE #g/cm2  #self.xscale*50
+        DY = 1. #/ 2. # HACK for Fe!
         self.y1, self.y2 = -DY, DY
                 
         self.maxgen = 0
@@ -85,7 +85,7 @@ class cworld():
         htitle = ';x[g/cm^{2}];N'
         nb = 200
         x1 = 0
-        x2 = 4000. # g/cm^2 #last.x*1.25
+        x2 = 4000. #/ 5 # HACK FOR Fe # g/cm^2 #last.x*1.25
         os.system(f'mkdir -p {rootdir}')
         self.outfile = ROOT.TFile(rootdir + 'histos' + rtag + '_tmp.root', ropt)   
         self.h1Nx = ROOT.TH1D(hname, htitle, nb, x1, x2)
@@ -409,6 +409,8 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
                 print(f'Error! Electrons: Fractional energy of interaction product over one! f={xi}')
         E1 = xi*part.E
         E2 = (1-xi)*part.E
+        if verbose:
+            print(f'   ...primary E={part.E}, daughter energies: {E1} and {E2}')
         # randomize whether radiated photon goes up or down;)
         if random.random() < 0.5:
             dy1, dy2 = dy2, dy1
@@ -553,12 +555,13 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
     return []
 
 ##########################################
+# control verbose here!
 def PerformInteractionStep(world, particles, randomizeY, halfSteps, verbose = 0):
     newparticles = []
     for p in particles:
         if verbose:
             print(f'...making {p.pid} interact...')
-        newparts = splitParticle(world, p, randomizeY, halfSteps)
+        newparts = splitParticle(world, p, randomizeY, halfSteps, verbose)
         for newp in newparts:
             newparticles.append(newp)
     return newparticles
@@ -682,7 +685,8 @@ def processArgs(argv):
         return -1, 0, 0, 0
 
     print(f'*** Running {argv[0]}')
-    E =  5*pow(10, 2) # 500 GeV
+    #E =  5*pow(10, 2) # 500 GeV
+    E =  30. # 30 GeV
     if len(argv) > 1:
         Ereq = float(argv[1])
         #if Ereq <= 1000000 and Ereq >= 30:

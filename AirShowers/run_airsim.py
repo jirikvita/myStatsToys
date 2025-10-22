@@ -17,12 +17,14 @@ def main(argv):
 
     # Primary particle energy!
     E0 = E*gGeV #1e14*geV
-    primaryPID = 'p'
-    #primaryPID = 'e'
+    #primaryPID = 'p'
+    primaryPID = 'e'
     #primaryPID = 'A56'
     randomizeY = True
     
     # regulates whether split energies to two daughter particles evenly after X0*ln(2) or by exp decay law:
+    #halfSteps = True
+    # DEFAULT:
     halfSteps = False
 
     useDarkStyle = True

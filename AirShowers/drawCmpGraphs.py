@@ -29,16 +29,28 @@ def main(argv):
 
         f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0.root' : ROOT.kBlue,
         f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0_A56.root' : ROOT.kBlue + 1,
+
+        # New physics, Z' of 100 GeV:
+        #f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0_Zprime_100.0_Gamma_10.0_mode_ee_xsectFrac_0.10.root' : ROOT.kCyan,
+        #f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0_Zprime_100.0_Gamma_10.0_mode_ee_xsectFrac_1.00.root' : ROOT.kCyan,
+        #f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0_Zprime_100.0_Gamma_10.0_mode_mumu_xsectFrac_0.10.root' : ROOT.kMagenta,
+        #f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0_Zprime_100.0_Gamma_10.0_mode_mumu_xsectFrac_1.00.root' : ROOT.kMagenta,
+        #f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0_Zprime_100.0_Gamma_10.0_mode_pipi_xsectFrac_0.10.root' : ROOT.kYellow,
+        #f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0_Zprime_100.0_Gamma_10.0_mode_pipi_xsectFrac_1.00.root' : ROOT.kYellow,
+        #f'graphs_{generator}_primaryEl_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0.root' : ROOT.kWhite,
+
+        # various EM showers with exp penetration truncated and 1--5 sigma:
+        f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0_EM1sigma_e.root' : ROOT.kCyan,
+        f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0_EM2sigma_e.root' : ROOT.kMagenta,
+        f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0_EM3sigma_e.root' : ROOT.kTeal,
+        f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0_EM4sigma_e.root' : ROOT.kGreen,
+        f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0_EM5sigma_e.root' : ROOT.kYellow,
         
-        f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0_Zprime_100.0_Gamma_10.0_mode_ee_xsectFrac_0.10.root' : ROOT.kCyan,
-        f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0_Zprime_100.0_Gamma_10.0_mode_ee_xsectFrac_1.00.root' : ROOT.kCyan,
-        f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0_Zprime_100.0_Gamma_10.0_mode_mumu_xsectFrac_0.10.root' : ROOT.kMagenta,
-        f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0_Zprime_100.0_Gamma_10.0_mode_mumu_xsectFrac_1.00.root' : ROOT.kMagenta,
-        f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0_Zprime_100.0_Gamma_10.0_mode_pipi_xsectFrac_0.10.root' : ROOT.kYellow,
-        f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0_Zprime_100.0_Gamma_10.0_mode_pipi_xsectFrac_1.00.root' : ROOT.kYellow,
-        f'graphs_{generator}_primaryEl_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0.root' : ROOT.kWhite,
     }
 
+
+
+    
     grs_conex = []
     grs = {}
     for gfilename,col in gfilenames.items():
@@ -47,7 +59,7 @@ def main(argv):
        grAirSim = gfile.Get('gr_airsim')
        grAirSim.SetLineColor(col)
        grAirSim.SetMarkerColor(col)
-       if 'Frac_0.' in gfilename:
+       if 'Frac_0.' in gfilename or 'EM' in gfilename:
            grAirSim.SetLineStyle(2)
            grAirSim.SetMarkerStyle(24)
 
@@ -58,7 +70,7 @@ def main(argv):
        funs = grAirSim.GetListOfFunctions()
        funs.Clear()
        
-       if not 'Zprime' in gfilename and not 'primaryEl' in gfilename:
+       if not 'Zprime' in gfilename and not 'primaryEl' in gfilename and not 'EM' in gfilename:
            gr_conex = gfile.Get('gr_conex')
            funs = gr_conex.GetListOfFunctions()
            funs.Clear()
@@ -74,7 +86,8 @@ def main(argv):
     can = ROOT.TCanvas(canname, canname, 0, 0, cw, ch)
 
     ymax = 2200
-    h2 = ROOT.TH2D(f'h_tmp', ';log(E);x[g/cm^{2}];', 500, 11, 16.5, 25, 0, ymax)
+    x1, x2 = 11, 16.5
+    h2 = ROOT.TH2D(f'h_tmp', ';log_{10}(E/eV);x[g/cm^{2}];', 500, x1, x2, 25, 0, ymax)
     h2.SetStats(0)
     makeWhiteAxes(h2)
     stuff.append(h2)
@@ -84,6 +97,17 @@ def main(argv):
 
     can.cd()
     h2.Draw()
+
+    # draw theory / model Xmax functions;)
+    fun_em = ROOT.TF1('Xmax_EM_theory', '[0]*(x - [1]) / log10(exp(1))', x1, x2)
+    # todo: take these params from the consts.py!
+    fun_em.SetParameters(37., log10(85.e6))
+    stuff.append(fun_em)
+    fun_em.SetLineWidth(2)
+    fun_em.SetLineStyle(2)
+    fun_em.SetLineColor(ROOT.kWhite)
+    fun_em.Draw('same')
+    
     for gr_conex in grs_conex:
         gr_conex.Draw('PL')
         leg.AddEntry(gr_conex, f'Conex+{generator}', 'PL')
@@ -92,6 +116,9 @@ def main(argv):
         gr.Draw('PL')
         leg.AddEntry(gr, tag, 'PL')
 
+
+
+        
     leg.Draw()
     stuff.append([leg, can, h2, grs, grs_conex])
 
