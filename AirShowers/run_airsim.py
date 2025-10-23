@@ -17,11 +17,11 @@ def main(argv):
 
     # Primary particle energy!
     E0 = E*gGeV #1e14*geV
-    #primaryPID = 'p'
-    primaryPID = 'e'
+    primaryPID = 'p'
+    #primaryPID = 'e'
     #primaryPID = 'A56'
     randomizeY = True
-    
+
     # regulates whether split energies to two daughter particles evenly after X0*ln(2) or by exp decay law:
     #halfSteps = True
     # DEFAULT:
@@ -33,11 +33,17 @@ def main(argv):
     if useDarkStyle:
         SetMyStyle()
     ROOT.gStyle.SetOptStat(1110)
-
+   
     debug = 0
     world = cworld(debug)
     world.decayMuons = False
     world.useDarkStyle = useDarkStyle
+
+    print(f'Primary particle: {primaryPID}')
+    print(f'      randomizeY: {randomizeY}')
+    print(f'       halfSteps: {halfSteps}')
+    print(f'    useDarkStyle: {useDarkStyle}')
+    print(f'      decayMuons: {world.decayMuons}')
     
     x, y = 0.*gkm, 0.*gm
     yend = 0*gm # dummy

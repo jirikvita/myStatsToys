@@ -37,9 +37,13 @@ def main(argv):
     ROOT.gStyle.SetPalette(ROOT.kLightTemperature)
 
     os.system('mkdir -p png pdf')
+
+    if len(argv) < 2:
+        print(f'Usage: {argv[0]} file.csv')
+        return 1
     
     # Parameters
-    csv_file = "best_model_test_data.csv"
+    csv_file = argv[1]
 
     Xmax1, Xmax2 = 600, 1050
     logE1, logE2 = 17, 21
