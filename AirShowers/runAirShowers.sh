@@ -7,6 +7,12 @@ tunables=$*
 
 echo "Tunables:"
 echo $tunables
+tag=""
+for tun in $tunables ; do
+    tag=${tag}_${tun}
+done
+
+echo $tag
 
 #for i in 11 11.5 12 12.5 13 13.5 14 14.5 15 15.5 16  ; do
 for i in 12 12.5 13 13.5 14 14.5 15 15.5 16  ; do
@@ -21,7 +27,7 @@ for i in 12 12.5 13 13.5 14 14.5 15 15.5 16  ; do
 	#if [ $i -gt 100000 ] ; then
 	#    draw=0
 	#fi
-	python3 ./run_airsim.py $i $j $batch $draw $* >& log_airsim_logE${i}_iter${j}.txt
+	echo "python3 ./run_airsim.py $i $j $batch $draw $* >& log_airsim_logE${i}_iter${j}${tag}.txt"
     done
 done
 

@@ -135,7 +135,7 @@ class tunables:
     def print(self):
         print(self.PionsConst, self.PionsExp, self.Inelasticity)
     def makeTag(self):
-        tag = f'_Inel_{self.Inelasticity}_sigmaInel_{self.sigmaInelasticity}_C_{self.PionsConst}_Csigma_{self.sigmaPionConst}' #_piExp_{self.PionsExp}'
+        tag = f'_Inel_{self.Inelasticity}_sigmaInel_{self.sigmaInelasticity}_C_{self.PionsConst}_Csigma_{self.sigmaPionConst}_mnlEM{self.maxNlengthsEM}_mnlHad{self.maxNlengthsHad}' #_piExp_{self.PionsExp}'
         if self.doNewPhysics:
             tag += f'_Zprime_{self.MZprime}_Gamma_{self.GammaZprime}_mode_{decays[self.decayMode]}_xsectFrac_{self.MZprimeHadXsectFraction:1.2f}'
         return tag
@@ -145,6 +145,8 @@ class tunables:
         print(f'sigmaInelasticity : {self.sigmaInelasticity}')
         print(f'PionsConst        : {self.PionsConst}')
         print(f'sigmaPionConst    : {self.sigmaPionConst}')
+        print(f'maxNlengthsEM     : {self.maxNlengthsEM}')
+        print(f'maxNlengthsHad    : {self.maxNlengthsHad}')
         print(f'doNewPhysics      : {self.doNewPhysics}')
         if self.doNewPhysics:
             print(f'MZprimeHadXsectFraction : {self.MZprimeHadXsectFraction}')

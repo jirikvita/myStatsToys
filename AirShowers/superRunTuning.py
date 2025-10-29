@@ -1,4 +1,6 @@
-#!/usr/bin/python
+#!/usr/bin/python3
+
+import os, sys
 
 
 # jk 29.10.2025
@@ -21,7 +23,7 @@ for inel in inels:
                 for mlEM in maxNlengthsEMs:
                     for mlHad in maxNlengthsHads:
                         n += 1
-                        cmd = f'./runAirShowers.sh {inel} {sigma_inel} {Nch} {sigma_Nch} {mlEM} {mlHad} &'
+                        cmd = f'./runAirShowers.sh {inel} {sigma_inel} {Nch} {sigma_Nch} {mlEM} {mlHad} ' + '&'
                         print(cmd)
-                        #os.system(cmd)
+                        os.system(cmd)
 print(f'Total tunable settings: {n}')
