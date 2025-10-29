@@ -51,6 +51,49 @@ class cworld():
 
         self.Tunables = tunables()
         return
+    
+    def updateTunables(self, argv):
+        if len(argv) < 1:
+            return
+        if len(argv) > 0:
+            try:
+                self.Tunables.Inelasticity = float(argv[0])
+                print(f'Updated inelasticity based on command line argument to {argv[0]}')
+            except:
+                print(f'Failed to update inelasticity based on command line argument {argv[0]} !')
+        if len(argv) > 1:
+            try:
+                self.Tunables.sigmaInelasticity = float(argv[1])
+                print(f'Updated sigmaInel based on command line argument to {argv[1]}')
+            except:
+                print(f'Failed to update sigmaInel based on command line argument {argv[1]} !')
+        if len(argv) > 2:
+            try:
+                self.Tunables.PionsConst = float(argv[2])
+                print(f'Updated Nch based on command line argument to {argv[2]}')
+            except:
+                print(f'Failed to update Nch based on command line argument {argv[2]} !')
+        if len(argv) > 3:
+            try:
+                self.Tunables.sigmaPionConst = float(argv[3])
+                print(f'Updated Nch sigma  based on command line argument to {argv[3]}')
+            except:
+                print(f'Failed to update Nch sigma  based on command line argument {argv[3]} !')
+        if len(argv) > 4:
+            try:
+                self.Tunables.maxNlengthsEM = float(argv[4])
+                print(f'Updated maxNlengthsEM based on command line argument to {argv[4]}')
+            except:
+                print(f'Failed to update maxNlengthsEM based on command line argument {argv[4]} !')
+        if len(argv) > 5:
+            try:
+                self.Tunables.maxNlengthsHad = float(argv[5])
+                print(f'Updated maxNlengthsHad based on command line argument to {argv[5]}')
+            except:
+                print(f'Failed to update maxNlengthsHad based on command line argument {argv[5]} !')
+        print('Done updating tunables based on command line arguments!')
+            
+        
 
     def PrintPars(self):
         self.Tunables.Print()
@@ -202,7 +245,12 @@ def genHadrons(pid, E, gamma, length, x, y, world, nMaxIters = 100):
     # nCharged = int( Poisson(world.Tunables.PionsConst)*log(E/gGeV)) #*world.Tunables.PionsExp))
     nCharged = -1
     while  nCharged < 0: 
-        nCharged = int( random.gauss(world.Tunables.PionsConst, world.Tunables.sigmaPionConst)*log(E/gGeV)) #*world.Tunables.PionsExp)) 
+        # DEFAULT!!!
+        nCharged = int( random.gauss(world.Tunables.PionsConst, world.Tunables.sigmaPionConst)*log(E/gGeV)) #*world.Tunables.PionsExp))
+        # HACK!!!
+        #nCharged = 10
+        if nCharged <= 1:
+            nCharged = 2
     
     PiZeroFrac = random.uniform(1/4., 1/3.)
     nNeutral = int( PiZeroFrac*nCharged / (1. - PiZeroFrac)  ) 

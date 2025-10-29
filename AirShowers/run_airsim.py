@@ -38,12 +38,16 @@ def main(argv):
     world = cworld(debug)
     world.decayMuons = False
     world.useDarkStyle = useDarkStyle
-
-    print(f'Primary particle: {primaryPID}')
-    print(f'      randomizeY: {randomizeY}')
-    print(f'       halfSteps: {halfSteps}')
-    print(f'    useDarkStyle: {useDarkStyle}')
-    print(f'      decayMuons: {world.decayMuons}')
+    if len(argv) > 5:
+        world.updateTunables(argv[5:])
+    
+    print(f'+----------- Setting -----------+')
+    print(f'| Primary particle: {primaryPID}')
+    print(f'|      randomizeY: {randomizeY}')
+    print(f'|       halfSteps: {halfSteps}')
+    print(f'|    useDarkStyle: {useDarkStyle}')
+    print(f'|      decayMuons: {world.decayMuons}')
+    print(f'+-------------------------------+')
     
     x, y = 0.*gkm, 0.*gm
     yend = 0*gm # dummy
