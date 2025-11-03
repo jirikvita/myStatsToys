@@ -22,7 +22,7 @@ stuff = []
 
 def main(argv):
 
-    grdir = 'graphs/'
+    grdir = 'graphs_tuneBeta/'
     #generator = 'SIBYLL'
     generator = 'EPOS'
     gfilenames = {
