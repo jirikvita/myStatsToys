@@ -35,6 +35,21 @@ def sample_from_custom_pdf(x0, lmb, ymax):
         if y < custom_pdf(x, x0, lmb):
             return x
 
+def sample_vonNeumann_pairProduction(x0 = 0, x1 = 1, ymax = 9./7.):
+    while True:
+        x = random.uniform(x0, x1)
+        y = random.uniform(0., ymax)
+        if y < (1 - 4./3.*x*(1. - x) ) * 9./7.:
+            return x
+
+def sample_vonNeumann_brehmsElEnergyFrac(x0 = 0, x1 = 1, ymax = 4./3.):
+    while True:
+        x = random.uniform(x0, x1)
+        y = random.uniform(0., ymax)
+        if y < (4./3. - 4./3.*(1-x) + (1-x)**2):
+            return x
+    
+        
 ## Example: Generate 10 samples
 #samples = [sample_from_custom_pdf() for _ in range(10)]
 #print(samples)

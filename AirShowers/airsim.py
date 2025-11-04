@@ -452,11 +452,17 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
             while dx > world.Tunables.maxNlengthsEM*length:
                 dx = exponential(length)
             x = min(part.x + dx, world.x2)
-            xi = exp(-dx / length)
+            # initial idea; follow the exp:
+            # xi = exp(-dx / length)
+            # new: follow the cross section:
+            xi = sample_vonNeumann_brehmsElEnergyFrac()
+            
             if xi > 1:
                 print(f'Error! Electrons: Fractional energy of interaction product over one! f={xi}')
-        E1 = xi*part.E
-        E2 = (1-xi)*part.E
+        #E1 = xi*part.E
+        #E2 = (1-xi)*part.E
+        E2 = xi*part.E
+        E1 = (1-xi)*part.E
         if verbose:
             print(f'   ...primary E={part.E}, daughter energies: {E1} and {E2}')
         # randomize whether radiated photon goes up or down;)
@@ -487,12 +493,15 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
             x = part.x + dx
             if x > world.x2:
                 x = world.x2
+            # initial idea; follow the exp:
             xi = exp(-dx / length)
             if xi > 1:
                 print(f'Error! Photons: Fractional energy of interaction product over one! f={xi}')
             # TODO: xi as a random number drawn from distribution
             # C*(1 - 4/3*x*(1-x)), C = 9/7?
-            # TF1 b("b", "9./7.5*(1 - 4/3*x*(1-x))", 0, 1);
+            # TF1 b("b", "9./7.*(1 - 4/3*x*(1-x))", 0, 1);
+            # new: follow the xsect
+            xi = sample_vonNeumann_pairProduction()
 
         E1 = xi*part.E
         E2 = (1-xi)*part.E
@@ -558,7 +567,7 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
                         elif world.Tunables.decayMode == decayModes.kee:
                             pid0, pid1 = 'e', 'e'
                         print(f'    ...Zprime resonance! E={part.E:.2f}, mass: {world.Tunables.MZprime:.0f} GeV, Ethr={Ethr:.2f} GeV')
-                        # recpompute gamma factor
+                        # recompute gamma factor
                         # care about additional particles produced in the interaction...?!?!?!
                         # add some Feynman x and compute how much energy goes to proton remnants?
                         gamma = part.E / world.Tunables.MZprime
