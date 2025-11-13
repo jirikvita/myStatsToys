@@ -10,6 +10,8 @@ import os, sys
 from utils import *
 from consts import *
 
+from grsNames import getGrsNames
+
 ########################################
 
 cans = []
@@ -22,46 +24,17 @@ stuff = []
 
 def main(argv):
 
-    grdir = 'graphs_tuneBeta/'
+    # grdir = 'graphs_tuneBeta/'
+    grdir = 'graphs/'
     #generator = 'SIBYLL'
     generator = 'EPOS'
-    gfilenames = {
 
-        # protons:
-        f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0.root' : ROOT.kBlue,
-        #f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0.root' : ROOT.kBlue + 1,
-        f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0_EMonly1p5lengthsCut_p.root'  : ROOT.kAzure+1,
-        f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0_EM_and_had_1p5lengthsCut_p.root' : ROOT.kMagenta+3,
-        
-        # Fe:
-        f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0_A56.root' : ROOT.kBlue + 1,
-
-        # New physics, Z' of 100 GeV:
-        #f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0_Zprime_100.0_Gamma_10.0_mode_ee_xsectFrac_0.10.root' : ROOT.kCyan,
-        #f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0_Zprime_100.0_Gamma_10.0_mode_ee_xsectFrac_1.00.root' : ROOT.kCyan,
-        #f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0_Zprime_100.0_Gamma_10.0_mode_mumu_xsectFrac_0.10.root' : ROOT.kMagenta,
-        #f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0_Zprime_100.0_Gamma_10.0_mode_mumu_xsectFrac_1.00.root' : ROOT.kMagenta,
-        #f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0_Zprime_100.0_Gamma_10.0_mode_pipi_xsectFrac_0.10.root' : ROOT.kYellow,
-        #f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0_Zprime_100.0_Gamma_10.0_mode_pipi_xsectFrac_1.00.root' : ROOT.kYellow,
-        #f'graphs_{generator}_primaryEl_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0.root' : ROOT.kWhite,
-
-        # various EM showers with exp penetration truncated and 1--5 sigma:
-        f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0_EM1lengthsCut_e.root' : ROOT.kGray,
-        f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0_EM1p25lengthsCut_e.root' : ROOT.kGray+1,
-        f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0_EM1p5lengthsCut_e.root' : ROOT.kGray+2,
-        f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0_EM2lengthsCut_e.root' : ROOT.kMagenta,
-        f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0_EM3lengthsCut_e.root' : ROOT.kTeal,
-        f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0_EM4lengthsCut_e.root' : ROOT.kGreen,
-        f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0_EM5lengthsCut_e.root' : ROOT.kYellow,
-        f'graphs_{generator}_Inel_0.55_sigmaInel_0.2_C_120.0_Csigma_30.0_EM999lengthsCut_e.root' : ROOT.kPink,
-        
-    }
-
-
-
+    gfilenames = getGrsNames(generator)
     
     grs_conex = []
     grs = {}
+    haveConex_p = False
+    haveConex_Fe = False
     for gfilename,col in gfilenames.items():
        gfile = ROOT.TFile(grdir + gfilename, 'read')
        gfile.ls()
@@ -77,18 +50,21 @@ def main(argv):
 
        tag = gfilename.replace(f'graphs_{generator}_', '').replace('.root', '').replace('_', ' ').replace('Gamma','#Gamma=')
        tag = tag.replace('sigmaInel','#sigma_{Inel}').replace('Csigma','#sigma_{C}').replace('xsectFrac','frac_{Z\'}').replace('mode','Z\'#rightarrow')
-       tag = tag.replace('mumu','#mu#mu').replace('pipi','#pi#pi').replace('Zprime 100.0','m_{Z\'}=100 GeV').replace('10.0','10 GeV').replace('A56','Fe').replace('EM','EM ').replace('length', 'X_{0}').replace('sCut',' cut').replace('1p','1.').replace(' e','')
+       tag = tag.replace('mumu','#mu#mu').replace('pipi','#pi#pi').replace('Zprime 100.0','m_{Z\'}=100 GeV').replace('10.0','10 GeV').replace('A56','Fe').replace('EM','EM ').replace('length', 'X_{0}').replace('sCut',' cut').replace('1p','1.').replace('primaryE',' Electron')
        grs[tag] = grAirSim
        funs = grAirSim.GetListOfFunctions()
        funs.Clear()
        
-       if not 'Zprime' in gfilename and not 'primaryEl' in gfilename and not 'EM' in gfilename:
+       if (not haveConex_p or not haveConex_Fe) and not 'Zprime' in gfilename and not 'primaryE' in gfilename: # and not 'EM' in gfilename:
            gr_conex = gfile.Get('gr_conex')
            funs = gr_conex.GetListOfFunctions()
            funs.Clear()
            if 'A56' in gfilename:
                gr_conex.SetName(gr_conex.GetName() + '_Fe')
                gr_conex.SetMarkerStyle(21)
+               haveConex_Fe = True
+           else:
+               haveConex_p = True
            gr_conex.SetLineColor(ROOT.kRed)
            gr_conex.SetMarkerColor(ROOT.kRed)
            grs_conex.append(gr_conex)
@@ -114,9 +90,9 @@ def main(argv):
     ROOT.gPad.SetGridy(1)
     h2.Draw()
 
-    # draw theory / model Xmax functions;)
+    # draw theory Xmax function for EM showers:
     fun_em = ROOT.TF1('Xmax_EM_theory', '[0]*(x - [1]) / log10(exp(1))', x1+0.5, x2-0.25)
-    # todo: take these params from the consts.py!
+    # todo: take these params from the consts.py?
     fun_em.SetParameters(37., log10(85.e6))
     stuff.append(fun_em)
     fun_em.SetLineWidth(2)
@@ -124,19 +100,37 @@ def main(argv):
     fun_em.SetLineColor(ROOT.kWhite)
     fun_em.Draw('same')
     
+    # draw theory Xmax function for hadronic showers:
+    #fun_had = ROOT.TF1('Xmax_had_theory', '[0] + [1]*(x - log(3*[2]) - 0.2*(x-15)) / log10(exp(1))', x1+0.5, x2-0.25)
+    #fun_had.SetParameters(37., 120., 41.2)
+    fun_had = ROOT.TF1('Xmax_had_theory', '[0] + [1]*(x-15) + 100', x1+0.5, x2-0.25)
+    fun_had.SetParameters(470., 58)
+    stuff.append(fun_had)
+    fun_had.SetLineWidth(2)
+    fun_had.SetLineStyle(2)
+    fun_had.SetLineColor(ROOT.kRed-4)
+    fun_had.Draw('same')
+    makeWhiteAxes(fun_had)
+        
+    
+
     for gr_conex in grs_conex:
         gr_conex.Draw('PL')
         tag = ', p'
         if 'Fe' in gr_conex.GetName():
             tag = ', Fe'
+        if 'Electron' in gr_conex.GetName():
+            tag = ', Electron'
         leg.AddEntry(gr_conex, f'Conex+{generator}{tag}', 'PL')
 
     for tag,gr in grs.items():
         gr.Draw('PL')
-        leg.AddEntry(gr, tag, 'PL')
+        if ', p' in tag or 'Fe' in tag or 'Electron' in tag:
+            leg.AddEntry(gr, tag, 'PL')
 
 
-    leg.AddEntry(fun_em, 'Theoretical X_{max}^{EM} = X_{0} ln(E/E_{C})', 'L')
+    leg.AddEntry(fun_em, 'Theoretical X_{max}^{EM} = X_{0} ln(E/E_{C}) [Matthews 2005]', 'L')
+    leg.AddEntry(fun_had, 'Theoretical X_{max}^{had} = X_{0} + #lambda_{I} ln(E/3Nch(E)) + 100 [Matthews 2005]', 'L')
     leg.Draw()
     stuff.append([leg, can, h2, grs, grs_conex])
 

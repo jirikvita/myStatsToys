@@ -209,7 +209,11 @@ def makeDarkAxes(h2):
 
 ##########################################
 def makeWhiteAxes(h2):
-    h2.SetStats(0)
+
+    try:
+        h2.SetStats(0)
+    except:
+        pass
         
     h2.GetXaxis().SetAxisColor(ROOT.kWhite)
     h2.GetXaxis().SetLabelColor(ROOT.kWhite)

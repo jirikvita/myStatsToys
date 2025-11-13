@@ -8,7 +8,7 @@ for gen in EPOS ; do
     #for i in `ls | grep root_Inel | grep -v old | grep Zprime` ; do
     # Em signal truncation test:
     #for i in `ls | grep root_Inel | grep -v old | grep EM` ; do
-    for i in `ls -r | grep root_Inel ` ; do
+    for i in `ls | grep root_Inel | grep EM1.125 | grep -v prim` ; do
 
 	#if [ -d nPiLogEi/$i ] ; then
 	#  echo "*** nPiLogEi/$i ***"
