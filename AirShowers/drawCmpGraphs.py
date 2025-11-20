@@ -10,7 +10,8 @@ import os, sys
 from utils import *
 from consts import *
 
-from grsNames import getGrsNames
+#from grsNames import getGrsNames
+from grsNames_newPhys import getGrsNames
 
 ########################################
 
@@ -103,14 +104,26 @@ def main(argv):
     # draw theory Xmax function for hadronic showers:
     #fun_had = ROOT.TF1('Xmax_had_theory', '[0] + [1]*(x - log(3*[2]) - 0.2*(x-15)) / log10(exp(1))', x1+0.5, x2-0.25)
     #fun_had.SetParameters(37., 120., 41.2)
-    fun_had = ROOT.TF1('Xmax_had_theory', '[0] + [1]*(x-15) + 100', x1+0.5, x2-0.25)
+    fun_had = ROOT.TF1('Xmax_had_theory', '[0] + [1]*(x-15)', x1+0.5, x2-0.25)
     fun_had.SetParameters(470., 58)
     stuff.append(fun_had)
     fun_had.SetLineWidth(2)
-    fun_had.SetLineStyle(2)
+    fun_had.SetLineStyle(3)
     fun_had.SetLineColor(ROOT.kRed-4)
     fun_had.Draw('same')
     makeWhiteAxes(fun_had)
+        
+    # draw theory Xmax function for hadronic showers:
+    #fun_hadShifted = ROOT.TF1('Xmax_hadShifted_theory', '[0] + [1]*(x - log(3*[2]) - 0.2*(x-15)) / log10(exp(1))', x1+0.5, x2-0.25)
+    #fun_hadShifted.SetParameters(37., 120., 41.2)
+    fun_hadShifted = ROOT.TF1('Xmax_hadShifted_theory', '[0] + [1]*(x-15) + 100', x1+0.5, x2-0.25)
+    fun_hadShifted.SetParameters(470., 58)
+    stuff.append(fun_hadShifted)
+    fun_hadShifted.SetLineWidth(2)
+    fun_hadShifted.SetLineStyle(2)
+    fun_hadShifted.SetLineColor(ROOT.kRed-4)
+    fun_hadShifted.Draw('same')
+    makeWhiteAxes(fun_hadShifted)
         
     
 
@@ -125,12 +138,13 @@ def main(argv):
 
     for tag,gr in grs.items():
         gr.Draw('PL')
-        if ', p' in tag or 'Fe' in tag or 'Electron' in tag:
+        if len(gfilenames) < 10 or (', p' in tag or 'Fe' in tag or 'Electron' in tag):
             leg.AddEntry(gr, tag, 'PL')
 
 
     leg.AddEntry(fun_em, 'Theoretical X_{max}^{EM} = X_{0} ln(E/E_{C}) [Matthews 2005]', 'L')
-    leg.AddEntry(fun_had, 'Theoretical X_{max}^{had} = X_{0} + #lambda_{I} ln(E/3Nch(E)) + 100 [Matthews 2005]', 'L')
+    leg.AddEntry(fun_had, 'Theoretical X_{max}^{had} = X_{0} + #lambda_{I} ln(E/3Nch(E)) [Matthews 2005]', 'L')
+    leg.AddEntry(fun_hadShifted, 'Theoretical X_{max}^{had} = X_{0} + #lambda_{I} ln(E/3Nch(E)) + 100 [Matthews 2005]', 'L')
     leg.Draw()
     stuff.append([leg, can, h2, grs, grs_conex])
 

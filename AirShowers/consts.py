@@ -113,11 +113,11 @@ class tunables:
 
         # hadroproduction parameters
         # fraction of energy in collision going to pions:
-        self.Inelasticity = 0.55
+        self.Inelasticity = 0.45
         self.sigmaInelasticity = 0.2
         # for the pion number logarithmic dependence on energy
-        self.PionsConst = 10 # 120.
-        self.sigmaPionConst = 3 # 30.
+        self.PionsConst = 10 
+        self.sigmaPionConst = 3 
         
         # new physics
         self.doNewPhysics = False
@@ -129,8 +129,8 @@ class tunables:
         #self.decayMode = decayModes.kee
 
         # max. number of int. lengths to allo the interaction to happen acc. to exp. law
-        self.maxNlengthsEM = 1.25
-        self.maxNlengthsHad = 1.5
+        self.maxNlengthsEM = 1.125
+        self.maxNlengthsHad = 999.
         
     def print(self):
         print(self.PionsConst, self.PionsExp, self.Inelasticity)

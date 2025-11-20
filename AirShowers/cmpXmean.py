@@ -157,8 +157,8 @@ def main(argv):
         13, 13.5, 14,
         14.5,
         15,
-        15.5,
-        #16.0,
+        #15.5,
+        16.0,
     ]
 
     cnx, cny = 3, 3
@@ -235,8 +235,8 @@ def main(argv):
         14: f'conex_{conexPrimary}_E_14_{generator}_merged.root',
         14.5: f'conex_{conexPrimary}_E_14.5_{generator}_merged.root',
         15: f'conex_{conexPrimary}_E_15_{generator}_merged.root',
-        15.5: f'conex_{conexPrimary}_E_15.5_{generator}_merged.root',
-        #16: f'conex_{conexPrimary}_E_16_{generator}_merged.root',
+        #15.5: f'conex_{conexPrimary}_E_15.5_{generator}_merged.root',
+        16: f'conex_{conexPrimary}_E_16_{generator}_merged.root',
         ###16.5: f'conex_{conexPrimary}_E_16.5_{generator}_merged.root',
                   }
     cfnames = EconexDict.values()
