@@ -15,6 +15,126 @@ import math
 
 
 ##########################################
+def makeGrRatio(gr, refgr, xtolerance):
+    ratio = ROOT.TGraphErrors()
+    ratio.SetLineStyle(gr.GetLineStyle())
+    ratio.SetLineColor(gr.GetLineColor())
+    ratio.SetLineWidth(gr.GetLineWidth())
+    
+    ratio.SetMarkerStyle(gr.GetMarkerStyle())
+    ratio.SetMarkerColor(gr.GetMarkerColor())
+    ratio.SetMarkerSize(gr.GetMarkerSize())
+    
+    xref = c_double(0.)
+    yref = c_double(0.)
+    x = c_double(0.)
+    y = c_double(0.)
+
+    i = 0
+    iref = 0
+    ip = 0
+    N = gr.GetN()
+    Nref = refgr.GetN()
+            
+    for j in range( max(N, Nref) ):
+        gr.GetPoint(i, x, y)
+        refgr.GetPoint(iref, xref, yref)
+        while abs(x.value - xref.value) > xtolerance:
+            if x.value < xref.value:
+                i += 1
+                gr.GetPoint(i, x, y)
+            else:
+                iref += 1
+                refgr.GetPoint(iref, xref, yref)
+            if i >= N:
+                break
+            if iref >= Nref:
+                break
+
+
+        if yref.value > 0:
+            val = y.value / yref.value
+            print(y.value, yref.value)
+            err = gr.GetErrorY(i)
+            errref = gr.GetErrorY(iref)
+            rerr = 0.
+            if err > 0:
+                rerr += pow(err, 2)
+            if errref > 0:
+                rerr += pow(errref, 2)
+            if rerr > 0:
+                rerr = sqrt(rerr) / yref.value
+            ratio.SetPoint(ip, x.value, val)
+            ratio.SetPointError(ip, 0., rerr)
+            ip += 1
+        i += 1
+        iref += 1
+    return ratio
+
+##########################################
+def makeRatioGraphs(grs, refkey, xtolerance):
+    print(grs)
+    ratios = []
+    for key,gr in grs.items():
+        if key == refkey:
+            continue
+        ratio = makeGrRatio(gr, grs[refkey], xtolerance)
+        ratios.append(ratio)
+    return ratios
+
+
+##########################################
+def shiftX(gr, dx):
+    x = c_double(0.)
+    y = c_double(0.)
+    for ip in range(gr.GetN()):
+        gr.GetPoint(ip, x, y)
+        gr.SetPoint(ip, x.value + dx, y.value)
+    return
+
+#########################################################
+def MakeMultiSubPads(can, ratios, PadSeparation = 0.0, UpperPadTopMargin = 0.07, LowestPadBottomMargin = 0.40,  UpperPadBottomMargin = 0.0):
+    x0 = 0.01
+    x1 = 0.99
+    tag = can.GetName()
+    pads = []
+    y0 = 1.
+    nr = len(ratios)
+    for i in range(0,nr):
+        y1 = y0 - ratios[i] + PadSeparation/2
+        pad = ROOT.TPad("p1" + tag,"p1" + tag, x0, y1, x1, y0 - PadSeparation/2)
+        print( x0, y1, x1, y0 + PadSeparation/2)
+        y0 = 1.*y1
+        pad.SetTopMargin(0.07)
+        if i == 0:
+            pad.SetTopMargin(UpperPadTopMargin)
+            pad.SetBottomMargin(UpperPadBottomMargin)
+        elif i == nr - 1:
+            pad.SetTopMargin(0.)
+            pad.SetBottomMargin(LowestPadBottomMargin)
+        else:
+            pad.SetTopMargin(0.)
+            pad.SetBottomMargin(0.)
+        #pad.SetBorderSize(1)
+        #pad.SetFillColor(i+1)
+        pad.Draw()
+        pads.append(pad)
+  
+    xx = 0.5
+    width = 0.39
+    height = 0.42
+    yy = 0.5
+    pad_inset = ROOT.TPad("pad_inset" + tag,"pad_inset" + tag,xx, yy, xx + width, yy + height);
+    pad_inset.SetTopMargin(0.05);
+    pad_inset.SetRightMargin(0.05);
+    pad_inset.SetBottomMargin(0.12);
+    #pad_inset.Divide(2,1)
+    pad_inset.cd()
+    
+    
+    return pads,pad_inset
+
+##########################################
 # 10.7.2025
 # custom quadratic * exp PDF for energy distribution of hadrons
 

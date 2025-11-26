@@ -129,7 +129,7 @@ class tunables:
         #self.decayMode = decayModes.kee
 
         # max. number of int. lengths to allo the interaction to happen acc. to exp. law
-        self.maxNlengthsEM = 1.125
+        self.maxNlengthsEM = 1.125 
         self.maxNlengthsHad = 999.
         
     def print(self):

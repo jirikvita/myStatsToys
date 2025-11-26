@@ -152,12 +152,14 @@ def main(argv):
 
     logEs = [#11, 11.5,
         ## Fe: remove 12 and 12.5
-        12,
-        12.5,
-        13, 13.5, 14,
+        #12,
+        #12.5,
+        13,
+        13.5,
+        14,
         14.5,
         15,
-        #15.5,
+        15.5,
         16.0,
     ]
 
@@ -190,7 +192,7 @@ def main(argv):
     #primary = 'A56'
     if 'primaryE' in rootdir:
         primary = 'e'
-    if 'primaryFe' in rootdir or '56' in rootdir:
+    if 'Fe' in rootdir or '56' in rootdir:
         primary = 'A56'
     print(f'Primary: {primary}')
     for logE in logEs:
@@ -228,14 +230,14 @@ def main(argv):
         #11: f'conex_{conexPrimary}_E_11_{generator}_merged.root',
         #11.5: f'conex_{conexPrimary}_E_11.5_{generator}_merged.root',
         ## Fe: remove 12 and 12.5
-        12: f'conex_{conexPrimary}_E_12_{generator}_merged.root',
-        12.5: f'conex_{conexPrimary}_E_12.5_{generator}_merged.root',
+        #12: f'conex_{conexPrimary}_E_12_{generator}_merged.root',
+        #12.5: f'conex_{conexPrimary}_E_12.5_{generator}_merged.root',
         13: f'conex_{conexPrimary}_E_13_{generator}_merged.root',
         13.5: f'conex_{conexPrimary}_E_13.5_{generator}_merged.root',
         14: f'conex_{conexPrimary}_E_14_{generator}_merged.root',
         14.5: f'conex_{conexPrimary}_E_14.5_{generator}_merged.root',
         15: f'conex_{conexPrimary}_E_15_{generator}_merged.root',
-        #15.5: f'conex_{conexPrimary}_E_15.5_{generator}_merged.root',
+        15.5: f'conex_{conexPrimary}_E_15.5_{generator}_merged.root',
         16: f'conex_{conexPrimary}_E_16_{generator}_merged.root',
         ###16.5: f'conex_{conexPrimary}_E_16.5_{generator}_merged.root',
                   }

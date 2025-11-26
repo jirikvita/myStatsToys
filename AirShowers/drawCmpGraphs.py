@@ -25,34 +25,60 @@ stuff = []
 
 def main(argv):
 
+    
     # grdir = 'graphs_tuneBeta/'
     grdir = 'graphs/'
     #generator = 'SIBYLL'
     generator = 'EPOS'
 
     gfilenames = getGrsNames(generator)
+    reffilename = 'graphs_EPOS_Inel_0.45_sigmaInel_0.2_C_10_Csigma_3_mnlEM1.125_mnlHad999.0.root'
+    refkey = ''
+    
+    # possibly adjust xpoints
+    adjustXpoints = True
+    xw = 0.20
+    x0 = -xw/2.
+    dx = xw/len(gfilenames)
     
     grs_conex = []
     grs = {}
     haveConex_p = False
     haveConex_Fe = False
+    ifile = -1
+
+    if not reffilename in gfilenames:
+        print('*** ERROR, no reference key for ratios!')
+    else:
+        print('*** OK, have the reference key for ratios!')
+    
     for gfilename,col in gfilenames.items():
+       print(gfilename)
+       ifile += 1
        gfile = ROOT.TFile(grdir + gfilename, 'read')
        gfile.ls()
        grAirSim = gfile.Get('gr_airsim')
        grAirSim.SetLineColor(col)
        grAirSim.SetMarkerColor(col)
-       if 'Frac_0.' in gfilename or ('EM' in gfilename and not '_p' in gfilename):
+       if adjustXpoints:
+           shiftX(grAirSim, x0 + ifile*dx)
+
+       
+       if 'Zprime_100.' in gfilename: # or ('EM' in gfilename and not '_p' in gfilename):
            grAirSim.SetLineStyle(2)
            grAirSim.SetMarkerStyle(24)
        if 'A56' in gfilename:
            #grAirSim.SetLineStyle(2)
            grAirSim.SetMarkerStyle(21)
 
-       tag = gfilename.replace(f'graphs_{generator}_', '').replace('.root', '').replace('_', ' ').replace('Gamma','#Gamma=')
+       tag = gfilename + ''
+       tag = tag.replace(f'graphs_{generator}_', '').replace('.root', '').replace('_', ' ').replace('Gamma','#Gamma=')
        tag = tag.replace('sigmaInel','#sigma_{Inel}').replace('Csigma','#sigma_{C}').replace('xsectFrac','frac_{Z\'}').replace('mode','Z\'#rightarrow')
        tag = tag.replace('mumu','#mu#mu').replace('pipi','#pi#pi').replace('Zprime 100.0','m_{Z\'}=100 GeV').replace('10.0','10 GeV').replace('A56','Fe').replace('EM','EM ').replace('length', 'X_{0}').replace('sCut',' cut').replace('1p','1.').replace('primaryE',' Electron')
        grs[tag] = grAirSim
+       if gfilename == reffilename:
+           refkey = tag + ''
+       
        funs = grAirSim.GetListOfFunctions()
        funs.Clear()
        
@@ -75,18 +101,21 @@ def main(argv):
     cw, ch = 1200, 1200
     canname = f'AirSim_GrsCmp'
     can = ROOT.TCanvas(canname, canname, 0, 0, cw, ch)
+    pads, inset = MakeMultiSubPads(can,  [0.60, 0.40], 0.0, 0.07, 0.4, 0.15)
 
-    ymax = 2200
+
+    ymax = 1200
     x1, x2 = 11, 16.5
     h2 = ROOT.TH2D(f'h_tmp', ';log_{10}(E/eV);x[g/cm^{2}];', 500, x1, x2, 25, 0, ymax)
     h2.SetStats(0)
     makeWhiteAxes(h2)
     stuff.append(h2)
 
-    leg = ROOT.TLegend(0.15, 0.62, 0.85, 0.89)
+    leg = ROOT.TLegend(0.12, 0.62, 0.8, 0.89)
     leg.SetTextColor(ROOT.kWhite)
 
-    can.cd()
+    pads[0].cd()
+    #    can.cd()
     ROOT.gPad.SetGridx(1)
     ROOT.gPad.SetGridy(1)
     h2.Draw()
@@ -148,6 +177,26 @@ def main(argv):
     leg.Draw()
     stuff.append([leg, can, h2, grs, grs_conex])
 
+
+    # ratios
+    pads[1].cd()
+    ROOT.gPad.SetGridy(1)
+    rh2 = ROOT.TH2D(f'rh_tmp', ';log_{10}(E/eV);x[g/cm^{2}];', 500, x1, x2, 25, 0.6, 1.4)
+    rh2.SetStats(0)
+    makeWhiteAxes(rh2)
+    stuff.append(rh2)
+    rh2.Draw()
+    
+    xtolerance = 0.3
+    # check key:
+    print('=========== check keys ... ================')
+    for key in grs:
+        print(key)
+    ratios = makeRatioGraphs(grs, refkey, xtolerance)
+    for ratio in ratios:
+        ratio.Draw('same PL')
+
+    stuff.append([rh2, ratios])
     pngdir = 'png_graphs/'
     pdfdir = 'pdf_graphs/'
     os.system(f'mkdir -p {pngdir} {pdfdir}')
