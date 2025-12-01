@@ -187,6 +187,8 @@ class cpart:
         self.yend = yend # end position
         #self.gen = gen # generation
         #self.interacted = interacted
+    #def Print(self):
+    #    print(self.pid, self.E)
         
 ##########################################
 def checkResonantEnergy(E, world):
@@ -372,23 +374,35 @@ def genHadrons(pid, E, gamma, length, x, y, world, nMaxIters = 100):
     return hadrons_and_photons
 
 ##########################################
-def twoParticleDecay(part, gamma, world, dy1, rnd1, dy2, rnd2, addSFy, pid0 = '', pid1 = ''):
+def twoParticleDecay(part, gamma, world, dy1, rnd1, dy2, rnd2, addSFy, pid0 = '', pid1 = '', decayRighAwayUniformly = False, verbose = 0):
     SFy = world.SFy * addSFy
     # decay the pion to a muon
     # less transverse separation
-    rnd1 = getRndSign()*random.random() / gamma
-    rnd2 = -rnd1
-
-    # take into account the Lorentz gamma factor
-    length = gamma*gctau[part.pid]
-    # random choice from falling exponential distribution, see
-    # https://numpy.org/doc/2.1/reference/random/generated/numpy.random.exponential.html
-    dx = exponential(length)
+    xi = 0.5
+    dx = 0
+    length = 0.
+    x = part.x
     y = part.y
-    x = min(part.x + dx, world.x2)
-    xi = exp(-dx / length)
+    if not decayRighAwayUniformly:
+        rnd1 = getRndSign()*random.random() / gamma
+        rnd2 = -rnd1
+
+        # take into account the Lorentz gamma factor
+        length = gamma*gctau[part.pid]
+        # random choice from falling exponential distribution, see
+        # https://numpy.org/doc/2.1/reference/random/generated/numpy.random.exponential.html
+        dx = exponential(length)
+        x = min(part.x + dx, world.x2)
+        xi = exp(-dx / length)
+    else:
+        xi = random.random()
+        
+    if verbose:
+        print(f'              ...splitting primary {part.pid} using length={length}, xi={xi}')
     E1 = xi*part.E
     E2 = (1-xi)*part.E
+    if verbose:
+        print(f'              ...parent particle E={part.E}, split particle new energies: {E1}, {E2}')
     #SFpid = 1.
     if part.pid == 'mu':
         # hack the y of muons to be smaller, like pions
@@ -526,6 +540,38 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
         return ps
             
     elif (part.pid == 'pi' or part.pid == 'Pi' or part.pid == 'p') and part.E >= ECpiThr:
+            
+            #pions = []
+            #newps = []
+            if world.Tunables.doNewPhysics:
+                Ethr = pow(world.Tunables.MZprime, 2) / (2.*gmass['p'])
+                #if world.debug > 0
+                #print(f'Zprime resonance? E = {part.E:10.0f} GeV = 10^{log10(part.E)+9:.2f} eV, mass: {world.Tunables.MZprime} GeV, Ethr = {Ethr:.0f} GeV = 10^{log10(Ethr)+9:1.2f} eV')
+                if checkResonantEnergy(part.E, world):
+                    reallydoNewPhysics = random.random() < world.Tunables.MZprimeHadXsectFraction
+                    world.h1s["doNewPhys"].Fill(1*reallydoNewPhysics)
+                    world.h1s["logEforNewPhys"].Fill(log10(part.E) + 9)
+                    #print(f'  ...realy do new physics? {reallydoNewPhysics}')
+                    if reallydoNewPhysics:
+                        pid0, pid1 = -1, -1
+                        if world.Tunables.decayMode == decayModes.kPiPi:
+                            pid0, pid1 = 'Pi', 'Pi'
+                        elif world.Tunables.decayMode == decayModes.kMuMu:
+                            pid0, pid1 = 'mu', 'mu'
+                        elif world.Tunables.decayMode == decayModes.kee:
+                            pid0, pid1 = 'e', 'e'
+                        print(f'    ...Zprime resonance! E={part.E:.2f}, mass: {world.Tunables.MZprime:.0f} GeV, Ethr={Ethr:.2f} GeV')
+                        # recompute gamma factor
+                        # care about additional particles produced in the interaction...?!?!?!
+                        # add some Feynman x and compute how much energy goes to proton remnants?
+                        gamma = part.E / world.Tunables.MZprime
+                        if verbose:
+                            print(f'    new physics particle gamma: {gamma:1.3f}')
+                        # GOOD, we decay the Zprime right away! ;) no usage of 'x' from the random exp;-)
+                        pions, xend = twoParticleDecay(part, gamma, world, dy1, rnd1, dy2, rnd2, addSFy, pid0, pid1, True, verbose)
+                        part.xend = xend # terminate the parent particle
+                        return pions
+                    
             #xi = 1/3.
             #chi = 0.
             if halfSteps:
@@ -547,35 +593,10 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
             inelasticity = -1
             while inelasticity > 1 or inelasticity < 0:
                 inelasticity = random.gauss(world.Tunables.Inelasticity, world.Tunables.sigmaInelasticity)
-            
-            pions = []
-            if world.Tunables.doNewPhysics:
-                Ethr = pow(world.Tunables.MZprime, 2) / (2.*gmass['p'])
-                #if world.debug > 0
-                #print(f'Zprime resonance? E = {part.E:10.0f} GeV = 10^{log10(part.E)+9:.2f} eV, mass: {world.Tunables.MZprime} GeV, Ethr = {Ethr:.0f} GeV = 10^{log10(Ethr)+9:1.2f} eV')
-                if checkResonantEnergy(part.E, world):
-                    doNewPhysics = random.random() < world.Tunables.MZprimeHadXsectFraction
-                    world.h1s["doNewPhys"].Fill(1*doNewPhysics)
-                    world.h1s["logEforNewPhys"].Fill(log10(part.E) + 9)
-                    #print(f'  ...do new physics? {doNewPhysics}')
-                    if doNewPhysics:
-                        pid0, pid1 = -1, -1
-                        if world.Tunables.decayMode == decayModes.kPiPi:
-                            pid0, pid1 = 'Pi', 'Pi'
-                        elif world.Tunables.decayMode == decayModes.kMuMu:
-                            pid0, pid1 = 'mu', 'mu'
-                        elif world.Tunables.decayMode == decayModes.kee:
-                            pid0, pid1 = 'e', 'e'
-                        print(f'    ...Zprime resonance! E={part.E:.2f}, mass: {world.Tunables.MZprime:.0f} GeV, Ethr={Ethr:.2f} GeV')
-                        # recompute gamma factor
-                        # care about additional particles produced in the interaction...?!?!?!
-                        # add some Feynman x and compute how much energy goes to proton remnants?
-                        gamma = part.E / world.Tunables.MZprime
-                        pions, xend = twoParticleDecay(part, gamma, world, dy1, rnd1, dy2, rnd2, addSFy, pid0, pid1)
-                        part.xend = xend # terminate the parent particle
-                        pass
-            if len(pions) == 0:
-                pions = genHadrons( part.pid, inelasticity*part.E, gamma, length, x, y, world)
+
+            #if len(pions) == 0:
+            # no new physics genewrated, so generate pions
+            pions = genHadrons( part.pid, inelasticity*part.E, gamma, length, x, y, world)
             # keep the same y for the continuing proton or leading proton born in pi interaction:
             proton = cpart(part.E*(1. - inelasticity), 'p', x, y, y)
             newps = [proton]
@@ -621,6 +642,7 @@ def PerformInteractionStep(world, particles, randomizeY, halfSteps, verbose = 0)
         newparts = splitParticle(world, p, randomizeY, halfSteps, verbose)
         for newp in newparts:
             newparticles.append(newp)
+            #newp.Print()
     return newparticles
     
 ##########################################

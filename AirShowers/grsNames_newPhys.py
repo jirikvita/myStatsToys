@@ -14,17 +14,22 @@ def getGrsNames(generator):
         
         # New physics: Zprime 1000GeV
         #f'graphs_EPOS_Inel_0.45_sigmaInel_0.2_C_10_Csigma_3_mnlEM1.125_mnlHad999.0_Zprime_1000.0_Gamma_100.0_mode_ee_xsectFrac_0.25.root' : ROOT.k,
-        f'graphs_EPOS_Inel_0.45_sigmaInel_0.2_C_10_Csigma_3_mnlEM1.125_mnlHad999.0_Zprime_1000.0_Gamma_100.0_mode_ee_xsectFrac_1.00.root' : ROOT.kTeal,
+        ##f'graphs_EPOS_Inel_0.45_sigmaInel_0.2_C_10_Csigma_3_mnlEM1.125_mnlHad999.0_Zprime_1000.0_Gamma_100.0_mode_ee_xsectFrac_1.00.root' : ROOT.kTeal,
         #f'graphs_EPOS_Inel_0.45_sigmaInel_0.2_C_10_Csigma_3_mnlEM1.125_mnlHad999.0_Zprime_1000.0_Gamma_100.0_mode_mumu_xsectFrac_0.25.root' : ROOT.k,
-        f'graphs_EPOS_Inel_0.45_sigmaInel_0.2_C_10_Csigma_3_mnlEM1.125_mnlHad999.0_Zprime_1000.0_Gamma_100.0_mode_mumu_xsectFrac_1.00.root' : ROOT.kMagenta,
+        ##f'graphs_EPOS_Inel_0.45_sigmaInel_0.2_C_10_Csigma_3_mnlEM1.125_mnlHad999.0_Zprime_1000.0_Gamma_100.0_mode_mumu_xsectFrac_1.00.root' : ROOT.kMagenta,
         #f'graphs_EPOS_Inel_0.45_sigmaInel_0.2_C_10_Csigma_3_mnlEM1.125_mnlHad999.0_Zprime_1000.0_Gamma_100.0_mode_pipi_xsectFrac_0.25.root' : ROOT.k,
-        f'graphs_EPOS_Inel_0.45_sigmaInel_0.2_C_10_Csigma_3_mnlEM1.125_mnlHad999.0_Zprime_1000.0_Gamma_100.0_mode_pipi_xsectFrac_1.00.root' : ROOT.kYellow,
+        ##f'graphs_EPOS_Inel_0.45_sigmaInel_0.2_C_10_Csigma_3_mnlEM1.125_mnlHad999.0_Zprime_1000.0_Gamma_100.0_mode_pipi_xsectFrac_1.00.root' : ROOT.kYellow,
 
         # p:
-        f'graphs_EPOS_Inel_0.45_sigmaInel_0.2_C_10_Csigma_3_mnlEM1.125_mnlHad999.0.root' : ROOT.kBlue,
+        #f'graphs_EPOS_Inel_0.45_sigmaInel_0.2_C_10_Csigma_3_mnlEM1.125_mnlHad999.0.root' : ROOT.kBlue,
+        f'graphs_EPOS_Inel_0.45_sigmaInel_0.2_C_10_Csigma_3_mnlEM1.125_mnlHad999.0_testNoNewPhysWithNewPhysArea.root' : ROOT.kBlue,
         # Fe:
         f'graphs_EPOS_Inel_0.45_sigmaInel_0.2_C_10_Csigma_3_mnlEM1.125_mnlHad999.0_FeA56.root' : ROOT.kBlue,
 
+
+        #f'graphs_EPOS_Inel_0.45_sigmaInel_0.2_C_10_Csigma_3_mnlEM1.125_mnlHad999.0_testNoNewPhysWithNewPhysArea.root' : ROOT.kGreen,
+
+        
         # New physics: Zprime 100GeV
         #f'graphs_EPOS_Inel_0.45_sigmaInel_0.2_C_10_Csigma_3_mnlEM1.125_mnlHad999.0_Zprime_100.0_Gamma_10.0_mode_ee_xsectFrac_0.25.root' : ROOT.k,
         f'graphs_EPOS_Inel_0.45_sigmaInel_0.2_C_10_Csigma_3_mnlEM1.125_mnlHad999.0_Zprime_100.0_Gamma_10.0_mode_ee_xsectFrac_1.00.root' : ROOT.kTeal,

@@ -120,17 +120,17 @@ class tunables:
         self.sigmaPionConst = 3 
         
         # new physics
-        self.doNewPhysics = False
-        self.MZprimeHadXsectFraction = 0.1
+        self.doNewPhysics = True
+        self.MZprimeHadXsectFraction = 1.
         self.MZprime = 100*gGeV
         self.GammaZprime = 0.1*self.MZprime
-        self.decayMode = decayModes.kPiPi
+        #self.decayMode = decayModes.kPiPi
         #self.decayMode = decayModes.kMuMu
-        #self.decayMode = decayModes.kee
+        self.decayMode = decayModes.kee
 
         # max. number of int. lengths to allo the interaction to happen acc. to exp. law
         self.maxNlengthsEM = 1.125 
-        self.maxNlengthsHad = 999.
+        self.maxNlengthsHad = 9 #99.
         
     def print(self):
         print(self.PionsConst, self.PionsExp, self.Inelasticity)

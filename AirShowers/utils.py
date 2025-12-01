@@ -264,7 +264,9 @@ def getChi2(g1, g2):
     n2 = g2.GetN()
 
     if n1 != n2:
-        raise ValueError(f"Graphs have different number of points! {n1} vs {n2}")
+        #raise ValueError(f"Graphs have different number of points! {n1} vs {n2}")
+        print(f"Graphs have different number of points! {n1} vs {n2}")
+        return 0., 0
 
     chi2 = 0.0
     ndf = 0

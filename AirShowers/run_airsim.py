@@ -17,8 +17,8 @@ def main(argv):
 
     # Primary particle energy!
     E0 = E*gGeV #1e14*geV
-    #primaryPID = 'p'
-    primaryPID = 'e'
+    primaryPID = 'p'
+    #primaryPID = 'e'
     #primaryPID = 'A56'
     randomizeY = True
 

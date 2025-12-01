@@ -32,12 +32,13 @@ def main(argv):
     generator = 'EPOS'
 
     gfilenames = getGrsNames(generator)
-    reffilename = 'graphs_EPOS_Inel_0.45_sigmaInel_0.2_C_10_Csigma_3_mnlEM1.125_mnlHad999.0.root'
+    #reffilename = 'graphs_EPOS_Inel_0.45_sigmaInel_0.2_C_10_Csigma_3_mnlEM1.125_mnlHad999.0.root'
+    reffilename = 'graphs_EPOS_Inel_0.45_sigmaInel_0.2_C_10_Csigma_3_mnlEM1.125_mnlHad999.0_testNoNewPhysWithNewPhysArea.root'
     refkey = ''
     
     # possibly adjust xpoints
     adjustXpoints = True
-    xw = 0.20
+    xw = 0.1
     x0 = -xw/2.
     dx = xw/len(gfilenames)
     
@@ -101,7 +102,7 @@ def main(argv):
     cw, ch = 1200, 1200
     canname = f'AirSim_GrsCmp'
     can = ROOT.TCanvas(canname, canname, 0, 0, cw, ch)
-    pads, inset = MakeMultiSubPads(can,  [0.60, 0.40], 0.0, 0.07, 0.4, 0.15)
+    pads, inset = MakeMultiSubPads(can,  [0.60, 0.40], 0.0, 0.01, 0.1, 0.15)
 
 
     ymax = 1200
@@ -181,13 +182,14 @@ def main(argv):
     # ratios
     pads[1].cd()
     ROOT.gPad.SetGridy(1)
-    rh2 = ROOT.TH2D(f'rh_tmp', ';log_{10}(E/eV);x[g/cm^{2}];', 500, x1, x2, 25, 0.6, 1.4)
+    ROOT.gPad.SetGridx(1)
+    rh2 = ROOT.TH2D(f'rh_tmp', ';log_{10}(E/eV);x[g/cm^{2}];', 500, x1, x2, 500, 0.6, 1.4)
     rh2.SetStats(0)
     makeWhiteAxes(rh2)
     stuff.append(rh2)
     rh2.Draw()
     
-    xtolerance = 0.3
+    xtolerance = 0.15
     # check key:
     print('=========== check keys ... ================')
     for key in grs:
@@ -196,6 +198,11 @@ def main(argv):
     for ratio in ratios:
         ratio.Draw('same PL')
 
+
+    line1 = ROOT.TLine(x1, 1., x2, 1.)
+    line1.SetLineColor(ROOT.kBlue)
+    line1.Draw()
+    
     stuff.append([rh2, ratios])
     pngdir = 'png_graphs/'
     pdfdir = 'pdf_graphs/'

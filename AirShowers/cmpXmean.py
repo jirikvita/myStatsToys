@@ -58,7 +58,8 @@ def GetHmeans(logEs, fnames, hbasename, Nshowers, debug = 0):
                 means.append(mean)
                 #print(mean)
                 h.Rebin(Rebin)
-                #if logE < 10e4:
+                #flogE = float(logE)
+                #if flogE < 10e4:
                 #    h.Rebin(2)
                 Hs[logE].append(h)
             except:
@@ -99,7 +100,8 @@ def GetHmeansFromTree(conexDir, EconexDict, treename, varname):
         means.append(mean)
         #print(mean)
         #h.Rebin(Rebin)
-        #if logE < 10e3:
+        #flogE = float(logE)
+        #if flogE < 10e3:
         #    h.Rebin(2)
         Hs[logE].append(h)
         #meanMean, meanErr = GetMeanAndError(means)
@@ -150,22 +152,27 @@ def main(argv):
     #logEs = [100, 1000, 10000, 50000, 100000, 1000000]
     #logEs.append(250000)
 
-    logEs = [#11, 11.5,
+    alllogEs = [#11, 11.5,
         ## Fe: remove 12 and 12.5
-        #12,
-        #12.5,
-        13,
-        13.5,
-        14,
-        14.5,
-        15,
-        15.5,
-        16.0,
+        '12',
+        # useless: '12.25',
+        '12.5',
+        '12.75',
+        '13',
+        '13.25',
+        '13.5',
+        '14',
+        '14.5',
+        '14.75',
+        '15',
+        '15.5',
+        '15.75',
+        '16',
     ]
 
     cnx, cny = 3, 3
     cw, ch = 1400, 1200
-    print(logEs)
+    print(alllogEs)
     
     hbasename = 'h1Nx'
     Nshowers = 2000
@@ -195,8 +202,14 @@ def main(argv):
     if 'Fe' in rootdir or '56' in rootdir:
         primary = 'A56'
     print(f'Primary: {primary}')
-    for logE in logEs:
-        fnames[logE] = f'{rootdir}/histos_{primary}_logE_{logE:1.1f}_tmp.root'
+
+    logEs = []
+    for logE in alllogEs:
+        flogE = float(logE)
+        fname = f'{rootdir}/histos_{primary}_logE_{flogE:1.1f}_tmp.root'
+        if os.path.exists(fname):
+            fnames[logE] = fname
+            logEs.append(logE)
         
     Hs, Fs, MeansAirSim = GetHmeans(logEs, fnames, hbasename, Nshowers)
     ftag = fnames[logE].split('/')[-2].replace('root_','').replace('_',' ')
@@ -214,33 +227,26 @@ def main(argv):
     gr.SetName('gr_airsim')
     ip = 0
     for logE,meanData in MeansAirSim.items():
+        flogE = float(logE)
         mean = meanData.mean
         meanErr = meanData.meanErr
-        gr.SetPoint(ip, logE, mean)
+        gr.SetPoint(ip, flogE, mean)
         gr.SetPointError(ip, 0., meanErr)
         ip = ip+1
 
-    conexDir='conex/simulated_showers/uniqueE_low/merged/' #'/home/qitek/install/conex/conex2r6.40/simulated_showers/uniqueE_low/merged'
+    conexDir='conex/simulated_showers/uniqueE_low/merged/'
     conexPrimary = 'p'
     if 'A56' in primary or 'Fe' in primary:
         conexPrimary = 'Fe'
     print(f'Conex primary: {conexPrimary}')
+    EconexDict = {}
+    conexlogEs = []
+    for logE in logEs:
+        fname = f'conex_{conexPrimary}_E_{logE}_{generator}_merged.root'
+        if os.path.exists(conexDir + fname):
+            EconexDict[logE] = fname
+            conexlogEs.append(logE)
 
-    EconexDict = {
-        #11: f'conex_{conexPrimary}_E_11_{generator}_merged.root',
-        #11.5: f'conex_{conexPrimary}_E_11.5_{generator}_merged.root',
-        ## Fe: remove 12 and 12.5
-        #12: f'conex_{conexPrimary}_E_12_{generator}_merged.root',
-        #12.5: f'conex_{conexPrimary}_E_12.5_{generator}_merged.root',
-        13: f'conex_{conexPrimary}_E_13_{generator}_merged.root',
-        13.5: f'conex_{conexPrimary}_E_13.5_{generator}_merged.root',
-        14: f'conex_{conexPrimary}_E_14_{generator}_merged.root',
-        14.5: f'conex_{conexPrimary}_E_14.5_{generator}_merged.root',
-        15: f'conex_{conexPrimary}_E_15_{generator}_merged.root',
-        15.5: f'conex_{conexPrimary}_E_15.5_{generator}_merged.root',
-        16: f'conex_{conexPrimary}_E_16_{generator}_merged.root',
-        ###16.5: f'conex_{conexPrimary}_E_16.5_{generator}_merged.root',
-                  }
     cfnames = EconexDict.values()
     conexPeakXmaxHs, cFs, MeansConex = GetHmeansFromTree(conexDir, EconexDict, 'Shower', 'Xmax')
     
@@ -249,9 +255,10 @@ def main(argv):
     ip = 0
     ConexShowerGraphs = {}
     for logE,meanData in MeansConex.items():
+        flogE = float(logE)
         mean = meanData.mean
         meanErr = meanData.meanErr
-        gr_conex.SetPoint(ip, logE, mean)
+        gr_conex.SetPoint(ip, flogE, mean)
         gr_conex.SetPointError(ip, 0., meanErr)
         ip = ip+1
 
@@ -343,7 +350,8 @@ def main(argv):
             if igr > 1000:
                 break
             h.SetLineColor(ROOT.kCyan)
-            realE = pow(10, logE)
+            flogE = float(logE)
+            realE = pow(10, flogE)
             if suspectedWideShower(realE, meanMean, h):
                 h.SetLineColor(ROOT.kRed)
                 nConexDoublePeaks[logE] += 1
@@ -499,7 +507,8 @@ def main(argv):
             #print('...drawing, mean=', h.GetMean())
             #h.Draw('hist plc' + opt)
             h.SetLineColor(ROOT.kAzure-3)
-            realE = pow(10, logE)
+            flogE = float(logE)
+            realE = pow(10, flogE)
             if suspectedWideShower(realE, meanMean, h):
             
                 h.SetLineColor(ROOT.kRed)
@@ -597,7 +606,9 @@ def main(argv):
     leg.Draw()
 
     chi2, ndf = getChi2(gr_conex, gr)
-    chi2ndf = chi2/ndf
+    chi2ndf = 0.
+    if ndf > 0:
+        chi2ndf = chi2/ndf
     chtxt = '#chi^{2}/ndf = ' + f'{chi2ndf:1.1f}'
     txt = ROOT.TLatex(0.62, 0.15, chtxt)
     txt.SetNDC()
