@@ -42,11 +42,11 @@ def main(argv):
         world.updateTunables(argv[5:])
     
     print(f'+----------- Setting -----------+')
-    print(f'| Primary particle: {primaryPID}')
-    print(f'|      randomizeY: {randomizeY}')
-    print(f'|       halfSteps: {halfSteps}')
-    print(f'|    useDarkStyle: {useDarkStyle}')
-    print(f'|      decayMuons: {world.decayMuons}')
+    print(f'| Primary particle : {primaryPID}')
+    print(f'|      randomizeY  : {randomizeY}')
+    print(f'|       halfSteps  : {halfSteps}')
+    print(f'|    useDarkStyle  : {useDarkStyle}')
+    print(f'|      decayMuons  : {world.decayMuons}')
     print(f'+-------------------------------+')
     
     x, y = 0.*gkm, 0.*gm

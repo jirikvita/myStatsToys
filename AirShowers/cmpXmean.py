@@ -165,6 +165,7 @@ def main(argv):
         '14.5',
         '14.75',
         '15',
+        '15.25',
         '15.5',
         '15.75',
         '16',
@@ -207,12 +208,18 @@ def main(argv):
     for logE in alllogEs:
         flogE = float(logE)
         fname = f'{rootdir}/histos_{primary}_logE_{flogE:1.1f}_tmp.root'
-        if os.path.exists(fname):
+        if flogE <= 12.75 and 'Zprime_100.0_Gamma_10.0_mode_mumu' in rootdir:
+            continue
+        if flogE <= 14.75 and 'Zprime_1000.0_Gamma_100.0_mode_mumu' in rootdir:
+            continue
+        if flogE > 14.6 and 'Zprime_100.0_Gamma_10.0' in rootdir:
+            continue
+        if os.path.exists(fname): 
             fnames[logE] = fname
             logEs.append(logE)
         
     Hs, Fs, MeansAirSim = GetHmeans(logEs, fnames, hbasename, Nshowers)
-    ftag = fnames[logE].split('/')[-2].replace('root_','').replace('_',' ')
+    ftag = fnames[logEs[-1]].split('/')[-2].replace('root_','').replace('_',' ')
     fftag = ftag.replace(' ','_')
     if primary != 'p':
         ftag = ftag + ' ' + primary
@@ -241,7 +248,7 @@ def main(argv):
     print(f'Conex primary: {conexPrimary}')
     EconexDict = {}
     conexlogEs = []
-    for logE in logEs:
+    for logE in logEs: #here
         fname = f'conex_{conexPrimary}_E_{logE}_{generator}_merged.root'
         if os.path.exists(conexDir + fname):
             EconexDict[logE] = fname

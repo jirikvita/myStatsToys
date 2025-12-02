@@ -73,9 +73,19 @@ def main(argv):
            grAirSim.SetMarkerStyle(21)
 
        tag = gfilename + ''
+       tag = tag.replace('root_Inel_0.45_sigmaInel_0.2_C_10_Csigma_3_mnlEM1.125_mnlHad999.0_Fe', 'Primary Fe')
+       tag = tag.replace('Inel_0.55_sigmaInel_0.2_C_10_Csigma_3_mnlEM1.125_mnlHad1.5_primaryE_e', 'Primary e')
+       tag = tag.replace('Inel_0.45_sigmaInel_0.2_C_10_Csigma_3_mnlEM1.125_mnlHad999.0','Primary proton')
        tag = tag.replace(f'graphs_{generator}_', '').replace('.root', '').replace('_', ' ').replace('Gamma','#Gamma=')
-       tag = tag.replace('sigmaInel','#sigma_{Inel}').replace('Csigma','#sigma_{C}').replace('xsectFrac','frac_{Z\'}').replace('mode','Z\'#rightarrow')
-       tag = tag.replace('mumu','#mu#mu').replace('pipi','#pi#pi').replace('Zprime 100.0','m_{Z\'}=100 GeV').replace('10.0','10 GeV').replace('A56','Fe').replace('EM','EM ').replace('length', 'X_{0}').replace('sCut',' cut').replace('1p','1.').replace('primaryE',' Electron')
+       tag = tag.replace('sigmaInel','#sigma_{Inel}').replace('Csigma','#sigma_{C}').replace('xsectFrac 1.00','').replace('mode','Z\'#rightarrow')
+       tag = tag.replace('mumu','#mu#mu').replace('pipi','#pi#pi')
+       tag = tag.replace('Zprime 100.0','with m_{Z\'}=100 GeV').replace('10.0','10 GeV')
+       tag = tag.replace('Zprime 1000.0','with m_{Z\'}=1 TeV').replace('100.0','10 GeV')
+       tag = tag.replace('A56','Fe').replace('EM','EM ').replace('length', 'X_{0}').replace('sCut',' cut').replace('1p','1.')
+       #tag = tag.replace('primaryE',' Electron')
+       tag = tag.replace('Zprime',' with Z\'')
+       tag = tag.replace('FeFe','Primary Fe').replace('testNoNewPhysWithNewPhysArea','')
+       tag = tag.replace('Primary proton Primary Fe', 'Primary Fe')
        grs[tag] = grAirSim
        if gfilename == reffilename:
            refkey = tag + ''
@@ -102,17 +112,17 @@ def main(argv):
     cw, ch = 1200, 1200
     canname = f'AirSim_GrsCmp'
     can = ROOT.TCanvas(canname, canname, 0, 0, cw, ch)
-    pads, inset = MakeMultiSubPads(can,  [0.60, 0.40], 0.0, 0.01, 0.1, 0.15)
+    pads, inset = MakeMultiSubPads(can,  [0.60, 0.40], 0.0, 0.03, 0.1, 0.15)
 
 
     ymax = 1200
     x1, x2 = 11, 16.5
-    h2 = ROOT.TH2D(f'h_tmp', ';log_{10}(E/eV);x[g/cm^{2}];', 500, x1, x2, 25, 0, ymax)
+    h2 = ROOT.TH2D(f'h_tmp', ';log_{10}(E/eV);<X_{max}>[g/cm^{2}];', 500, x1, x2, 25, 0, ymax)
     h2.SetStats(0)
     makeWhiteAxes(h2)
     stuff.append(h2)
 
-    leg = ROOT.TLegend(0.12, 0.62, 0.8, 0.89)
+    leg = ROOT.TLegend(0.105, 0.57, 0.605, 0.945)
     leg.SetTextColor(ROOT.kWhite)
 
     pads[0].cd()
@@ -183,7 +193,8 @@ def main(argv):
     pads[1].cd()
     ROOT.gPad.SetGridy(1)
     ROOT.gPad.SetGridx(1)
-    rh2 = ROOT.TH2D(f'rh_tmp', ';log_{10}(E/eV);x[g/cm^{2}];', 500, x1, x2, 500, 0.6, 1.4)
+    rw = 0.42
+    rh2 = ROOT.TH2D(f'rh_tmp', ';log_{10}(E/eV);<X_{max}> ratio to protons;', 500, x1, x2, 500, 1.-rw, 1.+rw)
     rh2.SetStats(0)
     makeWhiteAxes(rh2)
     stuff.append(rh2)

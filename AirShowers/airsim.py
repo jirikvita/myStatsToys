@@ -40,8 +40,8 @@ class cworld():
         self.piySF = 0.08
         self.deltaY = 0.7 # particles fork visual factor
 
-        self.x1, self.x2 = 0., 4000. #/ 5 # HACK FOR FE #g/cm2  #self.xscale*50
-        DY = 1. #/ 2. # HACK for Fe!
+        self.x1, self.x2 = 0., 4000. # 4000!!! #/ 5 # HACK FOR FE #g/cm2  #self.xscale*50
+        DY = 1. ## alt. 0.18 DEF: 1. #/ 2. # HACK for Fe!
         self.y1, self.y2 = -DY, DY
                 
         self.maxgen = 0
@@ -128,7 +128,7 @@ class cworld():
         htitle = ';x[g/cm^{2}];N'
         nb = 200
         x1 = 0
-        x2 = 4000. #/ 5 # HACK FOR Fe # g/cm^2 #last.x*1.25
+        x2 = 4000 ### 4000. #/ 5 # HACK FOR Fe # g/cm^2 #last.x*1.25
         os.system(f'mkdir -p {rootdir}')
         self.outfile = ROOT.TFile(rootdir + 'histos' + rtag + '_tmp.root', ropt)   
         self.h1Nx = ROOT.TH1D(hname, htitle, nb, x1, x2)

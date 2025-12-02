@@ -39,6 +39,7 @@ def makeGrRatio(gr, refgr, xtolerance):
     for j in range( max(N, Nref) ):
         gr.GetPoint(i, x, y)
         refgr.GetPoint(iref, xref, yref)
+        doBreak = False
         while abs(x.value - xref.value) > xtolerance:
             if x.value < xref.value:
                 i += 1
@@ -46,10 +47,14 @@ def makeGrRatio(gr, refgr, xtolerance):
             else:
                 iref += 1
                 refgr.GetPoint(iref, xref, yref)
-            if i >= N:
+            if i > N - 1:
+                doBreak = True
                 break
-            if iref >= Nref:
+            if iref > Nref - 1:
+                doBreak = True
                 break
+        if doBreak:
+            break
 
 
         if yref.value > 0:
