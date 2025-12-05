@@ -14,7 +14,8 @@ from consts import *
 
 #from grsNames_newPhys_10ptcl import *
 #from grsNames_newPhys_1ptcl import *
-from grsNames_newPhys_2ptcl import *
+#from grsNames_newPhys_2ptcl import *
+from grsNames_newPhys_3ptcl import *
 
 ########################################
 
