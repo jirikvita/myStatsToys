@@ -3,6 +3,12 @@
 
 import ROOT
 
+dtag = '_tuning'
+grdir = 'graphs_bugStillLeadingProtonInNewPhysics/'
+#'graphs_Exp_fractions/'
+
+reffilename = 'graphs_EPOS_Inel_0.45_sigmaInel_0.2_C_10_Csigma_3_mnlEM1.125_mnlHad999.0.root'
+
 def getGrsNames(generator):
     gfilenames = {
 
@@ -17,7 +23,7 @@ def getGrsNames(generator):
         f'graphs_EPOS_Inel_0.55_sigmaInel_0.2_C_10_Csigma_3_mnlEM1.125_mnlHad1.5_primaryFe56_A56.root' : ROOT.kBlue,
 
         # protons tuning:
-
+        f'graphs_EPOS_Inel_0.45_sigmaInel_0.2_C_10_Csigma_3_mnlEM1.125_mnlHad999.0.root' : ROOT.kBlue,
         # candle plot...?;)
 
         # max lenghth X0: 1.0

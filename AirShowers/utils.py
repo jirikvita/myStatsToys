@@ -59,7 +59,7 @@ def makeGrRatio(gr, refgr, xtolerance):
 
         if yref.value > 0:
             val = y.value / yref.value
-            print(y.value, yref.value)
+            #print(y.value, yref.value)
             err = gr.GetErrorY(i)
             errref = gr.GetErrorY(iref)
             rerr = 0.

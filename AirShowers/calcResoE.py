@@ -5,8 +5,8 @@ from math import log10
 
 
 mp = 0.938
-Ms = [100, 1000] # GeV
-Gammas = [10, 100]
+Ms = [100, 1000, 100, 1000] # GeV
+Gammas = [10, 100, 2, 20]
 
 for M, gamma in zip(Ms, Gammas):
     Eres = pow(M, 2) / (2*mp)

@@ -10,8 +10,11 @@ import os, sys
 from utils import *
 from consts import *
 
-#from grsNames import getGrsNames
-from grsNames_newPhys import getGrsNames
+#from grsNames_tuning import *
+
+#from grsNames_newPhys_10ptcl import *
+#from grsNames_newPhys_1ptcl import *
+from grsNames_newPhys_2ptcl import *
 
 ########################################
 
@@ -26,14 +29,10 @@ stuff = []
 def main(argv):
 
     
-    # grdir = 'graphs_tuneBeta/'
-    grdir = 'graphs/'
     #generator = 'SIBYLL'
     generator = 'EPOS'
 
     gfilenames = getGrsNames(generator)
-    #reffilename = 'graphs_EPOS_Inel_0.45_sigmaInel_0.2_C_10_Csigma_3_mnlEM1.125_mnlHad999.0.root'
-    reffilename = 'graphs_EPOS_Inel_0.45_sigmaInel_0.2_C_10_Csigma_3_mnlEM1.125_mnlHad999.0_testNoNewPhysWithNewPhysArea.root'
     refkey = ''
     
     # possibly adjust xpoints
@@ -218,8 +217,8 @@ def main(argv):
     pngdir = 'png_graphs/'
     pdfdir = 'pdf_graphs/'
     os.system(f'mkdir -p {pngdir} {pdfdir}')
-    can.Print(pngdir + can.GetName() + f'_{generator}.png')
-    can.Print(pdfdir + can.GetName() + f'_{generator}.pdf')
+    can.Print(pngdir + can.GetName() + f'_{generator}{dtag}.png')
+    can.Print(pdfdir + can.GetName() + f'_{generator}{dtag}.pdf')
 
     ROOT.gApplication.Run()
 

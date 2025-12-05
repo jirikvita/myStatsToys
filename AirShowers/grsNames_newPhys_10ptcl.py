@@ -3,6 +3,11 @@
 
 import ROOT
 
+dtag = '_newPhys_10ptcl'
+grdir = 'graphs/'
+#reffilename = 'graphs_EPOS_Inel_0.45_sigmaInel_0.2_C_10_Csigma_3_mnlEM1.125_mnlHad999.0.root'
+reffilename = 'graphs_EPOS_Inel_0.45_sigmaInel_0.2_C_10_Csigma_3_mnlEM1.125_mnlHad999.0_testNoNewPhysWithNewPhysArea.root'
+
 def getGrsNames(generator):
     gfilenames = {
 

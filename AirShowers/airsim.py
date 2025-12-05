@@ -874,7 +874,7 @@ def doAllDrawing(world, primary, E0, particles, halfSteps, tag, gtag, h1Nx, part
             fun.SetLineColor(ROOT.kWhite)
         fun.SetLineWidth(2)
         fun.SetLineStyle(2)
-        pvs = [h1Nx.GetMaximum()/8., 0., h1Nx.GetMean(), 150.]
+        pvs = [h1Nx.GetMaximum()/10., 10., h1Nx.GetMean(), 150.]
         #h1.Fit(fname, '', '0')
         for pn,pv in zip(pns,pvs):
             ip = pns.index(pn)

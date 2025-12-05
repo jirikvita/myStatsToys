@@ -28,7 +28,13 @@ line = ROOT.TLine(xmax, y1, xmax, y2)
 line.SetLineWidth(2)
 line.SetLineStyle(2)
 line.Draw()
+print(f'lmb  = {lmb}')
+print(f'x0 = {x0}')
 print(f'xmax = {xmax}')
+print(f'lbm+x0/2 = {lmb + x0/2}')
+print(f'sqrt(lmb^2+(x0/2^2)) = {sqrt( pow(lmb,2) + pow(x0/2., 2))}')
+
+
 
 I = fun.Integral(0, x0)
 print(f'Integral: {I:1.4f}')

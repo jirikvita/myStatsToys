@@ -620,7 +620,7 @@ def main(argv):
     txt = ROOT.TLatex(0.62, 0.15, chtxt)
     txt.SetNDC()
     txt.SetTextColor(ROOT.kWhite)
-    txt.Draw()
+    ###txt.Draw()
     
     ROOT.gPad.Update()
 
