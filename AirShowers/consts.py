@@ -130,7 +130,7 @@ class tunables:
 
         # max. number of int. lengths to allo the interaction to happen acc. to exp. law
         self.maxNlengthsEM = 1.125 
-        self.maxNlengthsHad = 900 #99.
+        self.maxNlengthsHad = 999 #99.
         
     def print(self):
         print(self.PionsConst, self.PionsExp, self.Inelasticity)
