@@ -13,9 +13,9 @@ for gen in EPOS ; do
 
 #        for i in `ls | grep root_Inel | grep Zprime_100.0` ; do
 #        for i in `ls | grep root_Inel | grep Zprime_1000.0` ; do
-###    for i in `ls | grep root_Inel | grep 999 | grep  Zprime ` ; do
+    for i in `ls | grep root_Inel | grep 999 | grep  Zprime ` ; do
 	#    for i in `ls | grep root_Inel | grep  Zprime | grep Gamma_1.0` ; do
-for i in `ls | grep root_Inel | grep  Zprime | grep Gamma_3.0` ; do
+# for i in `ls | grep root_Inel | grep  Zprime | grep Gamma_3` ; do
 
 	#if [ -d nPiLogEi/$i ] ; then
 	#  echo "*** nPiLogEi/$i ***"

@@ -20,7 +20,7 @@ def getGrsNames(generator):
         # Fe:
         #f'graphs_EPOS_Inel_0.55_sigmaInel_0.2_C_10_Csigma_3_mnlEM1.25_mnlHad1.5_primaryFe56_A56.root' : ROOT.kBlue,
         #f'graphs_EPOS_Inel_0.55_sigmaInel_0.2_C_10_Csigma_2_mnlEM1.0_mnlHad1.5_primaryFe56_A56.root' : ROOT.kBlue,
-        f'graphs_EPOS_Inel_0.55_sigmaInel_0.2_C_10_Csigma_3_mnlEM1.125_mnlHad1.5_primaryFe56_A56.root' : ROOT.kBlue,
+        f'graphs_EPOS_Inel_0.55_sigmaInel_0.2_C_10_Csigma_3_mnlEM1.125_mnlHad1.5_primaryFe_A56.root' : ROOT.kBlue,
 
         # protons tuning:
         f'graphs_EPOS_Inel_0.45_sigmaInel_0.2_C_10_Csigma_3_mnlEM1.125_mnlHad999.0.root' : ROOT.kBlue,

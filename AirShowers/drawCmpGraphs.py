@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 # jk 3.10.2025
+# jk 6.12.2025
 
 import ROOT
 from math import pow, log10, pow, sqrt
@@ -29,6 +30,10 @@ stuff = []
 
 def main(argv):
 
+    ### plot Xmax or its sigma:
+    #xtag = ''
+    xtag = '_sigma'
+    
     
     #generator = 'SIBYLL'
     generator = 'EPOS'
@@ -48,6 +53,7 @@ def main(argv):
     haveConex_Fe = False
     ifile = -1
 
+    
     if not reffilename in gfilenames:
         print('*** ERROR, no reference key for ratios!')
     else:
@@ -56,7 +62,10 @@ def main(argv):
     for gfilename,col in gfilenames.items():
        print(gfilename)
        ifile += 1
-       gfile = ROOT.TFile(grdir + gfilename, 'read')
+       realfilename = gfilename + ''
+       if xtag != '':
+           realfilename = gfilename.replace('.root', xtag + '.root')
+       gfile = ROOT.TFile(grdir + realfilename, 'read')
        gfile.ls()
        grAirSim = gfile.Get('gr_airsim')
        grAirSim.SetLineColor(col)
@@ -77,13 +86,14 @@ def main(argv):
        tag = tag.replace('Inel_0.55_sigmaInel_0.2_C_10_Csigma_3_mnlEM1.125_mnlHad1.5_primaryE_e', 'Primary e')
        tag = tag.replace('Inel_0.45_sigmaInel_0.2_C_10_Csigma_3_mnlEM1.125_mnlHad999.0','Primary proton')
        tag = tag.replace(f'graphs_{generator}_', '').replace('.root', '').replace('_', ' ').replace('Gamma','#Gamma=')
-       tag = tag.replace('sigmaInel','#sigma_{Inel}').replace('Csigma','#sigma_{C}').replace('xsectFrac 1.00','').replace('mode','Z\'#rightarrow')
+       tag = tag.replace('sigmaInel','#sigma_{Inel}').replace('Csigma','#sigma_{C}').replace('xsectFrac 1.00','').replace('mode','X#rightarrow')
        tag = tag.replace('mumu','#mu#mu').replace('pipi','#pi#pi')
-       tag = tag.replace('Zprime 100.0','with m_{Z\'}=100 GeV').replace('10.0','10 GeV')
-       tag = tag.replace('Zprime 1000.0','with m_{Z\'}=1 TeV').replace('100.0','10 GeV')
+       tag = tag.replace('Zprime 100.0','with m_{X}=100 GeV')
+       tag = tag.replace('Zprime 1000.0','with m_{X}=1 TeV')
+       tag = tag.replace('.0',' GeV,')
        tag = tag.replace('A56','Fe').replace('EM','EM ').replace('length', 'X_{0}').replace('sCut',' cut').replace('1p','1.')
        #tag = tag.replace('primaryE',' Electron')
-       tag = tag.replace('Zprime',' with Z\'')
+       tag = tag.replace('Zprime',' with X')
        tag = tag.replace('FeFe','Primary Fe').replace('testNoNewPhysWithNewPhysArea','')
        tag = tag.replace('Primary proton Primary Fe', 'Primary Fe')
        grs[tag] = grAirSim
@@ -117,7 +127,12 @@ def main(argv):
 
     ymax = 1200
     x1, x2 = 11, 16.5
-    h2 = ROOT.TH2D(f'h_tmp', ';log_{10}(E/eV);<X_{max}>[g/cm^{2}];', 500, x1, x2, 25, 0, ymax)
+    ytitle = '<X_{max}>'
+    if xtag != '':
+        ymax = 400
+        ytitle = '#sigma_{X_{max}}'
+
+    h2 = ROOT.TH2D(f'h_tmp', ';log_{10}(E/eV);' + ytitle + '[g/cm^{2}];', 500, x1, x2, 25, 0, ymax)
     h2.SetStats(0)
     makeWhiteAxes(h2)
     stuff.append(h2)
@@ -139,7 +154,8 @@ def main(argv):
     fun_em.SetLineWidth(2)
     fun_em.SetLineStyle(2)
     fun_em.SetLineColor(ROOT.kWhite)
-    fun_em.Draw('same')
+    if xtag == '':
+        fun_em.Draw('same')
     
     # draw theory Xmax function for hadronic showers:
     #fun_had = ROOT.TF1('Xmax_had_theory', '[0] + [1]*(x - log(3*[2]) - 0.2*(x-15)) / log10(exp(1))', x1+0.5, x2-0.25)
@@ -150,7 +166,8 @@ def main(argv):
     fun_had.SetLineWidth(2)
     fun_had.SetLineStyle(3)
     fun_had.SetLineColor(ROOT.kRed-4)
-    fun_had.Draw('same')
+    if xtag == '':
+        fun_had.Draw('same')
     makeWhiteAxes(fun_had)
         
     # draw theory Xmax function for hadronic showers:
@@ -162,7 +179,8 @@ def main(argv):
     fun_hadShifted.SetLineWidth(2)
     fun_hadShifted.SetLineStyle(2)
     fun_hadShifted.SetLineColor(ROOT.kRed-4)
-    fun_hadShifted.Draw('same')
+    if xtag == '':
+        fun_hadShifted.Draw('same')
     makeWhiteAxes(fun_hadShifted)
         
     
@@ -181,10 +199,10 @@ def main(argv):
         if len(gfilenames) < 10 or (', p' in tag or 'Fe' in tag or 'Electron' in tag):
             leg.AddEntry(gr, tag, 'PL')
 
-
-    leg.AddEntry(fun_em, 'Theoretical X_{max}^{EM} = X_{0} ln(E/E_{C}) [Matthews 2005]', 'L')
-    leg.AddEntry(fun_had, 'Theoretical X_{max}^{had} = X_{0} + #lambda_{I} ln(E/3Nch(E)) [Matthews 2005]', 'L')
-    leg.AddEntry(fun_hadShifted, 'Theoretical X_{max}^{had} = X_{0} + #lambda_{I} ln(E/3Nch(E)) + 100 [Matthews 2005]', 'L')
+    if xtag == '':
+        leg.AddEntry(fun_em, 'Theoretical X_{max}^{EM} = X_{0} ln(E/E_{C}) [Matthews 2005]', 'L')
+        leg.AddEntry(fun_had, 'Theoretical X_{max}^{had} = X_{0} + #lambda_{I} ln(E/3Nch(E)) [Matthews 2005]', 'L')
+        leg.AddEntry(fun_hadShifted, 'Theoretical X_{max}^{had} = X_{0} + #lambda_{I} ln(E/3Nch(E)) + 100 [Matthews 2005]', 'L')
     leg.Draw()
     stuff.append([leg, can, h2, grs, grs_conex])
 
@@ -194,7 +212,9 @@ def main(argv):
     ROOT.gPad.SetGridy(1)
     ROOT.gPad.SetGridx(1)
     rw = 0.42
-    rh2 = ROOT.TH2D(f'rh_tmp', ';log_{10}(E/eV);<X_{max}> ratio to protons;', 500, x1, x2, 500, 1.-rw, 1.+rw)
+    if xtag != '':
+        rw = 1.5
+    rh2 = ROOT.TH2D(f'rh_tmp', ';log_{10}(E/eV);' + ytitle + ' ratio to protons;', 500, x1, x2, 500, max(0, 1.-rw), 1.+rw)
     rh2.SetStats(0)
     makeWhiteAxes(rh2)
     stuff.append(rh2)
@@ -218,8 +238,8 @@ def main(argv):
     pngdir = 'png_graphs/'
     pdfdir = 'pdf_graphs/'
     os.system(f'mkdir -p {pngdir} {pdfdir}')
-    can.Print(pngdir + can.GetName() + f'_{generator}{dtag}.png')
-    can.Print(pdfdir + can.GetName() + f'_{generator}{dtag}.pdf')
+    can.Print(pngdir + can.GetName() + f'_{generator}{dtag}{xtag}.png')
+    can.Print(pdfdir + can.GetName() + f'_{generator}{dtag}{xtag}.pdf')
 
     ROOT.gApplication.Run()
 

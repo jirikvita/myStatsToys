@@ -2,6 +2,7 @@
 
 # jk 6.9.2024
 # jk 3.10.2025
+# jk 6.12.2025
 
 import ROOT
 from math import pow, log10, pow, sqrt
@@ -36,11 +37,11 @@ def suspectedWideShower(realE, meanMean, h):
 # actually, getting maximum of shower development for each shower,
 # i.e. really Xmax, by highest bin, so no mean X, 
 # but then computing the mean of these Xmax values;)
-def GetHmeans(logEs, fnames, hbasename, Nshowers, debug = 0):
+def GetHmeans(logEs, fnames, hbasename, Nshowers, plotSigma, debug = 0):
     Fs = []
     Hs = {}
     Means = {}
-    Rebin = 4
+    Rebin = 1
         
     for logE in logEs:
         infile = None
@@ -53,8 +54,18 @@ def GetHmeans(logEs, fnames, hbasename, Nshowers, debug = 0):
             hname = hbasename + f'_{i}'
             h = infile.Get(hname)
             try:
+                mean = None
+                err = None
+                # HERE take RMS to plot average Xmax sigms
+                #if plotSigma:
+                # NOT this, as for sigma_Xmax we need the std dev of the extraded Xmaxes;)
+                #mean = h.GetStdDev()
+                #    err = h.GetStdDevError()
+                #else:
+                # or the mean;)
                 mean = h.GetBinCenter(h.GetMaximumBin()) #h.GetMean()
                 err = h.GetMeanError()
+
                 means.append(mean)
                 #print(mean)
                 h.Rebin(Rebin)
@@ -67,13 +78,13 @@ def GetHmeans(logEs, fnames, hbasename, Nshowers, debug = 0):
                     print(f'Error getting {hname} from {fname}')
                 pass
 
-        meanMean, meanErr = GetMeanAndError(means)
+        meanMean, meanErr = GetMeanAndError(means, plotSigma)
         Means[logE] = showerAverResults(logE, meanMean, meanErr, means)
 
     return Hs, Fs, Means
         
 ########################################
-def GetHmeansFromTree(conexDir, EconexDict, treename, varname):
+def GetHmeansFromTree(conexDir, EconexDict, treename, varname, plotSigma):
     Fs = []
     Hs = {}
     Means = {}
@@ -91,12 +102,20 @@ def GetHmeansFromTree(conexDir, EconexDict, treename, varname):
         # this is already a histogram ox Xmax'es!
         h = ROOT.gDirectory.Get(hname)
         #try:
-        # so we should NOT take maximum of the Xmax histo, but a mean!!!
-        #mean = h.GetBinCenter(h.GetMaximumBin()) #h.GetMean()
-        #err = h.GetMeanError()
-        # so the mean:
-        mean = h.GetMean()
-        err = h.GetMeanError()
+        mean = None
+        err = None
+        # HERE take RMS to plot average Xmax sigms
+        if plotSigma:
+            mean = h.GetStdDev()
+            err = h.GetStdDevError()
+        else:
+            # so we should NOT take maximum of the Xmax histo, but a mean!!!
+            #mean = h.GetBinCenter(h.GetMaximumBin()) #h.GetMean()
+            #err = h.GetMeanError()
+            # so the mean:
+            mean = h.GetMean()
+            err = h.GetMeanError()
+
         means.append(mean)
         #print(mean)
         #h.Rebin(Rebin)
@@ -115,8 +134,9 @@ def GetHmeansFromTree(conexDir, EconexDict, treename, varname):
         
 
 ########################################
-def GetMeanAndError(means):
+def GetMeanAndError(means, plotSigma):
     meanSqSum = 0
+    stdDev = 0.
     np = len(means)
     meanMean = sum(means) / np
     for i in range(0, len(means)):
@@ -124,8 +144,11 @@ def GetMeanAndError(means):
     meanErr = 0.
     if np > 1 and meanSqSum > 0:
         meanErr = sqrt(meanSqSum / (np - 1) / np)
-        
-    return meanMean, meanErr
+        stdDev =  sqrt(meanSqSum / (np - 1))
+    if not plotSigma:
+        return meanMean, meanErr
+    else:
+        return stdDev, 0.
 
 ########################################
 ########################################
@@ -145,8 +168,20 @@ class showerAverResults:
 
 def main(argv):
 
+    
     SetMyStyle()
-
+    
+    sigmaTag = ''
+    #plotSigma = True
+    # DEFAULT:
+    plotSigma = False
+    ytitle = '<X_{max}>'
+    if plotSigma:
+        sigmaTag = '_sigma'
+        ytitle = '#sigma_{X_{max}}'
+    
+    
+    
     #logEs = [ int(pow(10,n)) for n in range(2,8)]
     #logEs = [ int(pow(10,n)) for n in range(3,6)]
     #logEs = [100, 1000, 10000, 50000, 100000, 1000000]
@@ -208,17 +243,18 @@ def main(argv):
     for logE in alllogEs:
         flogE = float(logE)
         fname = f'{rootdir}/histos_{primary}_logE_{flogE:1.1f}_tmp.root'
-        if flogE <= 12.75 and 'Zprime_100.0_Gamma_10.0_mode_mumu' in rootdir:
+        if flogE <= 12.75 and 'Zprime_100.0' in rootdir and 'mode_mumu' in rootdir:
             continue
-        if flogE <= 14.75 and 'Zprime_1000.0_Gamma_100.0_mode_mumu' in rootdir:
+        if flogE <= 14.75 and 'Zprime_1000.0' in rootdir and 'mode_mumu' in rootdir:
             continue
-        if flogE > 14.6 and 'Zprime_100.0_Gamma_10.0' in rootdir:
+        if flogE > 14.6 and 'Zprime_100.0' in rootdir:
             continue
         if os.path.exists(fname): 
             fnames[logE] = fname
             logEs.append(logE)
-        
-    Hs, Fs, MeansAirSim = GetHmeans(logEs, fnames, hbasename, Nshowers)
+    
+    print(fnames)
+    Hs, Fs, MeansAirSim = GetHmeans(logEs, fnames, hbasename, Nshowers, plotSigma)
     ftag = fnames[logEs[-1]].split('/')[-2].replace('root_','').replace('_',' ')
     fftag = ftag.replace(' ','_')
     if primary != 'p':
@@ -255,7 +291,7 @@ def main(argv):
             conexlogEs.append(logE)
 
     cfnames = EconexDict.values()
-    conexPeakXmaxHs, cFs, MeansConex = GetHmeansFromTree(conexDir, EconexDict, 'Shower', 'Xmax')
+    conexPeakXmaxHs, cFs, MeansConex = GetHmeansFromTree(conexDir, EconexDict, 'Shower', 'Xmax', plotSigma)
     
     gr_conex = ROOT.TGraphErrors()
     gr_conex.SetName('gr_conex')
@@ -408,10 +444,9 @@ def main(argv):
 
 
     cpcan.Update()
-    cpcan.Print(cpcan.GetName() + f'_{generator}.pdf')
-    cpcan.Print(cpcan.GetName() + f'_{generator}.png')
+    cpcan.Print(cpcan.GetName() + f'_{generator}{sigmaTag}.pdf')
+    cpcan.Print(cpcan.GetName() + f'_{generator}{sigmaTag}.png')
 
-    
     
     
     ########################
@@ -422,10 +457,12 @@ def main(argv):
     ccan.Divide(cnx, cny)
     cH2s = []
     ie = 0
+
     for logE,hs in conexPeakXmaxHs.items():
         ccan.cd(1+ie)
         ymax = getMaxima(hs)*1.2
-        h2 = ROOT.TH2D(f'ctmp_{logE}', ';X_{max}[g/cm^{2}];showers', 150, 0, 1500, 100, 0, 0.25)
+        
+        h2 = ROOT.TH2D(f'ctmp_{logE}', ';' + ytitle+ '[g/cm^{2}];showers', 150, 0, 1500, 100, 0, 0.25)
         h2.Draw()
         makeWhiteAxes(h2)
         cH2s.append(h2)
@@ -471,7 +508,7 @@ def main(argv):
         makeWhiteAxes(h2)
         H2s.append(h2)
 
-        HsPeakXmax[logE] = ROOT.TH1D(f'AirSimPeakXmax_{logE}', ';X_{max}[g/cm^{2}];showers', 75, 0, 1500)
+        HsPeakXmax[logE] = ROOT.TH1D(f'AirSimPeakXmax_{logE}', ';' + ytitle + '[g/cm^{2}];showers', 75, 0, 1500)
 
         h2sum = ROOT.TH2D(f'hsum_{logE}', ';x[g/cm^{2}];Particles (e/#mu)', 40, 0, 4000, 25, 0, ymax)
         makeWhiteAxes(h2sum)
@@ -575,8 +612,10 @@ def main(argv):
     gcan = ROOT.TCanvas(canname, canname, 500, 500, 800, 600)
     makeGrStyle(gr, ROOT.kAzure-3)
     gr.GetXaxis().SetTitle('log_{10}E(eV)')
-    gr.GetYaxis().SetTitle('X_{max}^{N} [g/cm^{2}]')
+    gr.GetYaxis().SetTitle(ytitle + ' [g/cm^{2}]')
     gr.GetYaxis().SetRangeUser(0, 1000)
+    if plotSigma:
+        gr.GetYaxis().SetRangeUser(0, 300)
 
     # private AirSim fit:
     gr.Draw('APL')
@@ -631,30 +670,30 @@ def main(argv):
     pngdir  = 'png_tuning/'
     pdfdir  = 'pdf_tuning/'
 
-    cpcan.Print(pdfdir + cpcan.GetName() + f'_{generator}.pdf')
-    cpcan.Print(pngdir + cpcan.GetName() + f'_{generator}.png')
+    cpcan.Print(pdfdir + cpcan.GetName() + f'_{generator}{sigmaTag}.pdf')
+    cpcan.Print(pngdir + cpcan.GetName() + f'_{generator}{sigmaTag}.png')
     
-    hcpcan.Print(pdfdir + hcpcan.GetName() + f'_{generator}.pdf')
-    hcpcan.Print(pngdir + hcpcan.GetName() + f'_{generator}.png')
+    hcpcan.Print(pdfdir + hcpcan.GetName() + f'_{generator}{sigmaTag}.pdf')
+    hcpcan.Print(pngdir + hcpcan.GetName() + f'_{generator}{sigmaTag}.png')
     
-    can.Print(pngdir + can.GetName() + f'_{fftag}.png')
-    can.Print(pdfdir + can.GetName() + f'_{fftag}.pdf')
+    can.Print(pngdir + can.GetName() + f'_{fftag}{sigmaTag}.png')
+    can.Print(pdfdir + can.GetName() + f'_{fftag}{sigmaTag}.pdf')
 
-    sumcan.Print(pngdir + sumcan.GetName() + f'_{fftag}.png')
-    sumcan.Print(pdfdir + sumcan.GetName() + f'_{fftag}.pdf')
+    sumcan.Print(pngdir + sumcan.GetName() + f'_{fftag}{sigmaTag}.png')
+    sumcan.Print(pdfdir + sumcan.GetName() + f'_{fftag}{sigmaTag}.pdf')
     
-    gcan.Print(pngdir + gcan.GetName() + f'_{generator}_{fftag}.png')
-    gcan.Print(pdfdir + gcan.GetName() + f'_{generator}_{fftag}.pdf')
+    gcan.Print(pngdir + gcan.GetName() + f'_{generator}_{fftag}{sigmaTag}.png')
+    gcan.Print(pdfdir + gcan.GetName() + f'_{generator}_{fftag}{sigmaTag}.pdf')
 
-    ccan.Print(pngdir + ccan.GetName() + f'_{generator}_{fftag}.png')
-    ccan.Print(pdfdir + ccan.GetName() + f'_{generator}_{fftag}.pdf')
+    ccan.Print(pngdir + ccan.GetName() + f'_{generator}_{fftag}{sigmaTag}.png')
+    ccan.Print(pdfdir + ccan.GetName() + f'_{generator}_{fftag}{sigmaTag}.pdf')
 
     stuff.append([conexPeakXmaxHs, Hs, H2s, cH2s, Fs, cFs, gr, gr_conex])
 
     print('Writing graphs to output file....')
     rootdir = 'graphs/'
     os.system(f'mkdir -p {rootdir}')
-    outfilename = rootdir + f'graphs_{generator}_{fftag}.root'
+    outfilename = rootdir + f'graphs_{generator}_{fftag}{sigmaTag}.root'
     outfile = ROOT.TFile(outfilename, 'recreate')
     grs_to_save = [gr, gr_conex]
     for savegr in grs_to_save:
