@@ -13,6 +13,8 @@ from consts import *
 
 #from grsNames_tuning import *
 
+from grsNames_std import *
+
 #from grsNames_newPhys_10ptcl import *
 #from grsNames_newPhys_1ptcl import *
 #from grsNames_newPhys_2ptcl import *
@@ -31,8 +33,8 @@ stuff = []
 def main(argv):
 
     ### plot Xmax or its sigma:
-    #xtag = ''
-    xtag = '_sigma'
+    xtag = ''
+    #xtag = '_sigma'
     
     
     #generator = 'SIBYLL'
@@ -47,7 +49,7 @@ def main(argv):
     x0 = -xw/2.
     dx = xw/len(gfilenames)
     
-    grs_conex = []
+    grs_conex = {}
     grs = {}
     haveConex_p = False
     haveConex_Fe = False
@@ -96,6 +98,7 @@ def main(argv):
        tag = tag.replace('Zprime',' with X')
        tag = tag.replace('FeFe','Primary Fe').replace('testNoNewPhysWithNewPhysArea','')
        tag = tag.replace('Primary proton Primary Fe', 'Primary Fe')
+       tag = tag.replace('Fe Fe','Fe')
        grs[tag] = grAirSim
        if gfilename == reffilename:
            refkey = tag + ''
@@ -115,14 +118,14 @@ def main(argv):
                haveConex_p = True
            gr_conex.SetLineColor(ROOT.kRed)
            gr_conex.SetMarkerColor(ROOT.kRed)
-           grs_conex.append(gr_conex)
+           grs_conex[tag + '_conex'] = gr_conex
 
 
     SetMyStyle()
     cw, ch = 1200, 1200
     canname = f'AirSim_GrsCmp'
     can = ROOT.TCanvas(canname, canname, 0, 0, cw, ch)
-    pads, inset = MakeMultiSubPads(can,  [0.60, 0.40], 0.0, 0.03, 0.1, 0.15)
+    pads, inset = MakeMultiSubPads(can,  [0.60, 0.40], 0.0, 0.03, 0.13, 0.15)
 
 
     ymax = 1200
@@ -133,6 +136,10 @@ def main(argv):
         ytitle = '#sigma_{X_{max}}'
 
     h2 = ROOT.TH2D(f'h_tmp', ';log_{10}(E/eV);' + ytitle + '[g/cm^{2}];', 500, x1, x2, 25, 0, ymax)
+    h2.GetYaxis().SetTitleSize(0.05)
+    h2.GetYaxis().SetTitleOffset(0.75)
+    h2.GetXaxis().SetTitleSize(0.05)
+    h2.GetXaxis().SetTitleOffset(0.70)
     h2.SetStats(0)
     makeWhiteAxes(h2)
     stuff.append(h2)
@@ -154,7 +161,7 @@ def main(argv):
     fun_em.SetLineWidth(2)
     fun_em.SetLineStyle(2)
     fun_em.SetLineColor(ROOT.kWhite)
-    if xtag == '':
+    if xtag == '' and not 'newPhys' in dtag:
         fun_em.Draw('same')
     
     # draw theory Xmax function for hadronic showers:
@@ -166,7 +173,7 @@ def main(argv):
     fun_had.SetLineWidth(2)
     fun_had.SetLineStyle(3)
     fun_had.SetLineColor(ROOT.kRed-4)
-    if xtag == '':
+    if xtag == '' and not 'newPhys' in dtag:
         fun_had.Draw('same')
     makeWhiteAxes(fun_had)
         
@@ -179,13 +186,13 @@ def main(argv):
     fun_hadShifted.SetLineWidth(2)
     fun_hadShifted.SetLineStyle(2)
     fun_hadShifted.SetLineColor(ROOT.kRed-4)
-    if xtag == '':
+    if xtag == '' and not 'newPhys' in dtag:
         fun_hadShifted.Draw('same')
     makeWhiteAxes(fun_hadShifted)
         
     
 
-    for gr_conex in grs_conex:
+    for grtag,gr_conex in grs_conex.items():
         gr_conex.Draw('PL')
         tag = ', p'
         if 'Fe' in gr_conex.GetName():
@@ -199,7 +206,7 @@ def main(argv):
         if len(gfilenames) < 10 or (', p' in tag or 'Fe' in tag or 'Electron' in tag):
             leg.AddEntry(gr, tag, 'PL')
 
-    if xtag == '':
+    if xtag == '' and not 'newPhys' in dtag:
         leg.AddEntry(fun_em, 'Theoretical X_{max}^{EM} = X_{0} ln(E/E_{C}) [Matthews 2005]', 'L')
         leg.AddEntry(fun_had, 'Theoretical X_{max}^{had} = X_{0} + #lambda_{I} ln(E/3Nch(E)) [Matthews 2005]', 'L')
         leg.AddEntry(fun_hadShifted, 'Theoretical X_{max}^{had} = X_{0} + #lambda_{I} ln(E/3Nch(E)) + 100 [Matthews 2005]', 'L')
@@ -213,9 +220,13 @@ def main(argv):
     ROOT.gPad.SetGridx(1)
     rw = 0.42
     if xtag != '':
-        rw = 1.5
+        rw = 1.55
     rh2 = ROOT.TH2D(f'rh_tmp', ';log_{10}(E/eV);' + ytitle + ' ratio to protons;', 500, x1, x2, 500, max(0, 1.-rw), 1.+rw)
     rh2.SetStats(0)
+    rh2.GetYaxis().SetTitleSize(0.07)
+    rh2.GetYaxis().SetTitleOffset(0.35)
+    rh2.GetXaxis().SetTitleSize(0.07)
+    rh2.GetXaxis().SetTitleOffset(0.60)
     makeWhiteAxes(rh2)
     stuff.append(rh2)
     rh2.Draw()
@@ -225,7 +236,11 @@ def main(argv):
     print('=========== check keys ... ================')
     for key in grs:
         print(key)
-    ratios = makeRatioGraphs(grs, refkey, xtolerance)
+    grsForRatios = grs
+    if True:
+        grsForRatios = grs | grs_conex
+    
+    ratios = makeRatioGraphs(grsForRatios, refkey, xtolerance)
     for ratio in ratios:
         ratio.Draw('same PL')
 
