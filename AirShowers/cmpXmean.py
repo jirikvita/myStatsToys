@@ -167,7 +167,7 @@ def main(argv):
     sigmaTag = ''
     # DEFAULT:
     plotSigma = False
-    plotSigma = True
+    #plotSigma = True
     ytitle = '<X_{max}>'
     if plotSigma:
         sigmaTag = '_sigma'
