@@ -13,12 +13,12 @@ from consts import *
 
 #from grsNames_tuning import *
 
-from grsNames_std import *
+#from grsNames_std import *
 
-#from grsNames_newPhys_10ptcl import *
+from grsNames_newPhys_10ptcl import *
 #from grsNames_newPhys_1ptcl import *
 #from grsNames_newPhys_2ptcl import *
-from grsNames_newPhys_3ptcl import *
+#from grsNames_newPhys_3ptcl import *
 
 ########################################
 
@@ -34,7 +34,7 @@ def main(argv):
 
     ### plot Xmax or its sigma:
     xtag = ''
-    #xtag = '_sigma'
+    xtag = '_sigma'
     
     
     #generator = 'SIBYLL'

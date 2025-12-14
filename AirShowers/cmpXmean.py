@@ -37,7 +37,7 @@ def suspectedWideShower(realE, meanMean, h):
 # actually, getting maximum of shower development for each shower,
 # i.e. really Xmax, by highest bin, so no mean X, 
 # but then computing the mean of these Xmax values;)
-def GetHmeans(logEs, fnames, hbasename, Nshowers, plotSigma, debug = 0):
+def GetHmeans(logEs, fnames, hbasename, Nshowers, plotSigma, stdDevVsXmaxHists = None, debug = 0):
     Fs = []
     Hs = {}
     Means = {}
@@ -59,7 +59,12 @@ def GetHmeans(logEs, fnames, hbasename, Nshowers, plotSigma, debug = 0):
                     err = None
                     mean = h.GetBinCenter(h.GetMaximumBin())
                     err = h.GetMeanError()
+                    stdDev = h.GetStdDev()
                     means.append(mean)
+
+                    if stdDevVsXmaxHists != None:
+                        stdDevVsXmaxHists[logE].Fill(mean, stdDev)
+                    
                     #print(mean)
                     h.Rebin(Rebin)
                     #flogE = float(logE)
@@ -77,7 +82,9 @@ def GetHmeans(logEs, fnames, hbasename, Nshowers, plotSigma, debug = 0):
     return Hs, Fs, Means
         
 ########################################
-def GetHmeansFromTree(conexDir, EconexDict, treename, varname, plotSigma):
+# TO CONSIDER: a check to get all this the Xmax'es from shower graphs -> histos maxima!
+
+def GetHmeansFromTree(conexDir, EconexDict, treename, varname, plotSigma): #, stdDevVsXmaxHists_conex = None):
     Fs = []
     Hs = {}
     Means = {}
@@ -92,12 +99,12 @@ def GetHmeansFromTree(conexDir, EconexDict, treename, varname, plotSigma):
         tree = rfile.Get(treename)
         hname = f'h_{logE}'
         tree.Draw(f'{varname} >> {hname}', f'{varname} < 4000')
-        # this is already a histogram ox Xmax'es!
+        # this is already a histogram of Xmax'es!
         h = ROOT.gDirectory.Get(hname)
         #try:
         mean = None
         err = None
-        # HERE take RMS to plot average Xmax sigms
+        # HERE take RMS to plot average Xmax sigma
         if plotSigma:
             mean = h.GetStdDev()
             err = h.GetStdDevError()
@@ -163,22 +170,16 @@ def main(argv):
 
     
     SetMyStyle()
-    
     sigmaTag = ''
+
     # DEFAULT:
     plotSigma = False
     #plotSigma = True
+    
     ytitle = '<X_{max}>'
     if plotSigma:
         sigmaTag = '_sigma'
         ytitle = '#sigma_{X_{max}}'
-    
-    
-    
-    #logEs = [ int(pow(10,n)) for n in range(2,8)]
-    #logEs = [ int(pow(10,n)) for n in range(3,6)]
-    #logEs = [100, 1000, 10000, 50000, 100000, 1000000]
-    #logEs.append(250000)
 
     alllogEs = [#11, 11.5,
         ## Fe: remove 12 and 12.5
@@ -204,7 +205,7 @@ def main(argv):
     print(alllogEs)
     
     hbasename = 'h1Nx'
-    Nshowers = 2000
+    Nshowers = 5000 # some supremum;)
     fnames = {}
 
     if len(argv) < 2:
@@ -261,13 +262,18 @@ def main(argv):
     
     print(fnames)
 
-    Hs, Fs, MeansAirSim = GetHmeans(logEs, fnames, hbasename, Nshowers, plotSigma)
+    stdDevVsXmaxHists = {}
+    if not plotSigma:
+        for logE in logEs:
+            stdDevVsXmaxHists[logE] = ROOT.TH2D(f'hist2D_StdDevVsXmax_{logE}', ';X_{max} [g/cm^{2}];X_{max} std. dev. [g/cm^{2}]', 50, 0, 1000, 50, 0, 500)
+
+    Hs, Fs, MeansAirSim = GetHmeans(logEs, fnames, hbasename, Nshowers, plotSigma, stdDevVsXmaxHists)
+        
     ftag = fnames[logEs[-1]][0].split('/')[-2].replace('root_','').replace('_',' ')
     fftag = ftag.replace(' ','_')
     if primary != 'p':
         ftag = ftag + ' ' + primary
         fftag = fftag + '_' + primary
-        
     
     print('Got following lengths:')
     for logE in Hs:
@@ -276,6 +282,7 @@ def main(argv):
     gr = ROOT.TGraphErrors()
     gr.SetName('gr_airsim')
     ip = 0
+
     for logE,meanData in MeansAirSim.items():
         flogE = float(logE)
         mean = meanData.mean
@@ -298,12 +305,21 @@ def main(argv):
             conexlogEs.append(logE)
 
     cfnames = EconexDict.values()
-    conexPeakXmaxHs, cFs, MeansConex = GetHmeansFromTree(conexDir, EconexDict, 'Shower', 'Xmax', plotSigma)
+    #stdDevVsXmaxHists_conex = {}
+    #if not plotSigma:
+    #    for logE in logEs:
+    #        stdDevVsXmaxHists_conex[logE] = ROOT.TH2D(f'hist2D_StdDevVsXmax_conex_{logE}', ';X_{max} [g/cm^{2}];X_{max} std. dev. [g/cm^{2}]', 50, 0, 1000, 50, 0, 500)
+
+
+    conexPeakXmaxHs, cFs, MeansConex = GetHmeansFromTree(conexDir, EconexDict, 'Shower', 'Xmax', plotSigma)# , stdDevVsXmaxHists_conex)
     
     gr_conex = ROOT.TGraphErrors()
     gr_conex.SetName('gr_conex')
     ip = 0
     ConexShowerGraphs = {}
+    ConexShowerHistos = {}
+    h2sXmaxCorrTest = {}
+    crfiles = {}
     for logE,meanData in MeansConex.items():
         flogE = float(logE)
         mean = meanData.mean
@@ -315,11 +331,17 @@ def main(argv):
         # get also individual conex showers as TGraphs:
         rfile = ROOT.TFile(conexDir + EconexDict[logE], 'read')
         tree = rfile.Get('Shower')
-        graphs = getConexShowerGraphs(tree, logE)
+        #graphs = getConexShowerGraphs(tree, logE)
+        graphs, chistos, h2XmaxCorrTest = getAndCompareConexShowerGraphsMaxAndXmax(tree, logE)
         ConexShowerGraphs[logE] = graphs
+        ConexShowerHistos[logE] = chistos
+        print('Printing histos for now....', logE, chistos)
+        h2sXmaxCorrTest[logE] = h2XmaxCorrTest
+        crfiles[logE] = rfile
 
     txts = []
-    
+    print('ConexShowerHistos:')
+    print(ConexShowerHistos)
 
     ########################
     # Draw conex profiles as graphs
@@ -368,16 +390,19 @@ def main(argv):
 
     ########################
     # Draw conex profiles as histos:)
+    stdDevVsXmaxHists_conex = {}
     canname = f'ConexHistProfiles'
-    hcpcan = ROOT.TCanvas(canname, canname, 0, 0, cw, ch)
+    hcpcan = ROOT.TCanvas(canname, canname, 0, 0, cw, ch) 
     cans.append(hcpcan)
     hcpcan.Divide(cnx, cny)
     hcpH2s = []
-    ConexShowerHistos = {}
     ie = 0
     nConexDoublePeaks = {}
     ConexHsDouble = {}
     for logE,grs in ConexShowerGraphs.items():
+        if not plotSigma:
+            stdDevVsXmaxHists_conex[logE] = ROOT.TH2D(f'hist2D_StdDevVsXmax_conex_{logE}', ';X_{max} [g/cm^{2}];X_{max} std. dev. [g/cm^{2}]', 50, 0, 1000, 50, 0, 500)
+
         nConexDoublePeaks[logE] = 0
         ConexHsDouble[logE] = []
         hcpcan.cd(1+ie)
@@ -386,7 +411,15 @@ def main(argv):
         h2.Draw()
         makeWhiteAxes(h2)
         hcpH2s.append(h2)
-        hs = makeHistosFromGraphs(grs, f'_{logE}')
+        #hs = makeHistosFromGraphs(grs, f'_{logE}')
+        hs = ConexShowerHistos[logE]
+        print(h2)
+        # here can fill the Xmax std dev vs the Xmax!!
+        if logE in stdDevVsXmaxHists_conex:
+            #print(ConexShowerHistos[logE])
+            for h in hs:
+                stdDevVsXmaxHists_conex[logE].Fill(h.GetBinCenter(h.GetMaximumBin()), h.GetStdDev())
+        
         ConexShowerHistos[logE] = hs
         opt = 'histsame'
         igr = 0
@@ -600,7 +633,6 @@ def main(argv):
         stuff.append(txt)
         ie += 1
 
-
     # plot histo of peak Xmax for AirSim into already plotted conex;-)
     ie = 0
     for logE,h in HsPeakXmax.items():
@@ -705,6 +737,14 @@ def main(argv):
     grs_to_save = [gr, gr_conex]
     for savegr in grs_to_save:
         savegr.Write()
+        
+    for logE,h2 in stdDevVsXmaxHists.items():
+        h2.Write()
+    for logE,h2 in stdDevVsXmaxHists_conex.items():
+        h2.Write()
+    for logE,h2 in h2sXmaxCorrTest.items():
+        h2.Write()
+        
     print('...closing output file...')
     outfile.Close()
     print('DONE!')

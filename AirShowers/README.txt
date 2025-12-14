@@ -1,8 +1,22 @@
-
-
-
 Jiri Kvita
 December 2025
+
+
+*** General description
+
+ -- Core simulation routines: airsim.py
+ -- Constants and steering (new physics, aka Z'): consts.py
+ -- Running script: run_airsim.py # also steering what primary particle!
+Usage:
+./run_airsim.py -h
+Usage: ./run_airsim.py [logE(eV)=13.5] [iteration=0] [batch=0] [draw=1]
+E.g.
+./run_airsim.py 12.9
+or, in GeV:
+./run_airsim.py 50000 # 50 TeV
+
+
+*** Personal work flow:
 
 ./GetAll.sh
 

@@ -236,13 +236,14 @@ def getMaxima(hs):
 
 
 ##########################################
+# superseded by the routine below
 def getConexShowerGraphs(tree, E):
     # Loop through entries in the tree
     print(f'Getting conex graphs for E={E}...')
     graphs = []
     for i, entry in enumerate(tree):
-        x_array = entry.X  # Replace with your branch name
-        y_array = entry.N  # Replace with your branch name
+        x_array = entry.X
+        y_array = entry.N
 
         # Assuming x_array and y_array are the same length
         n_points = len(x_array)
@@ -261,6 +262,42 @@ def getConexShowerGraphs(tree, E):
         graphs.append(graph)
 
     return graphs
+
+# update of the above function:
+##########################################
+def getAndCompareConexShowerGraphsMaxAndXmax(tree, E, tag = ''):
+    # Loop through entries in the tree
+    print(f'Comparing and getting conex graphs for E={E}...')
+    graphs = []
+    histos = []
+    
+    h2 = ROOT.TH2D(f'h2_XmaxMaxBinVsXmaxConex_{E}' + tag, ';X_{max} Conex [g/cm^{2}];X_{max} max. bin [g/cm^{2}]', 100, 0, 1000, 100, 0, 1000)
+    for i, entry in enumerate(tree):
+        x_array = entry.X
+        y_array = entry.N
+
+        # Assuming x_array and y_array are the same length
+        n_points = len(x_array)
+
+        # Create a TGraph for this event
+        graph = ROOT.TGraph(n_points)
+
+        for j in range(n_points):
+            graph.SetPoint(j, x_array[j], y_array[j])
+        h = makeHistoFromGraph(graph, f'h_Conex_profile_{E}_{i}' + tag)
+        XmaxTree = entry.Xmax
+        XmaxMaxBin = h.GetBinCenter(h.GetMaximumBin())
+        h2.Fill(XmaxTree, XmaxMaxBin)
+            
+        graph.SetTitle(f"ConexShower {i} E={E}")
+        graph.SetLineColorAlpha(ROOT.kCyan, 0.1)
+        #graph.SetMarkerColorAlpha(ROOT.kRed, 0.1)
+        #graph.SetMarkerSize(0.)
+        #graph.SetMarkerStyle(20)
+        graphs.append(graph)
+        histos.append(h)
+
+    return graphs, histos, h2
 
 
 ##########################################
