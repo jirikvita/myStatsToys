@@ -42,7 +42,8 @@ def GetHmeans(logEs, fnames, hbasename, Nshowers, plotSigma, stdDevVsXmaxHists =
     Hs = {}
     Means = {}
     Rebin = 1
-        
+
+    fit = ROOT.TF1('gfit', '[0]*exp(-0.5*(x-[1])^2/(2*[2]^2))', 0, 4000)
     for logE in logEs:
         infile = None
         #fname = fnames[logE]
@@ -57,16 +58,24 @@ def GetHmeans(logEs, fnames, hbasename, Nshowers, plotSigma, stdDevVsXmaxHists =
                 try:
                     mean = None
                     err = None
-                    mean = h.GetBinCenter(h.GetMaximumBin())
+                    imax = h.GetMaximumBin()
+                    mean = h.GetBinCenter(imax)
+                    A = h.GetBinContent(imax)
                     err = h.GetMeanError()
                     stdDev = h.GetStdDev()
+                    fit.SetParameters(A, mean, 0.5*stdDev)
+                    # fit around 5 bins around max
+                    bw = h.GetBinWidth(imax)
+                    h.Fit(fit, "", "", mean - 3*bw, mean + 3*bw)
+                    mean = fit.GetParameter(1)
                     means.append(mean)
 
                     if stdDevVsXmaxHists != None:
                         stdDevVsXmaxHists[logE].Fill(mean, stdDev)
                     
                     #print(mean)
-                    h.Rebin(Rebin)
+                    if Rebin > 1:
+                        h.Rebin(Rebin)
                     #flogE = float(logE)
                     #if flogE < 10e4:
                     #    h.Rebin(2)
@@ -265,7 +274,7 @@ def main(argv):
     stdDevVsXmaxHists = {}
     if not plotSigma:
         for logE in logEs:
-            stdDevVsXmaxHists[logE] = ROOT.TH2D(f'hist2D_StdDevVsXmax_{logE}', ';X_{max} [g/cm^{2}];X_{max} std. dev. [g/cm^{2}]', 50, 0, 1000, 50, 0, 500)
+            stdDevVsXmaxHists[logE] = ROOT.TH2D(f'hist2D_StdDevVsXmax_{logE}', ';X_{max} [g/cm^{2}];X_{max} std. dev. [g/cm^{2}]', 100, 0, 1000, 100, 0, 500)
 
     Hs, Fs, MeansAirSim = GetHmeans(logEs, fnames, hbasename, Nshowers, plotSigma, stdDevVsXmaxHists)
         
@@ -335,13 +344,13 @@ def main(argv):
         graphs, chistos, h2XmaxCorrTest = getAndCompareConexShowerGraphsMaxAndXmax(tree, logE)
         ConexShowerGraphs[logE] = graphs
         ConexShowerHistos[logE] = chistos
-        print('Printing histos for now....', logE, chistos)
+        #print('Printing histos for now....', logE, chistos)
         h2sXmaxCorrTest[logE] = h2XmaxCorrTest
         crfiles[logE] = rfile
 
     txts = []
-    print('ConexShowerHistos:')
-    print(ConexShowerHistos)
+    #print('ConexShowerHistos:')
+    #print(ConexShowerHistos)
 
     ########################
     # Draw conex profiles as graphs
@@ -401,7 +410,7 @@ def main(argv):
     ConexHsDouble = {}
     for logE,grs in ConexShowerGraphs.items():
         if not plotSigma:
-            stdDevVsXmaxHists_conex[logE] = ROOT.TH2D(f'hist2D_StdDevVsXmax_conex_{logE}', ';X_{max} [g/cm^{2}];X_{max} std. dev. [g/cm^{2}]', 50, 0, 1000, 50, 0, 500)
+            stdDevVsXmaxHists_conex[logE] = ROOT.TH2D(f'hist2D_StdDevVsXmax_conex_{logE}', ';X_{max} [g/cm^{2}];X_{max} std. dev. [g/cm^{2}]', 100, 0, 1000, 100, 0, 500)
 
         nConexDoublePeaks[logE] = 0
         ConexHsDouble[logE] = []

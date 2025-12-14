@@ -126,6 +126,8 @@ class cworld():
     def makeOutHistos(self, iteration, rtag, ropt, rootdir = 'root/'):
         hname = f'h1Nx_{iteration}'
         htitle = ';x[g/cm^{2}];N'
+        # THIS COULD BE INCREASED FOR BETTER XMAX GRANULARITY...
+        # OR A GAUSSIAN FIT AT MAXIMUM COULD BE DONE LATER IN PROCESSING;)
         nb = 200
         x1 = 0
         x2 = 4000 ### 4000. #/ 5 # HACK FOR Fe # g/cm^2 #last.x*1.25

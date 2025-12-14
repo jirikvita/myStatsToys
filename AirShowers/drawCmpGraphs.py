@@ -34,7 +34,7 @@ def main(argv):
 
     ### plot Xmax or its sigma:
     xtag = ''
-    xtag = '_sigma'
+    #xtag = '_sigma'
     
     
     #generator = 'SIBYLL'
