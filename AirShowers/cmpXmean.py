@@ -63,10 +63,10 @@ def GetHmeans(logEs, fnames, hbasename, Nshowers, plotSigma, stdDevVsXmaxHists =
                     A = h.GetBinContent(imax)
                     err = h.GetMeanError()
                     stdDev = h.GetStdDev()
-                    fit.SetParameters(A, mean, 0.5*stdDev)
+                    fit.SetParameters(A, mean, 0.3*stdDev)
                     # fit around 5 bins around max
                     bw = h.GetBinWidth(imax)
-                    h.Fit(fit, "", "", mean - 3*bw, mean + 3*bw)
+                    h.Fit(fit, "Q", "", mean - 3*bw, mean + 3*bw)
                     mean = fit.GetParameter(1)
                     means.append(mean)
 
@@ -107,9 +107,10 @@ def GetHmeansFromTree(conexDir, EconexDict, treename, varname, plotSigma): #, st
 
         tree = rfile.Get(treename)
         hname = f'h_{logE}'
+        h = ROOT.TH1D(hname, ';X_{max} [g/cm^{2}];showers', 150, 100, 1000)
         tree.Draw(f'{varname} >> {hname}', f'{varname} < 4000')
         # this is already a histogram of Xmax'es!
-        h = ROOT.gDirectory.Get(hname)
+        #h = ROOT.gDirectory.Get(hname)
         #try:
         mean = None
         err = None
@@ -209,7 +210,13 @@ def main(argv):
         '16',
     ]
 
-    cnx, cny = 3, 3
+    cnx, cny = 2, 2
+    if len(alllogEs) > 4:
+        cnx, cny = 3, 3
+    if len(alllogEs) > 9:
+        cnx, cny = 4, 3
+    if len(alllogEs) > 12:
+        cnx, cny = 4, 4
     cw, ch = 1400, 1200
     print(alllogEs)
     
@@ -415,7 +422,7 @@ def main(argv):
         nConexDoublePeaks[logE] = 0
         ConexHsDouble[logE] = []
         hcpcan.cd(1+ie)
-        ymax = getGrMaxima(grs)*1.2
+        ymax = getGrMaxima(grs)*1.55
         h2 = ROOT.TH2D(f'conexProfileHist_tmp_{logE}', ';x[g/cm^{2}];N', 100, 0, 4000, 100, 0, ymax)
         h2.Draw()
         makeWhiteAxes(h2)
@@ -509,9 +516,9 @@ def main(argv):
 
     for logE,hs in conexPeakXmaxHs.items():
         ccan.cd(1+ie)
-        ymax = getMaxima(hs)*1.2
+        ymax = getMaxima(hs)*1.55
         
-        h2 = ROOT.TH2D(f'ctmp_{logE}', ';' + ytitle+ '[g/cm^{2}];showers', 150, 0, 1500, 100, 0, 0.25)
+        h2 = ROOT.TH2D(f'ctmp_{logE}', ';' + ytitle+ '[g/cm^{2}];showers', 150, 100, 900, 100, 0, 0.12)
         h2.Draw()
         makeWhiteAxes(h2)
         cH2s.append(h2)
@@ -551,13 +558,13 @@ def main(argv):
     for logE,hs in Hs.items():
         can.cd(1+ie)
         HsDouble[logE] = []
-        ymax = getMaxima(hs)*1.2
+        ymax = getMaxima(hs)*1.55
         h2 = ROOT.TH2D(f'tmp_{logE}', ';x[g/cm^{2}];Particles (e/#pi/p)', 100, 40, 4000, 100, 0, ymax)
         h2.Draw()
         makeWhiteAxes(h2)
         H2s.append(h2)
 
-        HsPeakXmax[logE] = ROOT.TH1D(f'AirSimPeakXmax_{logE}', ';' + ytitle + '[g/cm^{2}];showers', 75, 0, 1500)
+        HsPeakXmax[logE] = ROOT.TH1D(f'AirSimPeakXmax_{logE}', ';' + ytitle + '[g/cm^{2}];showers', 150, 100, 1000)
 
         h2sum = ROOT.TH2D(f'hsum_{logE}', ';x[g/cm^{2}];Particles (e/#mu)', 40, 0, 4000, 25, 0, ymax)
         makeWhiteAxes(h2sum)
@@ -653,6 +660,12 @@ def main(argv):
         h.SetStats(0)
         h.SetLineColor(ROOT.kAzure-3)
         h.Draw('hist same')
+        txt = ROOT.TLatex(0.63, 0.82, f'logE={logE}')
+        txt.SetTextColor(ROOT.kWhite)
+        txt.SetTextSize(0.07)
+        txt.SetNDC()
+        txt.Draw()
+        txts.append(txt)
         ie += 1
     ccan.Update()
     
