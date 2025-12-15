@@ -32,3 +32,6 @@ default model: (adds automatically also one more directory, root_Inel_0.45_sigma
 
 ./drawCmpGraphs.py
 
+./quickPlotStdVsXmaxCmp.py
+
+
