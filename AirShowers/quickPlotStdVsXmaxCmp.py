@@ -46,10 +46,16 @@ def main(argv):
     #cans.append(can2d)
 
 
+    mode = 'ee'
+    textag = mode
+
+    #mode = 'pipi'
+    #textag = '#pi#pi'
+    
     gdir = 'graphs/'
-    filenames = [ ['graphs_EPOS_Inel_0.45_sigmaInel_0.2_C_10_Csigma_3_mnlEM1.125_mnlHad999.0_Zprime_100.0_Gamma_10.0_mode_ee_xsectFrac_1.00.root', 'hist2D_StdDevVsXmax_conex_'],
-                  ['graphs_EPOS_Inel_0.45_sigmaInel_0.2_C_10_Csigma_3_mnlEM1.125_mnlHad999.0_Zprime_100.0_Gamma_10.0_mode_ee_xsectFrac_1.00.root', 'hist2D_StdDevVsXmax_'],
-                  ['graphs_EPOS_Inel_0.45_sigmaInel_0.2_C_10_Csigma_3_mnlEM1.125_mnlHad999.0.root', 'hist2D_StdDevVsXmax_']
+    filenames = [ [f'graphs_EPOS_Inel_0.45_sigmaInel_0.2_C_10_Csigma_3_mnlEM1.125_mnlHad999.0_Zprime_100.0_Gamma_10.0_mode_{mode}_xsectFrac_1.00.root', 'hist2D_StdDevVsXmax_conex_'],
+                  [f'graphs_EPOS_Inel_0.45_sigmaInel_0.2_C_10_Csigma_3_mnlEM1.125_mnlHad999.0_Zprime_100.0_Gamma_10.0_mode_{mode}_xsectFrac_1.00.root', 'hist2D_StdDevVsXmax_'],
+                  [f'graphs_EPOS_Inel_0.45_sigmaInel_0.2_C_10_Csigma_3_mnlEM1.125_mnlHad999.0.root', 'hist2D_StdDevVsXmax_']
                  ]
 
     rfiles = []
@@ -100,7 +106,7 @@ def main(argv):
             makeWhiteAxes(h2)
             h2.Draw('colz')
             logE = Es[j]
-            txt = ROOT.TLatex(0.5, 0.79, 'log_{10}' + f'E/eV={logE}')
+            txt = ROOT.TLatex(0.14, 0.14, 'log_{10}' + f'E/eV={logE}, showers: {h2.GetEntries()/1000:1.1f}k')
             txt.SetTextColor(ROOT.kWhite)
             txt.SetNDC()
             txt.Draw()
@@ -110,13 +116,17 @@ def main(argv):
             h1s.append(h1)
 
             print(filenames[i])
-            if 'Zprime_100.0_Gamma_10.0_mode_ee' in filenames[i][0]:
-                txt2 = ROOT.TLatex(0.14, 0.84, 'Incl. X#rightarrow ee, m_{X}=100 GeV, #Gamma_{X}=10 GeV')
-                txt2.SetTextColor(ROOT.kWhite)
-                txt2.SetNDC()
-                txt2.SetTextSize(0.042)
-                txt2.Draw()
-                txts.append(txt2)
+            sampletag = 'Private sim.'
+            if f'Zprime_100.0_Gamma_10.0_mode_{mode}' in filenames[i][0] and not 'conex' in filenames[i][1]:
+                sampletag += f' incl. X#rightarrow {textag}' + ', m_{X}=100 GeV, #Gamma_{X}=10 GeV'
+            if 'conex' in filenames[i][1]:
+                sampletag = 'Conex'
+            txt2 = ROOT.TLatex(0.14, 0.84, sampletag)
+            txt2.SetTextColor(ROOT.kWhite)
+            txt2.SetNDC()
+            txt2.SetTextSize(0.042)
+            txt2.Draw()
+            txts.append(txt2)
             ican += 1
         H1s.append(h1s)
 
@@ -163,13 +173,18 @@ def main(argv):
             #txts.append(txt)
 
             print(filenames[i])
-            if 'Zprime_100.0_Gamma_10.0_mode_ee' in filenames[i][0]:
-                txt2 = ROOT.TLatex(0.14, 0.84, 'Incl. X#rightarrow ee, m_{X}=100 GeV, #Gamma_{X}=10 GeV')
-                txt2.SetTextColor(ROOT.kWhite)
-                txt2.SetNDC()
-                txt2.SetTextSize(0.042)
-                txt2.Draw()
-                txts.append(txt2)
+            sampletag = 'Private sim.'
+            if f'Zprime_100.0_Gamma_10.0_mode_{mode}' in filenames[i][0] and not 'conex' in filenames[i][1]:
+                sampletag += f' incl. X#rightarrow {textag}' + ', m_{X}=100 GeV, #Gamma_{X}=10 GeV'
+            if 'conex' in filenames[i][1]:
+                sampletag = 'Conex'
+                
+            txt2 = ROOT.TLatex(0.14, 0.84, sampletag)
+            txt2.SetTextColor(ROOT.kWhite)
+            txt2.SetNDC()
+            txt2.SetTextSize(0.035)
+            txt2.Draw()
+            txts.append(txt2)
         leg.Draw()
             
     
@@ -179,8 +194,8 @@ def main(argv):
     # Store and print
     stuff.append([H2s,rfiles])
     for can in cans:
-    	can.Print(pngdir + can.GetName() + '.png')
-    	can.Print(pdfdir + can.GetName() + '.pdf')
+    	can.Print(pngdir + can.GetName() + f'_{mode}.png')
+    	can.Print(pdfdir + can.GetName() + f'_{mode}.pdf')
     ROOT.gPad.Update()
 
     ROOT.gApplication.Run()
