@@ -120,7 +120,7 @@ class tunables:
         self.sigmaPionConst = 3 
         
         # new physics
-        self.doNewPhysics = True
+        self.doNewPhysics = False
         self.MZprimeHadXsectFraction = 1.
         self.MZprime = 100*gGeV
         self.GammaZprime = 0.1*self.MZprime
@@ -130,7 +130,7 @@ class tunables:
 
         # max. number of int. lengths to allo the interaction to happen acc. to exp. law
         self.maxNlengthsEM = 1.125 
-        self.maxNlengthsHad = 99.
+        self.maxNlengthsHad = 999.
         
     def print(self):
         print(self.PionsConst, self.PionsExp, self.Inelasticity)
