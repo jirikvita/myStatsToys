@@ -22,6 +22,8 @@ stuff = []
 # in Xmax and sigmaXmax:
 kLowestXmaxToConsider = 10.
 kHighestXmaxToConsider = 1200.
+kNmaxConexGraphsToPlot = 1000
+kNmaxConexHitsosToPlot = 1000
 ########################################
 
 def AddToHeatMap(h2, h):
@@ -205,17 +207,17 @@ def main(argv):
         '12',
         # useless: '12.25',
         '12.5',
-        '12.75',
+        #'12.75',
         '13',
-        '13.25',
+        #'13.25',
         '13.5',
         '14',
         '14.5',
-        '14.75',
+        #'14.75',
         '15',
-        '15.25',
+        #'15.25',
         '15.5',
-        '15.75',
+        #'15.75',
         '16',
     ]
 
@@ -389,7 +391,7 @@ def main(argv):
         opt = 'L'
         igr = 0
         for cgr in grs:
-            if igr > 1000:
+            if igr > kNmaxConexGraphsToPlot:
                 break
             cgr.Draw(opt)
             igr += 1
@@ -407,7 +409,7 @@ def main(argv):
         ntxt.Draw()
         txts.append(ntxt)
 
-        txt = ROOT.TLatex(0.59, 0.82, f'logE={logE}')
+        txt = ROOT.TLatex(0.59, 0.82, 'log_{10}E/eV=' + f'{logE}')
         txt.SetTextColor(ROOT.kWhite)
         txt.SetNDC()
         txt.Draw()
@@ -458,7 +460,7 @@ def main(argv):
         meanMean /= (1.*len(hs))
 
         for h in hs:
-            if igr > 1000:
+            if igr > kNmaxConexHitsosToPlot:
                 break
             h.SetLineColor(ROOT.kCyan)
             flogE = float(logE)
@@ -484,7 +486,7 @@ def main(argv):
         ntxt.Draw()
         txts.append(ntxt)
 
-        txt = ROOT.TLatex(0.63, 0.82, f'logE={logE}')
+        txt = ROOT.TLatex(0.63, 0.82, 'log_{10}E/eV=' + f'{logE}')
         txt.SetTextColor(ROOT.kWhite)
         txt.SetNDC()
         txt.Draw()
@@ -527,7 +529,7 @@ def main(argv):
         ccan.cd(1+ie)
         ymax = getMaxima(hs)*1.55
         
-        h2 = ROOT.TH2D(f'ctmp_{logE}', ';' + ytitle+ '[g/cm^{2}];showers', 150, 100, 900, 100, 0, 0.12)
+        h2 = ROOT.TH2D(f'ctmp_{logE}', ';' + ytitle + '[g/cm^{2}];relative showers', 150, 100, 900, 100, 0, 0.12)
         h2.Draw()
         makeWhiteAxes(h2)
         cH2s.append(h2)
@@ -540,6 +542,12 @@ def main(argv):
             if area > 0:
                 h.Scale(1./area)
             h.Draw('hist' + opt)
+
+        ntxt = ROOT.TLatex(0.15, 0.77, f'Conex showers: {hs[-1].GetEntries()/1000.:.0f}k')
+        ntxt.SetTextColor(hs[-1].GetLineColor())
+        ntxt.SetNDC()
+        ntxt.Draw()
+        txts.append(ntxt)
         ie += 1
 
     ccan.Update()
@@ -586,7 +594,7 @@ def main(argv):
         stxt.Draw()
         txts.append(stxt)
 
-        txt = ROOT.TLatex(0.63, 0.82, f'logE={logE}')
+        txt = ROOT.TLatex(0.63, 0.82, 'log_{10}E/eV=' + f'{logE}')
         txt.SetTextColor(ROOT.kWhite)
         txt.SetNDC()
         txt.Draw()
@@ -670,13 +678,19 @@ def main(argv):
         h.SetStats(0)
         h.SetLineColor(ROOT.kAzure-3)
         h.Draw('hist same')
-        txt = ROOT.TLatex(0.63, 0.82, f'logE={logE}')
+        txt = ROOT.TLatex(0.565, 0.82, 'log_{10}E/eV=' + f'{logE}')
         txt.SetTextColor(ROOT.kWhite)
         txt.SetTextSize(0.07)
         txt.SetNDC()
         txt.Draw()
         txts.append(txt)
         ie += 1
+        ntxt = ROOT.TLatex(0.15, 0.82, f'Private sim. showers: {h.GetEntries()/1000.:.0f}k')
+        ntxt.SetTextColor(hs[-1].GetLineColor())
+        ntxt.SetNDC()
+        ntxt.Draw()
+        txts.append(ntxt)
+
     ccan.Update()
     
     canname = 'GrXmean'

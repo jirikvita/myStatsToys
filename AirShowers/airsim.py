@@ -275,7 +275,7 @@ def genHadrons(pid, E, gamma, length, x, y, world, nMaxIters = 100):
     # so try commenting this line:
     #if pid != 'pi':
     # produce more protons than 1, some random Poisson distr with mu of 1?
-    protonsToMake = Poisson(lam=1) # COMPARE! and vary this parameter? ==> another tunable?;)
+    protonsToMake = Poisson(lam=1) 
     # heuristics:
     # make sure at least one additional proton produced for impinging proton
     if pid == 'p' and protonsToMake == 0:
