@@ -785,7 +785,7 @@ def processArgs(argv):
     iteration = 0
     if len(argv) > 2:
         req_iteration = int(argv[2])
-        if req_iteration >= 0 and req_iteration < 10000:
+        if req_iteration >= 0 and req_iteration < 100000:
             print(f'OK, using user-defined iteration : {req_iteration}')
             iteration = req_iteration
 
@@ -876,7 +876,7 @@ def doAllDrawing(world, primary, E0, particles, halfSteps, tag, gtag, h1Nx, part
             fun.SetLineColor(ROOT.kWhite)
         fun.SetLineWidth(2)
         fun.SetLineStyle(2)
-        pvs = [h1Nx.GetMaximum()/10., 10., h1Nx.GetMean(), 150.]
+        pvs = [h1Nx.GetMaximum()/0.5, 1., h1Nx.GetMean(), 500.]
         #h1.Fit(fname, '', '0')
         for pn,pv in zip(pns,pvs):
             ip = pns.index(pn)

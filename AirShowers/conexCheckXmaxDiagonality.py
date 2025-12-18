@@ -23,6 +23,8 @@ def main(argv):
     pdfdir = 'pdf_Xmax/'
     os.system(f'mkdir -p {pngdir} {pdfdir}')
 
+    ROOT.gStyle.SetPadLeftMargin(0.15)
+
     ### https://www.tutorialspoint.com/python/python_command_line_arguments.htm
     ### https://pymotw.com/2/getopt/
     ### https://docs.python.org/3.1/library/getopt.html
@@ -86,14 +88,14 @@ def main(argv):
     H1s = []
     for i,hs2 in enumerate(H2s):
         cn = f'ConexXmaxCmp{i}'
-        w = 2*550
+        w = 2*600
         h = 2*500
         can2d = ROOT.TCanvas(cn, cn, 0, 0, w, h)
         #can2d.Divide(len(Es), len(filenames))
         can2d.Divide(2,2)
         cans.append(can2d)
         ican = 1
-
+        
         h1s = []
         for j,h2 in enumerate(hs2):
             can2d.cd(ican)
@@ -102,7 +104,7 @@ def main(argv):
             h2.Draw('colz')
             logE = Es[j]
             rho = h2.GetCorrelationFactor()
-            txt = ROOT.TLatex(0.14, 0.82, 'log_{10}' + f'E/eV={logE}, ' + '#rho=' + f'{rho:1.2f}')
+            txt = ROOT.TLatex(0.21, 0.82, 'log_{10}' + f'E/eV={logE}, ' + '#rho=' + f'{rho:1.2f}')
             txt.SetTextColor(ROOT.kWhite)
             txt.SetNDC()
             txt.Draw()
@@ -111,6 +113,8 @@ def main(argv):
             
             h1 = h2.ProfileX()
             h1.SetName('proj_{logE}_{i}_{j}')
+            h1.GetXaxis().SetTitle(h2.GetXaxis().GetTitle())
+            h1.GetYaxis().SetTitle(h2.GetYaxis().GetTitle())
             h1s.append(h1)
             print(filenames[i])
             ican += 1
@@ -135,7 +139,7 @@ def main(argv):
         
         opt = 'e1 x0'
         sameopt = ''
-        leg = ROOT.TLegend(0.15, 0.45, 0.45, 0.82)
+        leg = ROOT.TLegend(0.22, 0.55, 0.5, 0.87)
         leg.SetTextColor(ROOT.kWhite)
         legs.append(leg)
         for j,h1 in enumerate(hs1):
@@ -145,7 +149,7 @@ def main(argv):
             h1.SetLineWidth(1)
             h1.SetMarkerColor(h1.GetLineColor())
             h1.SetMarkerSize(0.7)
-            h1.SetMarkerStyle(24)
+            h1.SetMarkerStyle(4)
             #h1.Scale(1./h1.Integral(0, h1.GetXaxis().GetNbins()+1))
             h1.Draw(opt + sameopt)
 
@@ -172,13 +176,6 @@ def main(argv):
             #txts.append(txt)
 
             print(filenames[i])
-            if 'Zprime_100.0_Gamma_10.0_mode_ee' in filenames[i][0]:
-                txt2 = ROOT.TLatex(0.14, 0.84, 'Incl. X#rightarrow ee, m_{X}=100 GeV, #Gamma_{X}=10 GeV')
-                txt2.SetTextColor(ROOT.kWhite)
-                txt2.SetNDC()
-                txt2.SetTextSize(0.042)
-                txt2.Draw()
-                txts.append(txt2)
         leg.Draw()
         ROOT.gPad.SetGridx(1)
         ROOT.gPad.SetGridy(1)    

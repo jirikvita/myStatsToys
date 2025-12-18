@@ -106,7 +106,7 @@ def main(argv):
             makeWhiteAxes(h2)
             h2.Draw('colz')
             logE = Es[j]
-            txt = ROOT.TLatex(0.14, 0.14, 'log_{10}' + f'E/eV={logE}, showers: {h2.GetEntries()/1000:1.1f}k')
+            txt = ROOT.TLatex(0.14, 0.14, 'log_{10}' + f'E/eV={logE}, showers: {h2.GetEntries()/1000:1.0f}k')
             txt.SetTextColor(ROOT.kWhite)
             txt.SetNDC()
             txt.Draw()

@@ -18,6 +18,11 @@ cans = []
 stuff = []
 
 ########################################
+# to avoid Fit fluctuations / instabilities
+# in Xmax and sigmaXmax:
+kLowestXmaxToConsider = 10.
+kHighestXmaxToConsider = 1200.
+########################################
 
 def AddToHeatMap(h2, h):
     for ibin in range(1, h.GetXaxis().GetNbins()+1):
@@ -49,6 +54,7 @@ def GetHmeans(logEs, fnames, hbasename, Nshowers, plotSigma, stdDevVsXmaxHists =
         #fname = fnames[logE]
         Hs[logE] = []
         means = []
+        #print(f'Have {len(fnames[logE])} ROOT files')
         for fname in fnames[logE]:
             infile = ROOT.TFile(fname, 'read')
             Fs.append(infile)
@@ -68,18 +74,22 @@ def GetHmeans(logEs, fnames, hbasename, Nshowers, plotSigma, stdDevVsXmaxHists =
                     bw = h.GetBinWidth(imax)
                     h.Fit(fit, "Q", "", mean - 3*bw, mean + 3*bw)
                     mean = fit.GetParameter(1)
-                    means.append(mean)
-
-                    if stdDevVsXmaxHists != None:
-                        stdDevVsXmaxHists[logE].Fill(mean, stdDev)
                     
-                    #print(mean)
-                    if Rebin > 1:
-                        h.Rebin(Rebin)
-                    #flogE = float(logE)
-                    #if flogE < 10e4:
-                    #    h.Rebin(2)
-                    Hs[logE].append(h)
+                    if mean > kLowestXmaxToConsider and mean < kHighestXmaxToConsider:
+                        means.append(mean)
+                        if stdDevVsXmaxHists != None:
+                            if logE in stdDevVsXmaxHists:
+                                stdDevVsXmaxHists[logE].Fill(mean, stdDev)
+                    
+                        #print(mean)
+                        if Rebin > 1:
+                            h.Rebin(Rebin)
+                        #flogE = float(logE)
+                        #if flogE < 10e4:
+                        #    h.Rebin(2)
+                        Hs[logE].append(h)
+                    else:
+                        print(f'ERROR! Fitted Xmax {mean} out of range [{kLowestXmaxToConsider},{kHighestXmaxToConsider}]!')
                 except:
                     if debug: 
                         print(f'Error getting {hname} from {fname}')
@@ -178,7 +188,6 @@ class showerAverResults:
 
 def main(argv):
 
-    
     SetMyStyle()
     sigmaTag = ''
 
@@ -210,18 +219,10 @@ def main(argv):
         '16',
     ]
 
-    cnx, cny = 2, 2
-    if len(alllogEs) > 4:
-        cnx, cny = 3, 3
-    if len(alllogEs) > 9:
-        cnx, cny = 4, 3
-    if len(alllogEs) > 12:
-        cnx, cny = 4, 4
-    cw, ch = 1400, 1200
     print(alllogEs)
     
     hbasename = 'h1Nx'
-    Nshowers = 5000 # some supremum;)
+    Nshowers =  10001 # some supremum;)
     fnames = {}
 
     if len(argv) < 2:
@@ -359,6 +360,17 @@ def main(argv):
     #print('ConexShowerHistos:')
     #print(ConexShowerHistos)
 
+
+    # PLOTTING, CANVAS SPLITTING
+    cnx, cny = 2, 2
+    if len(ConexShowerGraphs) > 4:
+        cnx, cny = 3, 3
+    if len(ConexShowerGraphs) > 9:
+        cnx, cny = 4, 3
+    if len(ConexShowerGraphs) > 12:
+        cnx, cny = 4, 4
+    cw, ch = 1400, 1200
+
     ########################
     # Draw conex profiles as graphs
     canname = f'ConexGrProfiles'
@@ -383,19 +395,19 @@ def main(argv):
             igr += 1
             #opt = 'L'
         
-        mtxt = ROOT.TLatex(0.63, 0.68, f'Conex+{generator}')
+        mtxt = ROOT.TLatex(0.59, 0.68, f'Conex+{generator}')
         mtxt.SetTextColor(ROOT.kWhite)
         mtxt.SetNDC()
         mtxt.Draw()
         txts.append(mtxt)
 
-        ntxt = ROOT.TLatex(0.63, 0.75, f'Showers: {igr-1}')
+        ntxt = ROOT.TLatex(0.59, 0.75, f'Showers: {igr-1}')
         ntxt.SetTextColor(ROOT.kWhite)
         ntxt.SetNDC()
         ntxt.Draw()
         txts.append(ntxt)
 
-        txt = ROOT.TLatex(0.63, 0.82, f'logE={logE}')
+        txt = ROOT.TLatex(0.59, 0.82, f'logE={logE}')
         txt.SetTextColor(ROOT.kWhite)
         txt.SetNDC()
         txt.Draw()
@@ -499,10 +511,7 @@ def main(argv):
         ie += 1
 
 
-    cpcan.Update()
-    cpcan.Print(cpcan.GetName() + f'_{generator}{sigmaTag}.pdf')
-    cpcan.Print(cpcan.GetName() + f'_{generator}{sigmaTag}.png')
-
+ 
     
     
     ########################
@@ -557,6 +566,7 @@ def main(argv):
     HsPeakXmax = {}
     for logE,hs in Hs.items():
         can.cd(1+ie)
+        print(f'  logE={logE}, have histograms: {len(hs)}')
         HsDouble[logE] = []
         ymax = getMaxima(hs)*1.55
         h2 = ROOT.TH2D(f'tmp_{logE}', ';x[g/cm^{2}];Particles (e/#pi/p)', 100, 40, 4000, 100, 0, ymax)
@@ -570,7 +580,7 @@ def main(argv):
         makeWhiteAxes(h2sum)
         Hsums.append(h2sum)
 
-        stxt = ROOT.TLatex(0.63, 0.68, 'Private sim.')
+        stxt = ROOT.TLatex(0.59, 0.68, 'Private sim.')
         stxt.SetTextColor(ROOT.kWhite)
         stxt.SetNDC()
         stxt.Draw()
@@ -582,7 +592,7 @@ def main(argv):
         txt.Draw()
         txts.append(txt)
 
-        ntxt = ROOT.TLatex(0.63, 0.75, f'Showers: {len(hs)}')
+        ntxt = ROOT.TLatex(0.59, 0.75, f'Showers: {len(hs)}')
         ntxt.SetTextColor(ROOT.kWhite)
         ntxt.SetNDC()
         ntxt.Draw()
@@ -731,6 +741,7 @@ def main(argv):
     pngdir  = 'png_tuning/'
     pdfdir  = 'pdf_tuning/'
 
+    cpcan.Update()
     cpcan.Print(pdfdir + cpcan.GetName() + f'_{generator}{sigmaTag}.pdf')
     cpcan.Print(pngdir + cpcan.GetName() + f'_{generator}{sigmaTag}.png')
     

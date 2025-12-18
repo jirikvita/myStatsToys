@@ -120,7 +120,7 @@ class tunables:
         self.sigmaPionConst = 3 
         
         # new physics
-        self.doNewPhysics = True
+        self.doNewPhysics = False
         self.MZprimeHadXsectFraction = 1.
         self.MZprime = 100*gGeV
         self.GammaZprime = 0.1*self.MZprime
