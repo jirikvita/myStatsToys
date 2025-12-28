@@ -16,12 +16,10 @@ for gen in EPOS ; do
 
 
 #DEFAULT!
-
-
-    #for i in `ls | grep root_Inel | grep 999 | egrep  "Zprime|NoNewPhys" ` ; do
+    for i in `ls | grep root_Inel | grep 999 | egrep  "Zprime|NoNewPhys" ` ; do
 
 #    	for i in `ls | grep root_Inel | grep 999 | egrep  "Zprime" ` ; do
-	    for i in `ls | grep root_Inel | grep 999 | egrep  "NoNewPhys" ` ; do
+#	    for i in `ls | grep root_Inel | grep 999 | egrep  "NoNewPhys" ` ; do
 
 	    
 	#    for i in `ls | grep root_Inel | grep  Zprime | grep Gamma_1.0` ; do
