@@ -39,6 +39,9 @@ def getTopPtHisto(dir):
     
     hn = 'h_m_tt_' + dirtag
     h_m_tt = ROOT.TH1D(hn, ';m^{tt};unw. events / N', 400, 0, 1000)
+
+    hn = 'h2_pt_tbar_vs_t' + dirtag
+    h2_pt_tbar_vs_t = ROOT.TH2D(hn, ';p_{T}^{t} [GeV];p_{T}^{tbar} [GeV];unw. events', 100, 0, 500, 100, 0, 500)
     
     print(f'Analyzing file {lhe_file}')
     #for i, event in enumerate(pylhe.read_lhe(lhe_file)):
@@ -68,10 +71,11 @@ def getTopPtHisto(dir):
             h_pt_tt.Fill(ttbar.Pt())
             h_m_tt.Fill(ttbar.M())
             h_y_tt.Fill(ttbar.Rapidity())
+            h2_pt_tbar_vs_t.Fill(t.Pt(), tbar.Pt())
         # hacks
         #if i > 10:
         #    break
-    return [h_pt_t, h_y_t, h_y_tt, h_m_tt, h_pt_tt]
+    return [h_pt_t, h_y_t, h_y_tt, h_m_tt, h_pt_tt, h2_pt_tbar_vs_t]
 
 #########################################################################
 def main(argv):
