@@ -1,6 +1,10 @@
 import ROOT
 import os
 
+# from ctypes import c_int64
+import numpy as np
+
+
 class PMTAnalyzer:
     def __init__(self, root_file_path):
         """Initialize the PMT analyzer with a ROOT file."""
@@ -9,6 +13,34 @@ class PMTAnalyzer:
         
         if not self.tree:
             raise ValueError("TTree 'pmt_events' not found in ROOT file")
+
+    @staticmethod
+    def _read_branch_int64(tree, branch_name):
+        """Read a scalar branch value safely as numpy int64."""
+        value = getattr(tree, branch_name)
+
+        # PyROOT may expose scalar branches as scalar objects, arrays, or
+        # one-element buffers depending on branch type and dictionary state.
+        if isinstance(value, np.ndarray):
+            if value.size != 1:
+                raise ValueError(
+                    f"Branch '{branch_name}' must be scalar, got array of size {value.size}"
+                )
+            value = value.reshape(-1)[0]
+        elif hasattr(value, "__len__") and not isinstance(value, (str, bytes)):
+            try:
+                if len(value) == 1:
+                    value = value[0]
+            except TypeError:
+                # Some ROOT proxies define __len__ but are still scalar-like.
+                pass
+
+        try:
+            return np.int64(value)
+        except (TypeError, ValueError, OverflowError) as exc:
+            raise ValueError(
+                f"Cannot convert branch '{branch_name}' value {value!r} to int64"
+            ) from exc
     
     def plot_variables(self, x_var="adc", y_var="tdc_coarse", output_file=None):
         """Plot two variables from the TTree."""
@@ -20,14 +52,22 @@ class PMTAnalyzer:
             raise ValueError(f"Branch '{y_var}' not found in TTree")
         if not hasattr(self.tree, "channel"):
             raise ValueError("Branch 'channel' not found in TTree")
+        if not hasattr(self.tree, "pmt_time"):
+            raise ValueError("Branch 'pmt_time' not found in TTree")
+        if not hasattr(self.tree, "tdc_start"):
+            raise ValueError("Branch 'tdc_start' not found in TTree")
 
         if n_entries == 0:
             raise ValueError("No entries found in TTree")
 
+        # ADC:
         x_min = 0
         x_max = 4096
+
+        # time:
         y_min = 0
         y_max = 128 # 256e6
+        y_min, ymax = 0, 100
         """
         x_min = None
         x_max = None
@@ -101,7 +141,7 @@ class PMTAnalyzer:
         skipped_channels = 0
         for i in range(entriesToGoThrough):
             self.tree.GetEntry(i)
-            if i % 10000 == 0:
+            if i % 10 == 0:
                 print(f"Processing entry {i:1,}/{n_entries:,}...")
 
             channel = int(getattr(self.tree, "channel"))
@@ -109,8 +149,36 @@ class PMTAnalyzer:
                 skipped_channels += 1
                 continue
 
+            # TO FINISH:
+            #tot_ns = (self.tree.tdc_coarse - self.tree.tdc_start / 15.0 + self.tree.tdc_stop / 15.0) * 4.0
+
+            ### BAD: y_val = self.tree.pmt_time * 4 + self.tree.tdc_start * 0.25 # ns
+            
+            #print(f'pmt_time,pmt_time << 4: {self.tree.pmt_time}, {c_int64(1*self.tree.pmt_time).value << 4}')
+            #T = (c_int64(1*self.tree.pmt_time).value << 4) + self.tree.tdc_start
+
+            pmt_time_i64 = self._read_branch_int64(self.tree, "pmt_time")
+            tdc_start_i64 = self._read_branch_int64(self.tree, "tdc_start")
+            T = (pmt_time_i64 << np.int64(4)) + tdc_start_i64
+            
+            #pulser_freq_hz = 10000
+            #PERIOD_4NS = int((1.0 / pulser_freq_hz) / 4e-9)
+            # -----------------------------
+            # Measurement time from data
+            # -----------------------------
+            t_ns = T * 0.25
+            y_val = 1.*t_ns
+            
+            print(
+                "Entry {}: y_val = {}, tdc_start = {}, pmt_time = {}".format(
+                    i,
+                    y_val,
+                    int(tdc_start_i64),
+                    int(pmt_time_i64),
+                )
+            )
             x_val = float(getattr(self.tree, x_var))
-            y_val = float(getattr(self.tree, y_var))
+            #y_val = float(getattr(self.tree, y_var))
             h_x[channel].Fill(x_val)
             h_y[channel].Fill(y_val)
             h_xy[channel].Fill(x_val, y_val)

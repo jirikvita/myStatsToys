@@ -271,18 +271,11 @@ def main(argv):
 
     X_reshaped = np.expand_dims(X, axis=1)
 
-    # Step 2: Define the LSTM Feature Extractor
-    input_layer = Input(shape=(1, input_dim))  # Correct shape for LSTM input
-
-    # Define the LSTM layer with feature extraction (last timestep output)
-    lstm_out = LSTM(Nfeat, return_sequences=False)(input_layer)  # Nfeat-dimensional output
-
-    # Create the feature extractor model
+    # Build an end-to-end model so the LSTM feature extractor is trained by regression loss.
+    input_layer = Input(shape=(1, input_dim))
+    lstm_out = LSTM(Nfeat, return_sequences=False)(input_layer)
     feature_extractor = Model(inputs=input_layer, outputs=lstm_out)
-
-    # Step 3: Extract features from the input data
-    features = feature_extractor.predict(X_reshaped)  # Shape will be (num_samples, Nfeat)
-    print("Extracted features shape:", features.shape)
+    print("Planned extracted features shape:", (n_events, Nfeat))
 
 
     """
@@ -304,22 +297,22 @@ def main(argv):
     #####################
     # Build the model
     
-    model = Sequential()
-
     # activations: relu, sigmoid, linear
     # kernel_initializer=RandomNormal(mean=0.0, stddev=0.05), bias_initializer='zeros'
     #, input_shape=(32,)),
-    
+
     N1, N2, N3, N4 = 256, 128, 64, 32
-    model.add(Dense(N1, input_dim=Nfeat, activation='relu'))  # Input layer and first hidden layer
-    model.add(BatchNormalization())                           # batch normalization of the output
+    x = Dense(N1, activation='relu')(lstm_out)                # First hidden layer
+    x = BatchNormalization()(x)                               # Batch normalization of the output
     if N2 > 0:
-        model.add(Dense(N2, activation='relu'))               # Second hidden layer
+        x = Dense(N2, activation='relu')(x)                   # Second hidden layer
     if N3 > 0:
-        model.add(Dense(N3, activation='relu'))               # Third hidden layer
+        x = Dense(N3, activation='relu')(x)                   # Third hidden layer
     if N4 > 0:
-        model.add(Dense(N3, activation='relu'))               # Fourth hidden layer
-    model.add(Dense(2, activation='linear'))                  # Output layer (2 outputs, no activation for regression)
+        x = Dense(N4, activation='relu')(x)                   # Fourth hidden layer
+    output = Dense(2, activation='linear')(x)                 # Output layer (2 outputs, no activation for regression)
+
+    model = Model(inputs=input_layer, outputs=output)
 
     #####################
     # Compile the model
@@ -347,7 +340,7 @@ def main(argv):
 
     #####################
     # Train the model
-    model.fit(features, Y, epochs=epochs, batch_size=batch_size, validation_split=0.2)
+    model.fit(X_reshaped, Y, epochs=epochs, batch_size=batch_size, validation_split=0.2)
     print('Done training!')
     #print('Printing the model...')
     #printWeights(model)
@@ -358,7 +351,7 @@ def main(argv):
 
     ##########################################
     # Plot performance on the train datase:
-    train_predictedY = model.predict(features)
+    train_predictedY = model.predict(X_reshaped)
     plotBias(train_predictedY, Y, tag = mtag + '_train')
     
     ##########################################
@@ -369,9 +362,7 @@ def main(argv):
     print(f'Read test events  : {len(testX)}')
     
     testX_reshaped = np.expand_dims(testX, axis=1)
-    testfeatures = feature_extractor.predict(testX_reshaped)
-
-    predictedY = model.predict(testfeatures)
+    predictedY = model.predict(testX_reshaped)
     print(f"Predicted output: {predictedY}")
 
     # save
