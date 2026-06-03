@@ -2,6 +2,7 @@
 
 # jk 24.9.2024
 
+import os
 import matplotlib.pyplot as plt
 
 
@@ -9,7 +10,10 @@ import matplotlib.pyplot as plt
 def passedMinSignal(Traces, minSignal):
     maxs = []
     for trace in Traces:
-        maxs.append(max(trace))
+        if len(trace) > 0:
+            maxs.append(max(trace))
+    if len(maxs) == 0:
+        return False
     Max = max(maxs)
     return Max >= minSignal
 
@@ -30,6 +34,9 @@ def plotMetaHistos(MetaData):
         coreY.append(mtd['Corey'])
         azimuth.append(mtd['Azimuth'])
         zenith.append(mtd['Zenith'])
+
+    if len(logE) == 0:
+        return
 
     # Create a figure with 1 row and 2 columns of subplots
     plt.figure(figsize=(9, 9))
@@ -62,7 +69,8 @@ def plotMetaHistos(MetaData):
     plt.xlim(0, 90)
     plt.ylim(-180, 180)
 
-    plt.show()
+    if os.environ.get('HOSTNAME', '') != 'zubr':
+        plt.show()
     
     return
 
@@ -84,14 +92,24 @@ def parseMetaData(tokens):
 #####################################################################
 def readData(infname, i1 = 0, i2 = -1, **kwargs):
     restrictions = {}
+    mode = 'normal'
     debug = 0
-    verb = 1000
+    verb = 100
     if 'restrictions' in kwargs:
         restrictions = kwargs['restrictions']
+    if 'mode' in kwargs:
+        mode = kwargs['mode']
     if 'debug' in kwargs:
         debug = kwargs['debug']
     if 'verb' in kwargs:
         verb = kwargs['verb']
+
+    # Convenience mode switch for common logging setup.
+    if mode == 'debug':
+        if 'debug' not in kwargs:
+            debug = 1
+        if 'verb' not in kwargs:
+            verb = 100
     skip=''
     if 'skip' in kwargs:
         skip = kwargs['skip']
@@ -107,6 +125,8 @@ def readData(infname, i1 = 0, i2 = -1, **kwargs):
     if len(restrictions) > 0:
         print('Got non-trivial restrictions:')
         print(restrictions)
+    else:   
+        print('No restrictions on shower parameters.')
     
     infile = open(infname, 'r')
     ievt = -1
@@ -115,7 +135,8 @@ def readData(infname, i1 = 0, i2 = -1, **kwargs):
     ipix = 0
     Data = []
     Traces = []
-
+    nEventsTotal = 0
+    
     if skip == 'odd' and ievt % 2 == 1:
         print('Will read odd events only!')
     if skip == 'even' and ievt % 2 == 0:
@@ -129,7 +150,8 @@ def readData(infname, i1 = 0, i2 = -1, **kwargs):
         line = xline[:-1]
 
         if 'Evt' in line:
-
+            nEventsTotal = nEventsTotal + 1
+            
             # store event till now:
             if len(metaData) > 0:
                 # but first check whether shower parameters are within requirements;)
@@ -154,8 +176,8 @@ def readData(infname, i1 = 0, i2 = -1, **kwargs):
                         except:
                             print('error converting metadata {varname} value {strcurrval} to float...')
                         GoOnBasedOnAllVars = GoOnBasedOnAllVars and shouldContinueSingleVar
-                        if not GoOnBasedOnAllVars:
-                            break
+                        #if not GoOnBasedOnAllVars:
+                        #    break
                     if not GoOnBasedOnAllVars:
                         if debug > 0:
                             print('SKIPPING event based on required variables')
@@ -163,8 +185,8 @@ def readData(infname, i1 = 0, i2 = -1, **kwargs):
                         continue # the reading to next event
                     
                     # end of requirements check; NOT TESTED YET
-                if debug > 0:
-                    print('ACCEPTING event based on required variables')
+                if debug > 0 and ievt % verb == 0:
+                    print(f"ACCEPTING event based on required variables: logE={metaData.get('logE', 'N/A')}")
                 if len(metaData) < 1:
                     continue
                 # here store event till now:
@@ -222,9 +244,14 @@ def readData(infname, i1 = 0, i2 = -1, **kwargs):
             if len(tokens) > 1:
                 spixevt,xtrace = tokens[0], tokens[1]
                 #print(f'spixevt: "{spixevt}"')
-                spix = spixevt.split('/')[0]
-                sevt = spixevt.split('/')[1]
-                thisevt = int(sevt)
+                parts = spixevt.split('/')
+                if len(parts) >= 2:
+                    spix, sevt = parts[0], parts[1]
+                    thisevt = int(sevt)
+                else:
+                    # Support files that encode only pixel id in the trace header.
+                    spix = spixevt
+                    thisevt = evt
                 
                 if thisevt != evt:
                     print(f'ERROR! Non-matching metadata evt {evt} and as in pixel trace: {thisevt}')
@@ -248,6 +275,9 @@ def readData(infname, i1 = 0, i2 = -1, **kwargs):
                 Traces.append(trace)
   
     infile.close()
+
+    print(f'Total events read from ascii: {nEventsTotal}')
+    print(f'Accepted events: {len(Data)}')
 
     if plotmetahistos:
         plotMetaHistos(MetaData)
