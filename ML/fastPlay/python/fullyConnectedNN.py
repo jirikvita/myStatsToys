@@ -55,8 +55,10 @@ def parse_maxima_only_mode(argv):
 
 
 def should_show_plots():
-    if BATCH_MODE:
+    if os.environ.get('NN_SHOW_PLOTS', '0') == '1':
         return True
+    if BATCH_MODE:
+        return False
     hostname = os.environ.get('HOSTNAME', '')
     return hostname != 'zubr'
 
@@ -471,7 +473,7 @@ def main(argv):
 
     # No event-level cuts at read-in: keep all events that parse correctly.
     minSignal = -1
-    trace_max_cut = 0.
+    trace_max_cut = 7.
     
     # central vals and sigma around them to accept
     restrictions = {}
