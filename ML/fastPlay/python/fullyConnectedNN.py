@@ -46,12 +46,6 @@ def parse_batch_mode(argv):
     return True
 
 
-def parse_plot_central_scatters(argv):
-    if ('--no-central-scatters' in argv) or ('--no-central-scatter' in argv):
-        return False
-    return True
-
-
 def parse_maxima_only_mode(argv):
     if ('--maxima-only' in argv):
         return True
@@ -193,29 +187,25 @@ def plotBias(predictedY,trueY, **kwargs):
         'xmaxBias' : xmaxBias,
         'xmaxPred' : xmaxPreds 
     })
-    #cut_bins = [-5, -0.1, 0.1, 5]
-    #df['EbCuts'] = pd.cut(df['eBias'], bins=cut_bins, labels=['Low', 'Cenral', 'High'])
-    #df['XbCuts'] = pd.cut(df['xmaxBias'], bins=cut_bins, labels=['Low', 'Cenral', 'High'])
-    delta = 0.05
-    df_EbCuts = df[ (df['eBias']    > -delta) & (df['eBias']    < delta) ]
-    df_XbCuts = df[ (df['xmaxBias'] > -delta) & (df['xmaxBias'] < delta) ]
-
     n_events = max(1, len(eTrues))
     # Keep dense scatters readable by scaling alpha with sample size.
     scatter_alpha = min(max(0.01, 2000.0 / float(n_events)), 0.8)
+
+    corr_e = float(np.corrcoef(eTrues, ePreds)[0, 1]) if len(eTrues) > 1 else float('nan')
+    corr_x = float(np.corrcoef(xmaxTrues, xmaxPreds)[0, 1]) if len(xmaxTrues) > 1 else float('nan')
     
     
     # Create a figure with 1 row and 2 columns of subplots
-    plt.figure(figsize=(12, 9))
+    plt.figure(figsize=(10, 8))
     
     # First subplot (left)
-    plt.subplot(2, 3, 1)  # 1 row, 2 columns, 1st subplot
+    plt.subplot(2, 2, 1)
     plt.hist(eBias, bins=25, color='red', alpha=0.7)
     #plt.title('logE bias')
     plt.xlabel(r'logE: (predicted-true)/true')
     
     # Second subplot (right)
-    plt.subplot(2, 3, 4)  # 1 row, 2 columns, 2nd subplot
+    plt.subplot(2, 2, 3)
     plt.hist(xmaxBias, bins=25, color='blue', alpha=0.7)
     #plt.title('Xmax bias')
     plt.xlabel(r'$X_{max}$: (predicted-true)/true')
@@ -224,7 +214,7 @@ def plotBias(predictedY,trueY, **kwargs):
     plt.subplots_adjust(bottom=0.1)
     plt.subplots_adjust(left=0.1)
 
-    plt.subplot(2, 3, 2)
+    plt.subplot(2, 2, 2)
     plt.scatter(eTrues, ePreds, c='red', s=5, alpha=scatter_alpha)
     plt.plot([16, 21], [16, 21], 'k--', linewidth=1)
     plt.xlabel('true logE')
@@ -235,10 +225,9 @@ def plotBias(predictedY,trueY, **kwargs):
     plt.subplots_adjust(bottom=0.1)
     plt.subplots_adjust(left=0.1)
     #plt.tight_layout()
-    corre = np.corrcoef(eTrues, ePreds)
-    print(f'E correlation factor: {corre}')
+    print(f'E correlation factor: {corr_e:.2f}')
     
-    plt.subplot(2, 3, 5)
+    plt.subplot(2, 2, 4)
     plt.scatter(xmaxTrues, xmaxPreds, c='blue', s=5, alpha=scatter_alpha)
     plt.plot([150, 1200], [150, 1200], 'k--', linewidth=1)
     plt.xlabel(r'true $X_{max}$')
@@ -247,8 +236,7 @@ def plotBias(predictedY,trueY, **kwargs):
     plt.xlim(150, 1200)
     plt.ylim(150, 1200)
     plt.subplots_adjust(bottom=0.1)
-    corrx = np.corrcoef(xmaxTrues, xmaxPreds)
-    print(f'Xmax correlation factor: {corrx}')
+    print(f'Xmax correlation factor: {corr_x:.2f}')
 
     #plt.subplots_adjust()
     #plt.tight_layout()
@@ -258,59 +246,36 @@ def plotBias(predictedY,trueY, **kwargs):
     if 'tag' in kwargs:
         tag = kwargs['tag']
     subset_label = kwargs.get('subset_label', '').strip().upper()
-    central_scatters = kwargs.get('plot_central_scatters', True)
+    trace_max_cut = kwargs.get('trace_max_cut', None)
     subset_prefix = f'{subset_label} ' if subset_label else ''
+    if trace_max_cut is None:
+        cut_suffix = ' | amp cut: none'
+    else:
+        cut_suffix = f' | amp cut >= {float(trace_max_cut):.2f}'
 
     print(f'Plotting bias summary panels for tag "{tag}" on {len(eTrues)} events:')
     print('- logE bias histogram')
     print('- Xmax bias histogram')
     print('- logE true vs predicted scatter')
     print('- Xmax true vs predicted scatter')
-    if central_scatters:
-        print('- logE scatter in central Xmax-bias slice')
-        print('- Xmax scatter in central logE-bias slice')
-    else:
-        print('- central-bias scatter panels disabled by option')
 
-    plt.subplot(2, 3, 1)
+    plt.subplot(2, 2, 1)
     plt.title(f'{subset_prefix}logE bias')
-    plt.subplot(2, 3, 4)
+    plt.subplot(2, 2, 3)
     plt.title(f'{subset_prefix}Xmax bias')
-    plt.subplot(2, 3, 2)
-    plt.title(f'{subset_prefix}logE true vs predicted')
-    plt.subplot(2, 3, 5)
-    plt.title(f'{subset_prefix}Xmax true vs predicted')
-
-    plt.subplot(2, 3, 3)
-    if central_scatters:
-        plt.scatter(df_XbCuts['eTrue'], df_XbCuts['ePred'], c='red', s=5, alpha=scatter_alpha)
-        #plt.colorbar(label='Bins')
-        plt.xlim(16, 21)
-        plt.ylim(16, 21)
-        plt.title(f'{subset_prefix}logE in central Xmax bias')
-    else:
-        plt.axis('off')
-        plt.title(f'{subset_prefix}central Xmax-bias scatter disabled')
-
-    plt.subplot(2, 3, 6)
-    if central_scatters:
-        plt.scatter(df_EbCuts['xmaxTrue'], df_EbCuts['xmaxPred'], c='blue', s=5, alpha=scatter_alpha)
-        #plt.colorbar(label='Bins')
-        plt.xlim(150, 1200)
-        plt.ylim(150, 1200)
-        plt.title(f'{subset_prefix}Xmax in central logE bias')
-    else:
-        plt.axis('off')
-        plt.title(f'{subset_prefix}central logE-bias scatter disabled')
+    plt.subplot(2, 2, 2)
+    plt.title(f'{subset_prefix}logE true vs predicted (corr={corr_e:.2f}){cut_suffix}')
+    plt.subplot(2, 2, 4)
+    plt.title(f'{subset_prefix}Xmax true vs predicted (corr={corr_x:.2f}){cut_suffix}')
     
     plt.savefig(f'biases{tag}.png')
     plt.savefig(f'biases{tag}.pdf')
     print(f'Saved bias plots: biases{tag}.png and biases{tag}.pdf')
 
     print(f'Plotting 2D-histogram versions of scatter panels for tag "{tag}" (50x50 bins, rainbow palette).')
-    fig2 = plt.figure(figsize=(12, 10))
+    fig2 = plt.figure(figsize=(12, 5))
 
-    ax = fig2.add_subplot(2, 2, 1)
+    ax = fig2.add_subplot(1, 2, 1)
     h = ax.hist2d(eTrues, ePreds, bins=(50, 50), range=[[16, 21], [16, 21]], cmap='rainbow')
     fig2.colorbar(h[3], ax=ax)
     ax.plot([16, 21], [16, 21], 'k--', linewidth=1)
@@ -318,9 +283,9 @@ def plotBias(predictedY,trueY, **kwargs):
     ax.set_ylim(16, 21)
     ax.set_xlabel('true logE')
     ax.set_ylabel('predicted logE')
-    ax.set_title(f'{subset_prefix}logE true vs predicted (2D hist)')
+    ax.set_title(f'{subset_prefix}logE true vs predicted (corr={corr_e:.2f}){cut_suffix}')
 
-    ax = fig2.add_subplot(2, 2, 2)
+    ax = fig2.add_subplot(1, 2, 2)
     h = ax.hist2d(xmaxTrues, xmaxPreds, bins=(50, 50), range=[[150, 1200], [150, 1200]], cmap='rainbow')
     fig2.colorbar(h[3], ax=ax)
     ax.plot([150, 1200], [150, 1200], 'k--', linewidth=1)
@@ -328,33 +293,7 @@ def plotBias(predictedY,trueY, **kwargs):
     ax.set_ylim(150, 1200)
     ax.set_xlabel(r'true $X_{max}$')
     ax.set_ylabel(r'predicted $X_{max}$')
-    ax.set_title(f'{subset_prefix}Xmax true vs predicted (2D hist)')
-
-    ax = fig2.add_subplot(2, 2, 3)
-    if central_scatters:
-        h = ax.hist2d(df_XbCuts['eTrue'], df_XbCuts['ePred'], bins=(50, 50), range=[[16, 21], [16, 21]], cmap='rainbow')
-        fig2.colorbar(h[3], ax=ax)
-        ax.set_xlim(16, 21)
-        ax.set_ylim(16, 21)
-        ax.set_xlabel('true logE')
-        ax.set_ylabel('predicted logE')
-        ax.set_title(f'{subset_prefix}logE in central Xmax bias (2D hist)')
-    else:
-        ax.axis('off')
-        ax.set_title(f'{subset_prefix}central Xmax-bias scatter disabled')
-
-    ax = fig2.add_subplot(2, 2, 4)
-    if central_scatters:
-        h = ax.hist2d(df_EbCuts['xmaxTrue'], df_EbCuts['xmaxPred'], bins=(50, 50), range=[[150, 1200], [150, 1200]], cmap='rainbow')
-        fig2.colorbar(h[3], ax=ax)
-        ax.set_xlim(150, 1200)
-        ax.set_ylim(150, 1200)
-        ax.set_xlabel(r'true $X_{max}$')
-        ax.set_ylabel(r'predicted $X_{max}$')
-        ax.set_title(f'{subset_prefix}Xmax in central logE bias (2D hist)')
-    else:
-        ax.axis('off')
-        ax.set_title(f'{subset_prefix}central logE-bias scatter disabled')
+    ax.set_title(f'{subset_prefix}Xmax true vs predicted (corr={corr_x:.2f}){cut_suffix}')
 
     fig2.tight_layout()
     fig2.savefig(f'biases_scatter2d{tag}.png')
@@ -462,10 +401,8 @@ def ReadAndParseData(infname, i1, i2, **kwargs):
             f'event_trace_max_before_cut{trace_max_hist_tag}.png and '
             f'event_trace_max_before_cut{trace_max_hist_tag}.pdf'
         )
-        if should_show_plots():
-            plt.show()
-        else:
-            plt.close()
+        # Save-only mode for amplitude histogram: do not open GUI windows.
+        plt.close()
 
     if trace_max_cut is not None:
         print(f'Applied event trace-max cut: event_max >= {trace_max_cut}')
@@ -526,17 +463,15 @@ class EveryNEpochLogger(Callback):
 def main(argv):
     global BATCH_MODE
     BATCH_MODE = parse_batch_mode(argv)
-    plot_central_scatters = parse_plot_central_scatters(argv)
     maxima_only_mode = parse_maxima_only_mode(argv)
     print(f'Batch mode: {BATCH_MODE} (default on; use --no-batch or --interactive to disable)')
-    print(f'Central-bias scatter panels: {plot_central_scatters} (use --no-central-scatters to disable)')
     print('Maxima-only mode: '
           f'{maxima_only_mode} '
             '(default off; use --maxima-only to save maxima artifacts and exit early)')
 
     # No event-level cuts at read-in: keep all events that parse correctly.
     minSignal = -1
-    trace_max_cut = 2.5
+    trace_max_cut = 0.
     
     # central vals and sigma around them to accept
     restrictions = {}
@@ -565,8 +500,8 @@ def main(argv):
     i2 = -1
     debug = 0
     verb = 1000
-    plot_meta_histos = should_show_plots()
-    print(f'Metadata plots enabled: {plot_meta_histos}')
+    plot_meta_histos = True
+    print('Metadata shower-parameter 2D figures: always generated and saved')
     X, Y = ReadAndParseData(infname, i1, i2, debug=debug, verb=verb,
                             plotmetahistos=plot_meta_histos, skip='', minSignal=minSignal,
                             restrictions=restrictions,
@@ -735,7 +670,14 @@ def main(argv):
     #printWeights(model)
     
     print('Going to test the trained model...')
-    results_tag = f'neurons_{N1}_{N2}_{N3}_{N4}_lr_{slearning_rate}_bs_{batch_size}'
+    if trace_max_cut is None:
+        trace_cut_tag = 'none'
+    else:
+        trace_cut_tag = str(trace_max_cut).replace('.', 'p')
+    results_tag = (
+        f'neurons_{N1}_{N2}_{N3}_{N4}_lr_{slearning_rate}_bs_{batch_size}'
+        f'_traceMaxCut_{trace_cut_tag}'
+    )
     results_dir = Path('results') / results_tag
     results_dir.mkdir(parents=True, exist_ok=True)
 
@@ -766,7 +708,7 @@ def main(argv):
     print('Plotting TRAIN performance diagnostics (bias/scatter panels)...')
     train_predictedY_std = model.predict(trainX_reshaped)
     train_predictedY = train_predictedY_std * y_std_safe + y_mean
-    plotBias(train_predictedY, trainY_raw, tag = mtag + '_train', subset_label='train', plot_central_scatters=plot_central_scatters)
+    plotBias(train_predictedY, trainY_raw, tag = mtag + '_train', subset_label='train', trace_max_cut=trace_max_cut)
     
     ##########################################
     # Predict on held-out test split sampled from the full read dataset.
@@ -787,12 +729,14 @@ def main(argv):
     # model = load_model('model.keras')
 
     print('Plotting TEST performance diagnostics (bias/scatter panels)...')
-    plotBias(predictedY, trueY_raw, tag = mtag + '_test', subset_label='test', plot_central_scatters=plot_central_scatters)
+    plotBias(predictedY, trueY_raw, tag = mtag + '_test', subset_label='test', trace_max_cut=trace_max_cut)
 
     # Move run outputs into results/<neurons+lr+bs-tag>/
     artifact_patterns = [
         f'biases{mtag}_*.png',
         f'biases{mtag}_*.pdf',
+        f'biases_scatter2d{mtag}_*.png',
+        f'biases_scatter2d{mtag}_*.pdf',
         f'weights2d_*{mtag}.png',
         f'weights2d_*{mtag}.pdf',
         f'biases2d_*{mtag}.png',

@@ -69,8 +69,15 @@ def plotMetaHistos(MetaData):
     plt.xlim(0, 90)
     plt.ylim(-180, 180)
 
-    if os.environ.get('HOSTNAME', '') != 'zubr':
-        plt.show()
+    plt.tight_layout()
+    out_png = 'selected_shower_params_2d.png'
+    out_pdf = 'selected_shower_params_2d.pdf'
+    plt.savefig(out_png)
+    plt.savefig(out_pdf)
+    print(f'Saved shower-parameter 2D figures: {out_png} and {out_pdf}')
+
+    # Save-only mode for metadata plots: do not open GUI windows.
+    plt.close()
     
     return
 
