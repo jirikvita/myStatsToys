@@ -87,6 +87,12 @@ def parse_args() -> argparse.Namespace:
 		action="store_true",
 		help="Disable default zoom and show full time range in rate plots",
 	)
+	parser.add_argument(
+		"--pairwise-alpha",
+		type=float,
+		default=0.35,
+		help="Alpha transparency for pairwise channel-correlation scatter points",
+	)
 	return parser.parse_args()
 
 
@@ -249,6 +255,83 @@ def _moving_average(values: list[float], window: int) -> list[float]:
 		total = prefix[end] - prefix[start]
 		out.append(total / (end - start))
 	return out
+
+
+def _series_to_timestamp_map(points: list[tuple[datetime, float]]) -> dict[datetime, float]:
+	return {timestamp: value for timestamp, value in points}
+
+
+def plot_pairwise_scatter_grid(
+	out_png: Path,
+	series: dict[int, tuple[list[datetime], list[float]]],
+	log_scale: bool,
+	max_rate_hz: float,
+	pairwise_alpha: float,
+) -> None:
+	out_png.parent.mkdir(parents=True, exist_ok=True)
+
+	channels = list(range(1, 7))
+	pairs: list[tuple[int, int, list[float], list[float]]] = []
+
+	for i, ch_x in enumerate(channels):
+		for ch_y in channels[i + 1 :]:
+			map_x = _series_to_timestamp_map(list(zip(series[ch_x][0], series[ch_x][1], strict=True)))
+			map_y = _series_to_timestamp_map(list(zip(series[ch_y][0], series[ch_y][1], strict=True)))
+			common_ts = sorted(set(map_x.keys()) & set(map_y.keys()))
+
+			x_vals = [map_x[ts] for ts in common_ts]
+			y_vals = [map_y[ts] for ts in common_ts]
+
+			if x_vals and y_vals:
+				pairs.append((ch_x, ch_y, x_vals, y_vals))
+
+	if not pairs:
+		raise RuntimeError("No overlapping timestamp data for pairwise channel-correlation plots.")
+
+	n_pairs = len(pairs)
+	n_cols = min(4, n_pairs)
+	n_rows = math.ceil(n_pairs / n_cols)
+
+	fig, axes = plt.subplots(n_rows, n_cols, figsize=(4.2 * n_cols, 3.8 * n_rows), squeeze=False)
+	palette = plt.cm.get_cmap("tab20", max(1, n_pairs))
+
+	pairwise_alpha = max(0.0, min(1.0, pairwise_alpha))
+	xy_max = math.log1p(max_rate_hz) if log_scale else max_rate_hz
+	xy_min = 5.0 if log_scale else 0.0
+	xlabel_prefix = "log(1 + " if log_scale else ""
+	xlabel_suffix = ")" if log_scale else ""
+
+	for idx, (ch_x, ch_y, x_vals, y_vals) in enumerate(pairs):
+		row = idx // n_cols
+		col = idx % n_cols
+		ax = axes[row][col]
+
+		x_vals_plot = [math.log1p(v) for v in x_vals] if log_scale else x_vals
+		y_vals_plot = [math.log1p(v) for v in y_vals] if log_scale else y_vals
+
+		ax.scatter(
+			x_vals_plot,
+			y_vals_plot,
+			s=10,
+			alpha=pairwise_alpha,
+			color=palette(idx),
+		)
+		ax.set_title(f"CH{ch_x} vs CH{ch_y}")
+		ax.set_xlabel(f"{xlabel_prefix}CH{ch_x} rate_hz{xlabel_suffix}")
+		ax.set_ylabel(f"{xlabel_prefix}CH{ch_y} rate_hz{xlabel_suffix}")
+		ax.set_xlim(xy_min, xy_max)
+		ax.set_ylim(xy_min, xy_max)
+		ax.grid(True, linestyle="--", alpha=0.35)
+
+	for idx in range(n_pairs, n_rows * n_cols):
+		row = idx // n_cols
+		col = idx % n_cols
+		axes[row][col].axis("off")
+
+	title_prefix = "log(1 + rate_hz)" if log_scale else "rate_hz"
+	fig.suptitle(f"Pairwise Channel Correlations ({title_prefix})", y=1.02)
+	fig.tight_layout()
+	fig.savefig(out_png, dpi=180, bbox_inches="tight")
 
 
 def plot_rates(
@@ -466,6 +549,7 @@ def main() -> None:
 	rates_avg_png = args.outdir / f"rate_channels_1_to_6_avg20{png_suffix}.png"
 	summary_csv = args.outdir / "rate_channels_1_to_6_summary.csv"
 	peak_dt_png = args.outdir / f"rate_channels_1_to_6_peak_dt_hist{png_suffix}.png"
+	pairwise_png = args.outdir / f"rate_channels_1_to_6_pairwise_scatter{png_suffix}.png"
 	plot_rates(
 		rates_png,
 		analysis_series,
@@ -487,6 +571,13 @@ def main() -> None:
 		threshold=args.peak_threshold,
 		bins=args.peak_dt_bins,
 	)
+	plot_pairwise_scatter_grid(
+		pairwise_png,
+		analysis_series,
+		log_scale=args.log_scale,
+		max_rate_hz=args.max_rate,
+		pairwise_alpha=args.pairwise_alpha,
+	)
 	write_summary_csv(summary_csv, analysis_series)
 
 	print(f"Saved plot: {rates_png}")
@@ -496,6 +587,7 @@ def main() -> None:
 	elif not args.full_range:
 		print("Default zoom unavailable (no trailing all-positive interval found); using full range.")
 	print(f"Saved peak dt histogram: {peak_dt_png}")
+	print(f"Saved pairwise scatter grid: {pairwise_png}")
 	print(f"Saved summary: {summary_csv}")
 
 	plt.show()

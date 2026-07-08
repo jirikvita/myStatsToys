@@ -110,6 +110,7 @@ def plot_pairwise_scatter_grid(series: dict[str, list[tuple[datetime, float]]], 
 	n_rows = math.ceil(n_pairs / n_cols)
 
 	fig, axes = plt.subplots(n_rows, n_cols, figsize=(4.2 * n_cols, 3.8 * n_rows), squeeze=False)
+	palette = plt.cm.get_cmap("tab20", max(1, n_pairs))
 
 	for idx, (ch_x, ch_y, x_vals, y_vals) in enumerate(pairs):
 		row = idx // n_cols
@@ -117,7 +118,13 @@ def plot_pairwise_scatter_grid(series: dict[str, list[tuple[datetime, float]]], 
 		ax = axes[row][col]
 		x_vals_log = [math.log1p(v) for v in x_vals]
 		y_vals_log = [math.log1p(v) for v in y_vals]
-		ax.scatter(x_vals_log, y_vals_log, s=10, alpha=0.4)
+		ax.scatter(
+			x_vals_log,
+			y_vals_log,
+			s=10,
+			alpha=0.45,
+			color=palette(idx),
+		)
 		ax.set_title(f"Ch {ch_x} vs Ch {ch_y}")
 		ax.set_xlabel(f"log(1 + Ch {ch_x} r_mon [Hz])")
 		ax.set_ylabel(f"log(1 + Ch {ch_y} r_mon [Hz])")
