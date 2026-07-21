@@ -30,16 +30,24 @@ def parse_args() -> argparse.Namespace:
 		description="Analyze and plot channel rates from monitor SQLite data"
 	)
 	parser.add_argument(
-		"--db",
+		"db",
+		nargs="?",
 		type=Path,
 		default=Path("Sqlite/20260707/158.194.88.101_monitor.sqlite"),
-		help="Path to monitor SQLite DB",
+		help="Path to monitor SQLite DB (first positional argument)",
+	)
+	parser.add_argument(
+		"--db",
+		dest="db_override",
+		type=Path,
+		default=None,
+		help="Path to monitor SQLite DB (overrides positional db)",
 	)
 	parser.add_argument(
 		"--outdir",
 		type=Path,
-		default=Path("plots/20260707"),
-		help="Directory where figures and summary CSV are written",
+		default=None,
+		help="Directory where figures and summary CSV are written (default: SQLite file directory)",
 	)
 	parser.add_argument(
 		"--start",
@@ -92,6 +100,15 @@ def parse_args() -> argparse.Namespace:
 		type=float,
 		default=0.35,
 		help="Alpha transparency for pairwise channel-correlation scatter points",
+	)
+	parser.add_argument(
+		"--scatter-max",
+		type=float,
+		default=3_000.0,
+		help=(
+			"Upper axis limit [Hz] for pairwise scatter plots. "
+			"When --log-scale is set the limit is recomputed as log(1 + scatter_max) automatically."
+		),
 	)
 	return parser.parse_args()
 
@@ -261,11 +278,12 @@ def _series_to_timestamp_map(points: list[tuple[datetime, float]]) -> dict[datet
 	return {timestamp: value for timestamp, value in points}
 
 
+
 def plot_pairwise_scatter_grid(
 	out_png: Path,
 	series: dict[int, tuple[list[datetime], list[float]]],
 	log_scale: bool,
-	max_rate_hz: float,
+	scatter_max: float,
 	pairwise_alpha: float,
 ) -> None:
 	out_png.parent.mkdir(parents=True, exist_ok=True)
@@ -296,7 +314,7 @@ def plot_pairwise_scatter_grid(
 	palette = plt.cm.get_cmap("tab20", max(1, n_pairs))
 
 	pairwise_alpha = max(0.0, min(1.0, pairwise_alpha))
-	xy_max = math.log1p(max_rate_hz) if log_scale else max_rate_hz
+	xy_max = math.log1p(scatter_max) if log_scale else scatter_max
 	xy_min = 5.0 if log_scale else 0.0
 	xlabel_prefix = "log(1 + " if log_scale else ""
 	xlabel_suffix = ")" if log_scale else ""
@@ -309,13 +327,20 @@ def plot_pairwise_scatter_grid(
 		x_vals_plot = [math.log1p(v) for v in x_vals] if log_scale else x_vals
 		y_vals_plot = [math.log1p(v) for v in y_vals] if log_scale else y_vals
 
-		ax.scatter(
-			x_vals_plot,
-			y_vals_plot,
-			s=10,
-			alpha=pairwise_alpha,
-			color=palette(idx),
-		)
+		outlier_mask = [x > scatter_max or y > scatter_max for x, y in zip(x_vals, y_vals)]
+		inl_x = [v for v, m in zip(x_vals_plot, outlier_mask) if not m]
+		inl_y = [v for v, m in zip(y_vals_plot, outlier_mask) if not m]
+		# clamp each outlier coordinate independently to xy_max so the point lands
+		# at the correct position on the in-range axis and at the edge on the
+		# out-of-range axis; clip_on=False draws the full marker at the boundary
+		out_x = [min(v, xy_max) for v, m in zip(x_vals_plot, outlier_mask) if m]
+		out_y = [min(v, xy_max) for v, m in zip(y_vals_plot, outlier_mask) if m]
+		color = palette(idx)[:3]
+		if inl_x:
+			ax.scatter(inl_x, inl_y, s=10, alpha=pairwise_alpha, color=color)
+		if out_x:
+			ax.scatter(out_x, out_y, s=18, alpha=1.0, color=color,
+					   edgecolors="black", linewidths=0.5, clip_on=False, zorder=5)
 		ax.set_title(f"CH{ch_x} vs CH{ch_y}")
 		ax.set_xlabel(f"{xlabel_prefix}CH{ch_x} rate_hz{xlabel_suffix}")
 		ax.set_ylabel(f"{xlabel_prefix}CH{ch_y} rate_hz{xlabel_suffix}")
@@ -526,11 +551,16 @@ def print_summary(series: dict[int, tuple[list[datetime], list[float]]]) -> None
 def main() -> None:
 	args = parse_args()
 	channels = (1, 2, 3, 4, 5, 6)
+	db_path = args.db_override if args.db_override is not None else args.db
+	outdir = args.outdir if args.outdir is not None else db_path.parent
+
+	print(f"Reading and analyzing SQLite file: {db_path.resolve()}")
+	print(f"Saving output files to: {outdir.resolve()}")
 
 	start = parse_timestamp(args.start)
 	end = parse_timestamp(args.end)
 
-	readings = load_readings(args.db, channels, start, end)
+	readings = load_readings(db_path, channels, start, end)
 	if not readings:
 		raise SystemExit("No readings found for channels 1..6 in the selected range")
 
@@ -545,11 +575,11 @@ def main() -> None:
 	print_summary(analysis_series)
 
 	png_suffix = "_logy" if args.log_scale else ""
-	rates_png = args.outdir / f"rate_channels_1_to_6{png_suffix}.png"
-	rates_avg_png = args.outdir / f"rate_channels_1_to_6_avg20{png_suffix}.png"
-	summary_csv = args.outdir / "rate_channels_1_to_6_summary.csv"
-	peak_dt_png = args.outdir / f"rate_channels_1_to_6_peak_dt_hist{png_suffix}.png"
-	pairwise_png = args.outdir / f"rate_channels_1_to_6_pairwise_scatter{png_suffix}.png"
+	rates_png = outdir / f"rate_channels_1_to_6{png_suffix}.png"
+	rates_avg_png = outdir / f"rate_channels_1_to_6_avg20{png_suffix}.png"
+	summary_csv = outdir / "rate_channels_1_to_6_summary.csv"
+	peak_dt_png = outdir / f"rate_channels_1_to_6_peak_dt_hist{png_suffix}.png"
+	pairwise_png = outdir / f"rate_channels_1_to_6_pairwise_scatter{png_suffix}.png"
 	plot_rates(
 		rates_png,
 		analysis_series,
@@ -575,7 +605,7 @@ def main() -> None:
 		pairwise_png,
 		analysis_series,
 		log_scale=args.log_scale,
-		max_rate_hz=args.max_rate,
+		scatter_max=args.scatter_max,
 		pairwise_alpha=args.pairwise_alpha,
 	)
 	write_summary_csv(summary_csv, analysis_series)
