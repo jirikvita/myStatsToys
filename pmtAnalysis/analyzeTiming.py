@@ -734,7 +734,13 @@ def run_exit_gui() -> None:
         return
 
     root.title("PMT Analysis")
-    root.geometry("320x140")
+    window_width = 320
+    window_height = 140
+    margin = 20
+    screen_width = root.winfo_screenwidth()
+    x_pos = max(0, screen_width - window_width - margin)
+    y_pos = margin
+    root.geometry(f"{window_width}x{window_height}+{x_pos}+{y_pos}")
 
     label = tk.Label(root, text="Plots are running. Click Exit to close everything.")
     label.pack(pady=12)
