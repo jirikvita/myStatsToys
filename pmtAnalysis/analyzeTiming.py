@@ -3,8 +3,9 @@
 
 For each channel found in the tree, this script produces:
   - an ADC histogram,
+    - a pedestal-corrected ADC histogram,
   - a measurement-time histogram (pulses vs. time within the run),
-  - a time-vs-ADC 2D histogram.
+    - a pedestal-corrected time-vs-ADC 2D histogram.
 
 The per-pulse measurement time is reconstructed from the raw TDC branches:
 
@@ -28,6 +29,11 @@ from matplotlib.colors import LogNorm
 from scipy.optimize import curve_fit
 import uproot
 
+try:
+    import tkinter as tk
+except ImportError:
+    tk = None
+
 DEFAULT_INPUT = "1pe_measurement/28cm/test_run_thr30_att825_20260629_141522.root"
 TREE_NAME = "pmt_events"
 
@@ -35,9 +41,18 @@ TREE_NAME = "pmt_events"
 # different setting.
 PULSER_FREQ_HZ = 10_000
 
+# Time unit used for the timing plots (the measurement-time histogram and the
+# time-vs-ADC 2D histogram): "ns" (nanoseconds, raw time resolution) or "s"
+# (seconds, i.e. measurement_time_s). Override with --time-unit.
+DEFAULT_TIME_UNIT = "s"
+
 # ADC axis limits used for both the 1D and 2D histograms.
 ADC_RANGE = (250, 500)
 ADC_HIST_BINS = (ADC_RANGE[1] - ADC_RANGE[0]) // 2  # 2 ADC counts per bin
+
+# ADC axis limits for pedestal-corrected ADC plots.
+ADC_CORRECTED_RANGE = (-100, 500)
+ADC_CORRECTED_HIST_BINS = (ADC_CORRECTED_RANGE[1] - ADC_CORRECTED_RANGE[0]) // 2
 
 # Boundary (in ADC counts) separating the pedestal peak from the 1 p.e. peak,
 # and the initial sigma guesses used to seed each Gaussian fit.
@@ -270,6 +285,8 @@ def compute_time_ns(pmt_time: np.ndarray, tdc_start: np.ndarray) -> np.ndarray:
 def analyze_channel(
     raw_channel: int,
     adc_ch: np.ndarray,
+    pmt_time_ch: np.ndarray,
+    tdc_start_ch: np.ndarray,
     t_ns_ch: np.ndarray,
     pulser_freq_hz: float,
 ) -> dict | None:
@@ -277,6 +294,8 @@ def analyze_channel(
     finite_mask = np.isfinite(t_ns_ch)
     t_ns_ch = t_ns_ch[finite_mask]
     adc_ch = adc_ch[finite_mask]
+    pmt_time_ch = pmt_time_ch[finite_mask]
+    tdc_start_ch = tdc_start_ch[finite_mask]
 
     display_ch = raw_channel + 1
 
@@ -286,13 +305,18 @@ def analyze_channel(
 
     PERIOD_4NS = int((1.0 / pulser_freq_hz) / 4e-9)
 
+    pmt_time_i64 = pmt_time_ch.astype(np.int64)
+    tdc_start_i64 = tdc_start_ch.astype(np.int64)
+    pmt_time_shift4 = pmt_time_i64 << np.int64(4)
+    T = pmt_time_shift4 + tdc_start_i64
+
     # -----------------------------
     # Measurement time from data
     # -----------------------------
     measurement_time_s = (np.max(t_ns_ch) - np.min(t_ns_ch)) * 1e-9
 
-    t_s = t_ns_ch * 1e-9
-    t_s = t_s - t_s.min()  # run starts at t = 0 s
+    t_ns_shifted = t_ns_ch - t_ns_ch.min()  # run starts at t = 0 ns
+    t_s = t_ns_shifted * 1e-9
 
     n_entries = adc_ch.size
     rate_hz = n_entries / measurement_time_s if measurement_time_s > 0 else float("nan")
@@ -378,7 +402,14 @@ def analyze_channel(
     return {
         "channel": display_ch,
         "adc": adc_ch,
+        "pedestal_adc": peak1_fit["mean"] if peak1_fit is not None else None,
+        "pmt_time": pmt_time_i64,
+        "pmt_time_shift4": pmt_time_shift4,
+        "tdc_start": tdc_start_i64,
+        "T": T,
         "t_s": t_s,
+        "t_ns": t_ns_shifted,
+        "measurement_time": t_s,
         "entries": n_entries,
         "measurement_time_s": measurement_time_s,
         "rate_hz": rate_hz,
@@ -398,7 +429,16 @@ def _grid_shape(n_items: int) -> tuple[int, int]:
     return nrows, ncols
 
 
-def plot_adc_grid(channel_data: list[dict], output_dir: str, stem: str) -> plt.Figure:
+def plot_adc_grid(
+    channel_data: list[dict],
+    output_dir: str,
+    stem: str,
+    adc_key: str = "adc",
+    adc_range: tuple[float, float] = ADC_RANGE,
+    adc_bins: int = ADC_HIST_BINS,
+    title: str = "ADC by channel",
+    output_suffix: str = "adc_grid",
+) -> plt.Figure:
     """Plot the ADC histogram of every channel as a single grid figure."""
     nrows, ncols = _grid_shape(len(channel_data))
     fig, axes = plt.subplots(nrows, ncols, figsize=(4.5 * ncols, 3.8 * nrows), squeeze=False)
@@ -407,9 +447,9 @@ def plot_adc_grid(channel_data: list[dict], output_dir: str, stem: str) -> plt.F
         ax = axes[idx // ncols][idx % ncols]
         adc_rms = data["adc_rms"]
         ax.hist(
-            data["adc"],
-            bins=ADC_HIST_BINS,
-            range=ADC_RANGE,
+            data[adc_key],
+            bins=adc_bins,
+            range=adc_range,
             histtype="stepfilled",
             color="indianred",
             alpha=0.6,
@@ -418,39 +458,63 @@ def plot_adc_grid(channel_data: list[dict], output_dir: str, stem: str) -> plt.F
             label=f"RMS={adc_rms:.1f}",
         )
 
-        for fit_key, color in (("peak1_fit", "royalblue"), ("peak2_fit", "darkorange")):
-            fit = data.get(fit_key)
-            if fit is None:
-                continue
-            x_fit = np.linspace(fit["fit_range"][0], fit["fit_range"][1], 200)
-            y_fit = gaussian(x_fit, fit["amplitude"], fit["mean"], fit["sigma"])
-            ax.plot(
-                x_fit,
-                y_fit,
-                color=color,
-                linewidth=2,
-                label=f"$\\mu$={fit['mean']:.1f}, $\\sigma$={fit['sigma']:.1f}",
-            )
+        if adc_key == "adc":
+            for fit_key, color in (("peak1_fit", "royalblue"), ("peak2_fit", "darkorange")):
+                fit = data.get(fit_key)
+                if fit is None:
+                    continue
+                x_fit = np.linspace(fit["fit_range"][0], fit["fit_range"][1], 200)
+                y_fit = gaussian(x_fit, fit["amplitude"], fit["mean"], fit["sigma"])
+                ax.plot(
+                    x_fit,
+                    y_fit,
+                    color=color,
+                    linewidth=2,
+                    label=f"$\\mu$={fit['mean']:.1f}, $\\sigma$={fit['sigma']:.1f}",
+                )
 
-        valley_fit = data.get("valley_fit")
-        if valley_fit is not None:
-            x_fit = np.linspace(valley_fit["fit_range"][0], valley_fit["fit_range"][1], 200)
-            y_fit = parabola(
-                x_fit, valley_fit["curvature"], valley_fit["mean"], valley_fit["offset"]
-            )
-            label = f"valley position={valley_fit['mean']:.1f}"
-            peak_valley_ratio = data.get("peak_valley_ratio")
-            if peak_valley_ratio is not None:
-                label += f"\npeak/valley={peak_valley_ratio:.2f}"
-            ax.plot(
-                x_fit,
-                y_fit,
-                color="seagreen",
-                linewidth=2,
-                label=label,
-            )
+            valley_fit = data.get("valley_fit")
+            if valley_fit is not None:
+                x_fit = np.linspace(valley_fit["fit_range"][0], valley_fit["fit_range"][1], 200)
+                y_fit = parabola(
+                    x_fit, valley_fit["curvature"], valley_fit["mean"], valley_fit["offset"]
+                )
+                label = f"valley position={valley_fit['mean']:.1f}"
+                peak_valley_ratio = data.get("peak_valley_ratio")
+                if peak_valley_ratio is not None:
+                    label += f"\npeak/valley={peak_valley_ratio:.2f}"
+                ax.plot(
+                    x_fit,
+                    y_fit,
+                    color="seagreen",
+                    linewidth=2,
+                    label=label,
+                )
+        elif adc_key == "adc_pedestal_corrected":
+            shifted_peak2_fit = data.get("shifted_peak2_fit")
+            if shifted_peak2_fit is not None:
+                x_fit = np.linspace(
+                    shifted_peak2_fit["fit_range"][0], shifted_peak2_fit["fit_range"][1], 200
+                )
+                y_fit = gaussian(
+                    x_fit,
+                    shifted_peak2_fit["amplitude"],
+                    shifted_peak2_fit["mean"],
+                    shifted_peak2_fit["sigma"],
+                )
+                threshold = data.get("shifted_peak_fit_threshold")
+                threshold_label = (
+                    f"ADC>{threshold}" if threshold is not None else "shifted peak fit"
+                )
+                ax.plot(
+                    x_fit,
+                    y_fit,
+                    color="darkorange",
+                    linewidth=2,
+                    label=f"{threshold_label}, $\\mu$={shifted_peak2_fit['mean']:.1f}",
+                )
 
-        ax.set_xlim(*ADC_RANGE)
+        ax.set_xlim(*adc_range)
         ax.set_title(f"Ch {data['channel']:02d}")
         ax.set_xlabel("ADC")
         ax.set_ylabel("Counts")
@@ -460,22 +524,29 @@ def plot_adc_grid(channel_data: list[dict], output_dir: str, stem: str) -> plt.F
     for idx in range(len(channel_data), nrows * ncols):
         axes[idx // ncols][idx % ncols].axis("off")
 
-    fig.suptitle("ADC by channel")
+    fig.suptitle(title)
     fig.tight_layout()
-    fig.savefig(os.path.join(output_dir, f"{stem}_adc_grid.png"), dpi=150)
+    fig.savefig(os.path.join(output_dir, f"{stem}_{output_suffix}.png"), dpi=150)
     return fig
 
 
-def plot_time_grid(channel_data: list[dict], output_dir: str, stem: str) -> plt.Figure:
+def plot_time_grid(
+    channel_data: list[dict], output_dir: str, stem: str, time_unit: str = DEFAULT_TIME_UNIT
+) -> plt.Figure:
     """Plot the measurement-time histogram of every channel as a grid figure."""
+    time_key = "t_ns" if time_unit == "ns" else "t_s"
+    time_label = "Time [ns]" if time_unit == "ns" else "Time [s]"
+
     nrows, ncols = _grid_shape(len(channel_data))
     fig, axes = plt.subplots(nrows, ncols, figsize=(4.5 * ncols, 3.8 * nrows), squeeze=False)
 
     for idx, data in enumerate(channel_data):
         ax = axes[idx // ncols][idx % ncols]
+        upper = data["measurement_time_s"] * 1e9 if time_unit == "ns" else data["measurement_time_s"]
         ax.hist(
-            data["t_s"],
+            data[time_key],
             bins=200,
+            range=(0.0, upper),
             histtype="stepfilled",
             color="steelblue",
             alpha=0.6,
@@ -483,7 +554,7 @@ def plot_time_grid(channel_data: list[dict], output_dir: str, stem: str) -> plt.
             linewidth=0.3,
         )
         ax.set_title(f"Ch {data['channel']:02d}")
-        ax.set_xlabel("Time [s]")
+        ax.set_xlabel(time_label)
         ax.set_ylabel("Counts")
         ax.grid(True, linestyle="--", alpha=0.4)
 
@@ -496,35 +567,243 @@ def plot_time_grid(channel_data: list[dict], output_dir: str, stem: str) -> plt.
     return fig
 
 
-def plot_time_vs_adc_grid(channel_data: list[dict], output_dir: str, stem: str) -> plt.Figure:
-    """Plot the time-vs-ADC 2D histogram of every channel as a grid figure."""
+def plot_1d_value_grid(
+    channel_data: list[dict],
+    output_dir: str,
+    stem: str,
+    value_key: str,
+    xlabel: str,
+    output_suffix: str,
+    title: str,
+    bins: int = 200,
+    value_range: tuple[float, float] | None = None,
+) -> plt.Figure:
+    """Plot a generic 1D value histogram for every channel as a grid figure."""
     nrows, ncols = _grid_shape(len(channel_data))
     fig, axes = plt.subplots(nrows, ncols, figsize=(4.5 * ncols, 3.8 * nrows), squeeze=False)
 
     for idx, data in enumerate(channel_data):
         ax = axes[idx // ncols][idx % ncols]
-        t_s = data["t_s"]
+        values = np.asarray(data[value_key])
+        finite_values = values[np.isfinite(values)]
+
+        if finite_values.size == 0:
+            ax.set_title(f"Ch {data['channel']:02d}")
+            ax.set_xlabel(xlabel)
+            ax.set_ylabel("Counts")
+            ax.grid(True, linestyle="--", alpha=0.4)
+            continue
+
+        hist_range = value_range
+        if hist_range is None:
+            lo = float(np.min(finite_values))
+            hi = float(np.max(finite_values))
+            if hi <= lo:
+                hi = lo + 1.0
+            hist_range = (lo, hi)
+
+        ax.hist(
+            finite_values,
+            bins=bins,
+            range=hist_range,
+            histtype="stepfilled",
+            color="slateblue",
+            alpha=0.6,
+            edgecolor="black",
+            linewidth=0.3,
+        )
+        ax.set_title(f"Ch {data['channel']:02d}")
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel("Counts")
+        ax.grid(True, linestyle="--", alpha=0.4)
+
+    for idx in range(len(channel_data), nrows * ncols):
+        axes[idx // ncols][idx % ncols].axis("off")
+
+    fig.suptitle(title)
+    fig.tight_layout()
+    fig.savefig(os.path.join(output_dir, f"{stem}_{output_suffix}.png"), dpi=150)
+    return fig
+
+
+def plot_time_vs_adc_grid(
+    channel_data: list[dict],
+    output_dir: str,
+    stem: str,
+    time_unit: str = DEFAULT_TIME_UNIT,
+    adc_key: str = "adc",
+    adc_range: tuple[float, float] = ADC_RANGE,
+    output_suffix: str = "time_vs_adc_grid",
+    title: str = "Time vs ADC by channel",
+) -> plt.Figure:
+    """Plot the time-vs-ADC 2D histogram of every channel as a grid figure."""
+    time_key = "t_ns" if time_unit == "ns" else "t_s"
+    time_label = "Time [ns]" if time_unit == "ns" else "Time [s]"
+
+    nrows, ncols = _grid_shape(len(channel_data))
+    fig, axes = plt.subplots(nrows, ncols, figsize=(4.5 * ncols, 3.8 * nrows), squeeze=False)
+
+    for idx, data in enumerate(channel_data):
+        ax = axes[idx // ncols][idx % ncols]
+        t = data[time_key]
+        upper = data["measurement_time_s"] * 1e9 if time_unit == "ns" else data["measurement_time_s"]
         _, _, _, image = ax.hist2d(
-            data["adc"],
-            t_s,
+            data[adc_key],
+            t,
             bins=[150, 150],
-            range=[list(ADC_RANGE), [t_s.min(), t_s.max()]],
+            range=[list(adc_range), [0.0, upper]],
             cmap="viridis",
             norm=LogNorm(),
         )
-        ax.set_xlim(*ADC_RANGE)
+        ax.set_xlim(*adc_range)
         ax.set_title(f"Ch {data['channel']:02d}")
         ax.set_xlabel("ADC")
-        ax.set_ylabel("Time [s]")
+        ax.set_ylabel(time_label)
         fig.colorbar(image, ax=ax, label="Counts")
 
     for idx in range(len(channel_data), nrows * ncols):
         axes[idx // ncols][idx % ncols].axis("off")
 
-    fig.suptitle("Time vs ADC by channel")
+    fig.suptitle(title)
     fig.tight_layout()
-    fig.savefig(os.path.join(output_dir, f"{stem}_time_vs_adc_grid.png"), dpi=150)
+    fig.savefig(os.path.join(output_dir, f"{stem}_{output_suffix}.png"), dpi=150)
     return fig
+
+
+def plot_shifted_peak_mean_vs_channel(
+    channel_data: list[dict], output_dir: str, stem: str
+) -> plt.Figure | None:
+    """Plot shifted peak mean vs channel with fit-parameter mean errors."""
+    channels = []
+    means = []
+    mean_errs = []
+
+    for data in channel_data:
+        fit = data.get("shifted_peak2_fit")
+        if fit is None:
+            continue
+        if not np.isfinite(fit.get("mean", np.nan)) or not np.isfinite(
+            fit.get("mean_err", np.nan)
+        ):
+            continue
+        channels.append(data["channel"])
+        means.append(fit["mean"])
+        mean_errs.append(fit["mean_err"])
+
+    if not channels:
+        print("No valid shifted peak fits available for mean-vs-channel plot.")
+        return None
+
+    channels_arr = np.asarray(channels, dtype=np.float64)
+    means_arr = np.asarray(means, dtype=np.float64)
+    mean_errs_arr = np.asarray(mean_errs, dtype=np.float64)
+
+    fig, ax = plt.subplots(figsize=(8.0, 4.8))
+    ax.errorbar(
+        channels_arr,
+        means_arr,
+        yerr=mean_errs_arr,
+        fmt="o-",
+        color="darkorange",
+        ecolor="black",
+        elinewidth=1.0,
+        capsize=3,
+        markersize=5,
+    )
+    ax.set_xlabel("Channel")
+    ax.set_ylabel("Shifted peak mean [ADC]")
+    ax.set_title("Shifted peak mean vs channel")
+    ax.set_ylim(bottom=0.0)
+    ax.grid(True, linestyle="--", alpha=0.4)
+    ax.set_xticks(channels_arr)
+    fig.tight_layout()
+    fig.savefig(os.path.join(output_dir, f"{stem}_shifted_peak_mean_vs_channel.png"), dpi=150)
+    return fig
+
+
+def run_exit_gui() -> None:
+    """Open a tiny control GUI; Exit closes plots and ends the program."""
+    if tk is None:
+        print("Tkinter is not available; skipping GUI.")
+        return
+
+    try:
+        root = tk.Tk()
+    except tk.TclError:
+        print("Tkinter GUI could not start (no display?).")
+        return
+
+    root.title("PMT Analysis")
+    root.geometry("320x140")
+
+    label = tk.Label(root, text="Plots are running. Click Exit to close everything.")
+    label.pack(pady=12)
+
+    def _exit_all() -> None:
+        plt.close("all")
+        root.quit()
+        root.destroy()
+
+    root.protocol("WM_DELETE_WINDOW", _exit_all)
+
+    exit_button = tk.Button(root, text="Exit", width=12, command=_exit_all)
+    exit_button.pack(pady=8)
+
+    root.mainloop()
+
+
+def build_pedestal_corrected_channel_data(channel_data: list[dict]) -> list[dict]:
+    """Build a second-pass dataset with pedestal-corrected ADC for each channel."""
+    corrected_data = []
+    for data in channel_data:
+        pedestal = data.get("pedestal_adc")
+        if pedestal is None or not np.isfinite(pedestal):
+            print(
+                f"Channel {data['channel']:02d}: missing pedestal from 1st Gaussian fit; "
+                "skipping pedestal correction for this channel."
+            )
+            continue
+        corrected_row = dict(data)
+        corrected_row["adc_pedestal_corrected"] = data["adc"] - pedestal
+        corrected_adc_rms = float(np.std(corrected_row["adc_pedestal_corrected"]))
+        corrected_row["adc_rms"] = corrected_adc_rms
+
+        shifted_peak_min = 25 if corrected_adc_rms < 50 else 50
+
+        nonshifted_peak2_fit = data.get("peak2_fit")
+        shifted_peak_fit = None
+        if nonshifted_peak2_fit is not None:
+            shifted_mean = nonshifted_peak2_fit["mean"] - pedestal
+            shifted_sigma = nonshifted_peak2_fit["sigma"]
+            shifted_peak_fit = {
+                "amplitude": nonshifted_peak2_fit["amplitude"],
+                "mean": shifted_mean,
+                "sigma": shifted_sigma,
+                "amplitude_err": nonshifted_peak2_fit["amplitude_err"],
+                "mean_err": nonshifted_peak2_fit["mean_err"],
+                "sigma_err": nonshifted_peak2_fit["sigma_err"],
+                "fit_range": (
+                    max(shifted_peak_min, shifted_mean - shifted_sigma),
+                    min(ADC_CORRECTED_RANGE[1], shifted_mean + shifted_sigma),
+                ),
+            }
+
+        corrected_row["shifted_peak_fit_threshold"] = shifted_peak_min
+        corrected_row["shifted_peak2_fit"] = shifted_peak_fit
+
+        if shifted_peak_fit is None:
+            print(
+                f"Channel {data['channel']:02d}: shifted ADC peak2 parameters unavailable "
+                f"(missing non-shifted peak2 fit; threshold would be {shifted_peak_min})."
+            )
+        else:
+            print(
+                f"Channel {data['channel']:02d}: shifted ADC peak2 (from non-shifted fit, ADC>{shifted_peak_min}) -> "
+                f"mu={shifted_peak_fit['mean']:.2f}+/-{shifted_peak_fit['mean_err']:.2f}, "
+                f"sigma={shifted_peak_fit['sigma']:.2f}+/-{shifted_peak_fit['sigma_err']:.2f}"
+            )
+        corrected_data.append(corrected_row)
+    return corrected_data
 
 
 def main() -> None:
@@ -545,6 +824,12 @@ def main() -> None:
         default=None,
         help="Directory for output plots (default: alongside the input file).",
     )
+    parser.add_argument(
+        "--time-unit",
+        choices=("ns", "s"),
+        default=DEFAULT_TIME_UNIT,
+        help="Time unit used for the timing plots (default: %(default)s).",
+    )
     args = parser.parse_args()
 
     input_file = args.input
@@ -557,7 +842,9 @@ def main() -> None:
 
     channel = arrays["channel"].astype(np.int64)
     adc = arrays["adc"].astype(np.float64)
-    t_ns = compute_time_ns(arrays["pmt_time"], arrays["tdc_start"])
+    pmt_time = arrays["pmt_time"].astype(np.int64)
+    tdc_start = arrays["tdc_start"].astype(np.int64)
+    t_ns = compute_time_ns(pmt_time, tdc_start)
 
     channels = sorted(np.unique(channel).tolist())
     print(f"Found channels (0-indexed): {channels}")
@@ -565,30 +852,131 @@ def main() -> None:
     channel_data = []
     for raw_ch in channels:
         mask = channel == raw_ch
-        result = analyze_channel(raw_ch, adc[mask], t_ns[mask], args.pulser_freq_hz)
+        result = analyze_channel(
+            raw_ch,
+            adc[mask],
+            pmt_time[mask],
+            tdc_start[mask],
+            t_ns[mask],
+            args.pulser_freq_hz,
+        )
         if result:
             channel_data.append(result)
 
     summary_path = os.path.join(output_dir, f"{stem}_timing_summary.txt")
     with open(summary_path, "w") as f:
-        f.write("channel entries measurement_time_s rate_hz period_4ns_ticks\n")
+        f.write("channel entries measurement_time_s rate_hz period_4ns_ticks pedestal_mean_adc\n")
         for row in channel_data:
+            pedestal = row["pedestal_adc"]
+            pedestal_str = f"{pedestal:.6f}" if pedestal is not None else "nan"
             f.write(
                 f"{row['channel']:02d} {row['entries']} "
                 f"{row['measurement_time_s']:.6f} {row['rate_hz']:.6f} "
-                f"{row['period_4ns_ticks']}\n"
+                f"{row['period_4ns_ticks']} {pedestal_str}\n"
             )
     print(f"Saved summary to {summary_path}")
+
+    pedestal_path = os.path.join(output_dir, f"{stem}_pedestals.txt")
+    with open(pedestal_path, "w") as f:
+        f.write("channel pedestal_mean_adc\n")
+        for row in channel_data:
+            pedestal = row["pedestal_adc"]
+            pedestal_str = f"{pedestal:.6f}" if pedestal is not None else "nan"
+            f.write(f"{row['channel']:02d} {pedestal_str}\n")
+    print(f"Saved pedestals to {pedestal_path}")
 
     if not channel_data:
         print("No channel data available to plot.")
         return
 
-    plot_adc_grid(channel_data, output_dir, stem)
-    plot_time_grid(channel_data, output_dir, stem)
-    plot_time_vs_adc_grid(channel_data, output_dir, stem)
+    corrected_channel_data = build_pedestal_corrected_channel_data(channel_data)
+    if not corrected_channel_data:
+        print("No channels with valid pedestal fit; skipping corrected ADC plots.")
+        return
 
-    plt.show()
+    plot_adc_grid(channel_data, output_dir, stem)
+    plot_1d_value_grid(
+        channel_data,
+        output_dir,
+        stem,
+        value_key="pmt_time",
+        xlabel="pmt_time",
+        output_suffix="pmt_time_grid",
+        title="pmt_time by channel",
+    )
+    plot_1d_value_grid(
+        channel_data,
+        output_dir,
+        stem,
+        value_key="pmt_time_shift4",
+        xlabel="pmt_time << 4",
+        output_suffix="pmt_time_shift4_grid",
+        title="pmt_time << 4 by channel",
+    )
+    plot_1d_value_grid(
+        channel_data,
+        output_dir,
+        stem,
+        value_key="tdc_start",
+        xlabel="tdc_start",
+        output_suffix="tdc_start_grid",
+        title="tdc_start by channel",
+    )
+    plot_1d_value_grid(
+        channel_data,
+        output_dir,
+        stem,
+        value_key="T",
+        xlabel="T = (pmt_time << 4) + tdc_start",
+        output_suffix="T_grid",
+        title="T by channel",
+    )
+    plot_1d_value_grid(
+        channel_data,
+        output_dir,
+        stem,
+        value_key="t_ns",
+        xlabel="t_ns [ns]",
+        output_suffix="t_ns_grid",
+        title="t_ns by channel",
+    )
+    plot_1d_value_grid(
+        channel_data,
+        output_dir,
+        stem,
+        value_key="measurement_time",
+        xlabel="measurement_time [s]",
+        output_suffix="measurement_time_grid",
+        title="measurement_time by channel",
+    )
+    plot_adc_grid(
+        corrected_channel_data,
+        output_dir,
+        stem,
+        adc_key="adc_pedestal_corrected",
+        adc_range=ADC_CORRECTED_RANGE,
+        adc_bins=ADC_CORRECTED_HIST_BINS,
+        title="Pedestal-corrected ADC by channel",
+        output_suffix="adc_pedestal_corrected_grid",
+    )
+    plot_time_grid(channel_data, output_dir, stem, time_unit=args.time_unit)
+    plot_time_vs_adc_grid(
+        corrected_channel_data,
+        output_dir,
+        stem,
+        time_unit=args.time_unit,
+        adc_key="adc_pedestal_corrected",
+        adc_range=ADC_CORRECTED_RANGE,
+        output_suffix="time_vs_adc_pedestal_corrected_grid",
+        title="Time vs pedestal-corrected ADC by channel",
+    )
+    plot_shifted_peak_mean_vs_channel(corrected_channel_data, output_dir, stem)
+
+    if tk is None:
+        plt.show()
+    else:
+        plt.show(block=False)
+        run_exit_gui()
 
 
 if __name__ == "__main__":
