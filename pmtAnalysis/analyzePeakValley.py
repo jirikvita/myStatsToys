@@ -6,7 +6,8 @@ For each channel found in the tree, this script produces:
     - a pedestal-corrected ADC histogram,
   - a measurement-time histogram (pulses vs. time within the run),
     - a pedestal-corrected time-vs-ADC 2D histogram,
-    - a time-walk 2D histogram (per-pulse TDC arrival time vs ADC).
+        - a time-walk 2D histogram (per-pulse TDC arrival time vs ADC),
+        - a ToT 2D histogram (time-over-threshold vs ADC).
 
 The per-pulse measurement time (absolute time since the start of the run,
 used only to get the overall run duration/rate) is reconstructed from the
@@ -19,26 +20,13 @@ and the overall run duration is estimated as:
 
     measurement_time_s = (max(t_ns) - min(t_ns)) * 1e-9
 
-For the time-walk plot (amplitude-dependent leading-edge timing), `t_ns` is
-the wrong variable: it is dominated by the absolute time within the run, not
-the pulse's arrival time relative to its own trigger/gate. The correct
-per-pulse arrival-time variable is instead reconstructed from the
-`tdc_coarse`/`tdc_start`/`tdc_stop` branches, which reset every event. These
-follow the classic TDC START/STOP interpolation scheme: `tdc_coarse` counts
-whole clock cycles between the START (trigger) and STOP (leading-edge
-threshold crossing) signals, while `tdc_start`/`tdc_stop` are each edge's own
-fine (4-bit) sub-cycle interpolation - so the STOP edge's fine offset must be
-added and the START edge's fine offset subtracted:
+For per-pulse timing plots, this script supports two pulse-time definitions:
 
-    tdc_walk_ticks = (tdc_coarse << 4) - tdc_start + tdc_stop
-    tdc_walk_ns = tdc_walk_ticks * 0.25
+    pulse-time      = (pmt_time % 25000) * 4 ns
+    pulse-time-alt  = ((pmt_time << 4) + tdc_start) * 0.25 ns
 
-(the same 0.25 ns LSB as pmt_time/tdc_start is assumed, since tdc_coarse
-reuses the same 4-bit fine field width.) This combination was verified
-empirically against naively adding tdc_start: it gives both a stronger
-correlation with ADC (0.67 vs 0.64) and a tighter high-ADC plateau (std 12.4
-vs 16.3 ticks) - i.e. less timing jitter once the walk-independent time is
-isolated, confirming the START/STOP interpretation.
+`pulse-time` is a coarse time-within-cycle variable, while `pulse-time-alt`
+adds the fine TDC interpolation from `tdc_start`.
 """
 
 from __future__ import annotations
@@ -70,13 +58,22 @@ PULSER_FREQ_HZ = 10_000
 # build the per-pulse tdc_walk_ns for the time-walk plot).
 TDC_LSB_NS = 0.25
 
-# Time unit used for the timing plots (the measurement-time histogram and the
-# time-vs-ADC 2D histogram): "ns" (nanoseconds, raw time resolution) or "s"
-# (seconds, i.e. measurement_time_s). Override with --time-unit.
-DEFAULT_TIME_UNIT = "s"
+# PMT cycle period (in coarse pmt_time ticks) used to identify cycle index for
+# first-pulse-per-cycle bookkeeping.
+PMT_PULSE_MODULO_TICKS = 25_000
+
+# Coarse pmt_time tick size (ns): 1 tick = 4 ns.
+PMT_TIME_TICK_NS = 4.0
+
+# Time-axis zoom for 2D timing plots (in ns).
+# If range[0] is negative, the range is auto-inferred from finite data.
+TIME_2D_Y_RANGE_NS = (-100., 200.0)
+TIME_2D_Y_RANGE_PULSE_TIME_NS = (-100.0, 200.0)
+TIME_2D_Y_RANGE_PULSE_TIME_ALT_NS = (-100.0, 2000.0)
+TIME_2D_Y_RANGE_ToT_NS = (-100.0, 75.0)
 
 # ADC axis limits used for both the 1D and 2D histograms.
-ADC_RANGE = (250, 500)
+ADC_RANGE = (0, 800)
 ADC_HIST_BINS = (ADC_RANGE[1] - ADC_RANGE[0]) // 2  # 2 ADC counts per bin
 
 # ADC axis limits for pedestal-corrected ADC plots.
@@ -332,10 +329,89 @@ def compute_tdc_walk_ns(
     tdc_start_i64 = tdc_start.astype(np.int64)
     tdc_stop_i64 = tdc_stop.astype(np.int64)
 
-    # JK: time walk computation!
+    # START/STOP interpolation: coarse cycles plus STOP fine minus START fine.
     tdc_walk_ticks = (tdc_coarse_i64 << np.int64(4)) - tdc_start_i64 + tdc_stop_i64
 
     return tdc_walk_ticks.astype(np.float64) * TDC_LSB_NS
+
+
+def compute_pulse_time_alt_ns_and_cycle(
+    pmt_time: np.ndarray,
+    tdc_start: np.ndarray,
+    modulo_ticks: int = PMT_PULSE_MODULO_TICKS,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Compute pulse-time alternative in ns and its corresponding cycle index.
+
+    Returns:
+        - pulse-time alternative in ns, defined exactly as:
+              T = (pmt_time << 4) + tdc_start
+              t_ns = np.array(T) * 0.25
+        - integer cycle index (pmt_time // modulo_ticks), kept for
+          first-pulse-per-cycle bookkeeping.
+    """
+    pmt_time_i64 = pmt_time.astype(np.int64)
+    tdc_start_i64 = tdc_start.astype(np.int64)
+
+    # Explicit reconstruction requested for the alternative time variable:
+    # Formula by Andrzej:
+    #   T = (pmt_time << 4) + tdc_start
+    #   t_ns = np.array(T) * 0.25
+    T = (pmt_time_i64 << np.int64(4)) + tdc_start_i64
+    pulse_time_alt_ns = np.array(T, dtype=np.float64) * 0.25
+
+    modulo_i64 = np.int64(modulo_ticks)
+    cycle_index = np.floor_divide(pmt_time_i64, modulo_i64)
+    return pulse_time_alt_ns, cycle_index
+
+
+def compute_pulse_time_ns_and_cycle(
+    pmt_time: np.ndarray,
+    modulo_ticks: int = PMT_PULSE_MODULO_TICKS,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Compute coarse pulse time in ns and its cycle index.
+
+    Definition requested by user:
+        pulse_time_ns = (pmt_time % modulo_ticks) * 4 ns
+    """
+    pmt_time_i64 = pmt_time.astype(np.int64)
+    modulo_i64 = np.int64(modulo_ticks)
+    pulse_time_ticks = np.mod(pmt_time_i64, modulo_i64)
+    pulse_time_ns = pulse_time_ticks.astype(np.float64) * PMT_TIME_TICK_NS
+    cycle_index = np.floor_divide(pmt_time_i64, modulo_i64)
+    return pulse_time_ns, cycle_index
+
+
+def first_pulse_in_cycle_mask(pulse_time_ns: np.ndarray, cycle_index: np.ndarray) -> np.ndarray:
+    """Return a mask that keeps only the first (earliest) pulse in each cycle."""
+    n = cycle_index.size
+    if n == 0:
+        return np.zeros(0, dtype=bool)
+
+    idx = np.arange(n, dtype=np.int64)
+    order = np.lexsort((idx, pulse_time_ns, cycle_index))
+    ordered_cycles = cycle_index[order]
+    first_in_sorted = np.empty(order.size, dtype=bool)
+    first_in_sorted[0] = True
+    first_in_sorted[1:] = ordered_cycles[1:] != ordered_cycles[:-1]
+
+    mask = np.zeros(n, dtype=bool)
+    mask[order[first_in_sorted]] = True
+    return mask
+
+
+def compute_tot_ns(
+    tdc_coarse: np.ndarray, tdc_start: np.ndarray, tdc_stop: np.ndarray
+) -> np.ndarray:
+    """Compute time-over-threshold (ToT) in ns.
+
+    Definition requested by user:
+        ToT = tdc_coarse * 4 + (tdc_stop - tdc_start) * 4/16
+    where 4 ns is the coarse period and 4/16 = 0.25 ns is the fine LSB.
+    """
+    tdc_coarse_f64 = tdc_coarse.astype(np.float64)
+    tdc_start_f64 = tdc_start.astype(np.float64)
+    tdc_stop_f64 = tdc_stop.astype(np.float64)
+    return (tdc_coarse_f64 * 4.0) + ((tdc_stop_f64 - tdc_start_f64) * (4.0 / 16.0))
 
 
 def analyze_channel(
@@ -347,6 +423,8 @@ def analyze_channel(
     tdc_stop_ch: np.ndarray,
     t_ns_ch: np.ndarray,
     pulser_freq_hz: float,
+    time_walk_source: str,
+    pmt_pulse_modulo_ticks: int,
 ) -> dict | None:
     """Compute the ADC/time data and summary stats for a single channel."""
     finite_mask = np.isfinite(t_ns_ch)
@@ -363,6 +441,28 @@ def analyze_channel(
         print(f"Channel {display_ch:02d}: no finite timing data, skipping.")
         return None
 
+    pulse_time_alt_ns, pulse_cycle_index = compute_pulse_time_alt_ns_and_cycle(
+        pmt_time_ch,
+        tdc_start_ch,
+        modulo_ticks=pmt_pulse_modulo_ticks,
+    )
+    pulse_time_ns, _ = compute_pulse_time_ns_and_cycle(
+        pmt_time_ch,
+        modulo_ticks=pmt_pulse_modulo_ticks,
+    )
+    is_first_pmt_pulse_in_cycle = first_pulse_in_cycle_mask(
+        pulse_time_alt_ns, pulse_cycle_index
+    )
+
+    if time_walk_source in ("pulse-time", "pulse-time-alt"):
+        n_before_cycle = pulse_cycle_index.size
+        n_after_cycle = int(np.count_nonzero(is_first_pmt_pulse_in_cycle))
+        print(
+            f"Channel {display_ch:02d}: first pulse per PMT cycle available "
+            f"{n_after_cycle}/{n_before_cycle} entries (modulo={pmt_pulse_modulo_ticks}); "
+            "first-pass ADC histograms/fits remain uncut."
+        )
+
     PERIOD_4NS = int((1.0 / pulser_freq_hz) / 4e-9)
 
     pmt_time_i64 = pmt_time_ch.astype(np.int64)
@@ -370,6 +470,20 @@ def analyze_channel(
     pmt_time_shift4 = pmt_time_i64 << np.int64(4)
     T = pmt_time_shift4 + tdc_start_i64
     tdc_walk_ns = compute_tdc_walk_ns(tdc_coarse_ch, tdc_start_ch, tdc_stop_ch)
+    tot_ns = compute_tot_ns(tdc_coarse_ch, tdc_start_ch, tdc_stop_ch)
+    if time_walk_source == "pulse-time":
+        time_walk_ns = pulse_time_ns
+        time_walk_ylabel = (
+            "First-pulse time [ns] = (pmt_time % "
+            f"{pmt_pulse_modulo_ticks}) * {PMT_TIME_TICK_NS:.0f}"
+        )
+        time_walk_name = "pulse_time"
+    elif time_walk_source == "pulse-time-alt":
+        time_walk_ns = pulse_time_alt_ns
+        time_walk_ylabel = "First-pulse time (alt.) [ns] = ((pmt_time << 4) + tdc_start) * 0.25"
+        time_walk_name = "pulse_time_alt"
+    else:
+        raise ValueError(f"Unsupported time_walk_source: {time_walk_source}")
 
     # -----------------------------
     # Measurement time from data
@@ -377,7 +491,6 @@ def analyze_channel(
     measurement_time_s = (np.max(t_ns_ch) - np.min(t_ns_ch)) * 1e-9
 
     t_ns_shifted = t_ns_ch - t_ns_ch.min()  # run starts at t = 0 ns
-    t_s = t_ns_shifted * 1e-9
 
     n_entries = adc_ch.size
     rate_hz = n_entries / measurement_time_s if measurement_time_s > 0 else float("nan")
@@ -470,10 +583,17 @@ def analyze_channel(
         "tdc_coarse": tdc_coarse_ch,
         "tdc_stop": tdc_stop_ch,
         "T": T,
-        "t_s": t_s,
         "t_ns": t_ns_shifted,
-        "measurement_time": t_s,
+        "measurement_time": t_ns_shifted,
         "tdc_walk_ns": tdc_walk_ns,
+        "pulse_time_ns": pulse_time_ns,
+        "pulse_time_alt_ns": pulse_time_alt_ns,
+        "pulse_cycle_index": pulse_cycle_index,
+        "is_first_pmt_pulse_in_cycle": is_first_pmt_pulse_in_cycle,
+        "tot_ns": tot_ns,
+        "time_walk_ns": time_walk_ns,
+        "time_walk_ylabel": time_walk_ylabel,
+        "time_walk_name": time_walk_name,
         "entries": n_entries,
         "measurement_time_s": measurement_time_s,
         "rate_hz": rate_hz,
@@ -491,6 +611,45 @@ def _grid_shape(n_items: int) -> tuple[int, int]:
     ncols = math.ceil(math.sqrt(n_items))
     nrows = math.ceil(n_items / ncols)
     return nrows, ncols
+
+
+def _infer_range_from_values(
+    values_list: list[np.ndarray],
+    fallback: tuple[float, float],
+    pad_fraction: float = 0.05,
+) -> tuple[float, float]:
+    """Infer a padded [min, max] range from finite values across arrays."""
+    finite_chunks = []
+    for values in values_list:
+        arr = np.asarray(values, dtype=np.float64)
+        if arr.size == 0:
+            continue
+        arr = arr[np.isfinite(arr)]
+        if arr.size > 0:
+            finite_chunks.append(arr)
+
+    if not finite_chunks:
+        return fallback
+
+    merged = np.concatenate(finite_chunks)
+    lo = float(np.nanmin(merged))
+    hi = float(np.nanmax(merged))
+    if not (np.isfinite(lo) and np.isfinite(hi)) or hi <= lo:
+        return fallback
+
+    span = hi - lo
+    pad = max(span * pad_fraction, TDC_LSB_NS)
+    return (lo - pad, hi + pad)
+
+
+def _resolve_time_y_range(
+    configured_range: tuple[float, float],
+    values_list: list[np.ndarray],
+) -> tuple[float, float]:
+    """Use configured range unless its lower bound is negative, then auto-infer."""
+    if configured_range[0] < 0:
+        return _infer_range_from_values(values_list, fallback=configured_range)
+    return configured_range
 
 
 def plot_adc_grid(
@@ -594,21 +753,19 @@ def plot_adc_grid(
     return fig
 
 
-def plot_time_grid(
-    channel_data: list[dict], output_dir: str, stem: str, time_unit: str = DEFAULT_TIME_UNIT
-) -> plt.Figure:
+def plot_time_grid(channel_data: list[dict], output_dir: str, stem: str) -> plt.Figure:
     """Plot the measurement-time histogram of every channel as a grid figure."""
-    time_key = "t_ns" if time_unit == "ns" else "t_s"
-    time_label = "Time [ns]" if time_unit == "ns" else "Time [s]"
+    time_label = "Time [ns]"
 
     nrows, ncols = _grid_shape(len(channel_data))
     fig, axes = plt.subplots(nrows, ncols, figsize=(4.5 * ncols, 3.8 * nrows), squeeze=False)
 
     for idx, data in enumerate(channel_data):
         ax = axes[idx // ncols][idx % ncols]
-        upper = data["measurement_time_s"] * 1e9 if time_unit == "ns" else data["measurement_time_s"]
+        t = np.asarray(data["t_ns"], dtype=np.float64)
+        upper = float(np.max(t)) if t.size else 1.0
         ax.hist(
-            data[time_key],
+            t,
             bins=200,
             range=(0.0, upper),
             histtype="stepfilled",
@@ -694,36 +851,64 @@ def plot_time_vs_adc_grid(
     channel_data: list[dict],
     output_dir: str,
     stem: str,
-    time_unit: str = DEFAULT_TIME_UNIT,
     adc_key: str = "adc",
     adc_range: tuple[float, float] = ADC_RANGE,
     output_suffix: str = "time_vs_adc_grid",
     title: str = "Time vs ADC by channel",
 ) -> plt.Figure:
     """Plot the time-vs-ADC 2D histogram of every channel as a grid figure."""
-    time_key = "t_ns" if time_unit == "ns" else "t_s"
-    time_label = "Time [ns]" if time_unit == "ns" else "Time [s]"
+    time_label = "Time [ns]"
 
     nrows, ncols = _grid_shape(len(channel_data))
     fig, axes = plt.subplots(nrows, ncols, figsize=(4.5 * ncols, 3.8 * nrows), squeeze=False)
 
+    y_min, y_max = _resolve_time_y_range(
+        TIME_2D_Y_RANGE_NS,
+        [np.asarray(data.get("t_ns", []), dtype=np.float64) for data in channel_data],
+    )
+
     for idx, data in enumerate(channel_data):
         ax = axes[idx // ncols][idx % ncols]
-        t = data[time_key]
-        upper = data["measurement_time_s"] * 1e9 if time_unit == "ns" else data["measurement_time_s"]
-        _, _, _, image = ax.hist2d(
-            data[adc_key],
-            t,
-            bins=[150, 150],
-            range=[list(adc_range), [0.0, upper]],
-            cmap="viridis",
-            norm=LogNorm(),
-        )
+        t = np.asarray(data["t_ns"], dtype=np.float64)
+        adc_vals = np.asarray(data[adc_key], dtype=np.float64)
+
+        finite_mask = np.isfinite(adc_vals) & np.isfinite(t)
+        adc_vals = adc_vals[finite_mask]
+        t = t[finite_mask]
+
+        in_zoom_y = (t >= y_min) & (t <= y_max)
+        adc_vals = adc_vals[in_zoom_y]
+        t = t[in_zoom_y]
+
+        image = None
+        if adc_vals.size > 0 and t.size > 0:
+            _, _, _, image = ax.hist2d(
+                adc_vals,
+                t,
+                bins=[150, 150],
+                range=[list(adc_range), [y_min, y_max]],
+                cmap="viridis",
+                norm=LogNorm(),
+                cmin=1,
+            )
+        else:
+            ax.text(
+                0.5,
+                0.5,
+                "No points in window",
+                transform=ax.transAxes,
+                ha="center",
+                va="center",
+                fontsize=8,
+                color="dimgray",
+            )
         ax.set_xlim(*adc_range)
+        ax.set_ylim(y_min, y_max)
         ax.set_title(f"Ch {data['channel']:02d}")
         ax.set_xlabel("ADC")
         ax.set_ylabel(time_label)
-        fig.colorbar(image, ax=ax, label="Counts")
+        if image is not None:
+            fig.colorbar(image, ax=ax, label="Counts")
 
     for idx in range(len(channel_data), nrows * ncols):
         axes[idx // ncols][idx % ncols].axis("off")
@@ -740,19 +925,31 @@ def plot_time_walk_grid(
     stem: str,
     adc_key: str = "adc",
     adc_range: tuple[float, float] = ADC_RANGE,
+    y_range_ns: tuple[float, float] = TIME_2D_Y_RANGE_PULSE_TIME_NS,
     output_suffix: str = "time_walk_grid",
-    title: str = "Time walk: TDC arrival time vs ADC by channel",
+    title: str = "Time walk vs ADC by channel",
 ) -> plt.Figure:
-    """Plot the per-pulse TDC arrival time vs ADC (the time-walk plot).
+    """Plot the selected per-pulse time variable vs ADC.
 
-    Unlike `plot_time_vs_adc_grid` (which uses the absolute run time and is
-    only useful for spotting rate drifts over the run), this uses
-    `tdc_walk_ns` - reconstructed from tdc_coarse/tdc_start, which resets
-    every trigger - and is the variable that actually exhibits
-    amplitude-dependent time walk.
+    This uses `time_walk_ns`, which is configured from --time-walk-source as
+    either pulse-time or pulse-time-alt.
     """
     profile_min_counts = 20
     profile_x_bins = 150
+
+    resolved_y_range_ns = y_range_ns
+    if y_range_ns[0] < 0:
+        values_list = []
+        for data in channel_data:
+            values = np.asarray(data.get("time_walk_ns", []), dtype=np.float64)
+            first_cycle_mask = np.asarray(
+                data.get("is_first_pmt_pulse_in_cycle", np.ones_like(values, dtype=bool)),
+                dtype=bool,
+            )
+            if first_cycle_mask.shape[0] == values.shape[0]:
+                values = values[first_cycle_mask]
+            values_list.append(values)
+        resolved_y_range_ns = _resolve_time_y_range(y_range_ns, values_list)
 
     nrows, ncols = _grid_shape(len(channel_data))
     fig, axes = plt.subplots(nrows, ncols, figsize=(4.5 * ncols, 3.8 * nrows), squeeze=False)
@@ -760,21 +957,53 @@ def plot_time_walk_grid(
     for idx, data in enumerate(channel_data):
         ax = axes[idx // ncols][idx % ncols]
         adc_vals = np.asarray(data[adc_key], dtype=np.float64)
-        tdc_walk_ns = np.asarray(data["tdc_walk_ns"], dtype=np.float64)
-
-        finite_mask = np.isfinite(adc_vals) & np.isfinite(tdc_walk_ns)
-        adc_vals = adc_vals[finite_mask]
-        tdc_walk_ns = tdc_walk_ns[finite_mask]
-
-        y_upper = float(np.max(tdc_walk_ns)) if tdc_walk_ns.size else 1.0
-        _, _, _, image = ax.hist2d(
-            adc_vals,
-            tdc_walk_ns,
-            bins=[150, 150],
-            range=[list(adc_range), [0.0, y_upper]],
-            cmap="viridis",
-            norm=LogNorm(),
+        time_walk_ns = np.asarray(data["time_walk_ns"], dtype=np.float64)
+        first_cycle_mask = np.asarray(
+            data.get("is_first_pmt_pulse_in_cycle", np.ones_like(time_walk_ns, dtype=bool)),
+            dtype=bool,
         )
+
+        if first_cycle_mask.shape[0] == adc_vals.shape[0]:
+            adc_vals = adc_vals[first_cycle_mask]
+        if first_cycle_mask.shape[0] == time_walk_ns.shape[0]:
+            time_walk_ns = time_walk_ns[first_cycle_mask]
+
+        finite_mask = np.isfinite(adc_vals) & np.isfinite(time_walk_ns)
+        adc_vals = adc_vals[finite_mask]
+        time_walk_ns = time_walk_ns[finite_mask]
+
+        # Keep only points inside the zoom window so both the 2D map and
+        # Y-profile are computed from the same visible time range.
+        y_min, y_max = resolved_y_range_ns
+        in_zoom_y = (
+            (time_walk_ns >= y_min)
+            & (time_walk_ns <= y_max)
+        )
+        adc_vals = adc_vals[in_zoom_y]
+        time_walk_ns = time_walk_ns[in_zoom_y]
+
+        image = None
+        if adc_vals.size > 0 and time_walk_ns.size > 0:
+            _, _, _, image = ax.hist2d(
+                adc_vals,
+                time_walk_ns,
+                bins=[150, 150],
+                range=[list(adc_range), [y_min, y_max]],
+                cmap="viridis",
+                norm=LogNorm(),
+                cmin=1,
+            )
+        else:
+            ax.text(
+                0.5,
+                0.5,
+                "No points in window",
+                transform=ax.transAxes,
+                ha="center",
+                va="center",
+                fontsize=8,
+                color="dimgray",
+            )
 
         # Y-profile vs X: mean TDC arrival time in each ADC bin.
         x_edges = np.linspace(adc_range[0], adc_range[1], profile_x_bins + 1)
@@ -783,10 +1012,10 @@ def plot_time_walk_grid(
         in_x_range = (x_bin_idx >= 0) & (x_bin_idx < profile_x_bins)
 
         x_bin_idx = x_bin_idx[in_x_range]
-        tdc_walk_in_range = tdc_walk_ns[in_x_range]
+        time_walk_in_range = time_walk_ns[in_x_range]
 
         counts = np.bincount(x_bin_idx, minlength=profile_x_bins)
-        sum_y = np.bincount(x_bin_idx, weights=tdc_walk_in_range, minlength=profile_x_bins)
+        sum_y = np.bincount(x_bin_idx, weights=time_walk_in_range, minlength=profile_x_bins)
         mean_y = np.divide(sum_y, counts, out=np.full(profile_x_bins, np.nan), where=counts > 0)
 
         profile_mask = (counts >= profile_min_counts) & np.isfinite(mean_y)
@@ -803,12 +1032,129 @@ def plot_time_walk_grid(
             )
 
         ax.set_xlim(*adc_range)
+        ax.set_ylim(y_min, y_max)
         ax.set_title(f"Ch {data['channel']:02d}")
         ax.set_xlabel("ADC")
-        ax.set_ylabel("TDC arrival time [ns]")
+        ax.set_ylabel(data.get("time_walk_ylabel", "Time-walk variable [ns]"))
         if np.any(profile_mask):
             ax.legend(loc="upper right", fontsize=7)
-        fig.colorbar(image, ax=ax, label="Counts")
+        if image is not None:
+            fig.colorbar(image, ax=ax, label="Counts")
+
+    for idx in range(len(channel_data), nrows * ncols):
+        axes[idx // ncols][idx % ncols].axis("off")
+
+    fig.suptitle(title)
+    fig.tight_layout()
+    fig.savefig(os.path.join(output_dir, f"{stem}_{output_suffix}.png"), dpi=150)
+    return fig
+
+
+def plot_tot_grid(
+    channel_data: list[dict],
+    output_dir: str,
+    stem: str,
+    adc_key: str = "adc",
+    adc_range: tuple[float, float] = ADC_RANGE,
+    output_suffix: str = "tot_vs_adc_grid",
+    title: str = "ToT vs ADC by channel",
+) -> plt.Figure:
+    """Plot ToT vs ADC with the same profile-style overlay used for time-walk."""
+    profile_min_counts = 20
+    profile_x_bins = 150
+
+    if TIME_2D_Y_RANGE_ToT_NS[0] < 0:
+        values_list = []
+        for data in channel_data:
+            values = np.asarray(data.get("tot_ns", []), dtype=np.float64)
+            first_cycle_mask = np.asarray(
+                data.get("is_first_pmt_pulse_in_cycle", np.ones_like(values, dtype=bool)),
+                dtype=bool,
+            )
+            if first_cycle_mask.shape[0] == values.shape[0]:
+                values = values[first_cycle_mask]
+            values_list.append(values)
+        y_min, y_max = _resolve_time_y_range(TIME_2D_Y_RANGE_ToT_NS, values_list)
+    else:
+        y_min, y_max = TIME_2D_Y_RANGE_ToT_NS
+
+    nrows, ncols = _grid_shape(len(channel_data))
+    fig, axes = plt.subplots(nrows, ncols, figsize=(4.5 * ncols, 3.8 * nrows), squeeze=False)
+
+    for idx, data in enumerate(channel_data):
+        ax = axes[idx // ncols][idx % ncols]
+        adc_vals = np.asarray(data[adc_key], dtype=np.float64)
+        tot_ns = np.asarray(data["tot_ns"], dtype=np.float64)
+        first_cycle_mask = np.asarray(
+            data.get("is_first_pmt_pulse_in_cycle", np.ones_like(tot_ns, dtype=bool)),
+            dtype=bool,
+        )
+
+        finite_mask = np.isfinite(adc_vals) & np.isfinite(tot_ns) & first_cycle_mask
+        adc_vals = adc_vals[finite_mask]
+        tot_ns = tot_ns[finite_mask]
+
+        in_zoom_y = (tot_ns >= y_min) & (tot_ns <= y_max)
+        adc_vals = adc_vals[in_zoom_y]
+        tot_ns = tot_ns[in_zoom_y]
+
+        image = None
+        if adc_vals.size > 0 and tot_ns.size > 0:
+            _, _, _, image = ax.hist2d(
+                adc_vals,
+                tot_ns,
+                bins=[150, 150],
+                range=[list(adc_range), [y_min, y_max]],
+                cmap="viridis",
+                norm=LogNorm(),
+                cmin=1,
+            )
+        else:
+            ax.text(
+                0.5,
+                0.5,
+                "No points in window",
+                transform=ax.transAxes,
+                ha="center",
+                va="center",
+                fontsize=8,
+                color="dimgray",
+            )
+
+        x_edges = np.linspace(adc_range[0], adc_range[1], profile_x_bins + 1)
+        x_centers = 0.5 * (x_edges[:-1] + x_edges[1:])
+        x_bin_idx = np.digitize(adc_vals, x_edges) - 1
+        in_x_range = (x_bin_idx >= 0) & (x_bin_idx < profile_x_bins)
+
+        x_bin_idx = x_bin_idx[in_x_range]
+        tot_in_range = tot_ns[in_x_range]
+
+        counts = np.bincount(x_bin_idx, minlength=profile_x_bins)
+        sum_y = np.bincount(x_bin_idx, weights=tot_in_range, minlength=profile_x_bins)
+        mean_y = np.divide(sum_y, counts, out=np.full(profile_x_bins, np.nan), where=counts > 0)
+
+        profile_mask = (counts >= profile_min_counts) & np.isfinite(mean_y)
+        if np.any(profile_mask):
+            ax.plot(
+                x_centers[profile_mask],
+                mean_y[profile_mask],
+                linestyle="none",
+                marker="o",
+                markersize=2.8,
+                color="red",
+                alpha=0.95,
+                label=f"Y profile (mean, n>={profile_min_counts})",
+            )
+
+        ax.set_xlim(*adc_range)
+        ax.set_ylim(y_min, y_max)
+        ax.set_title(f"Ch {data['channel']:02d}")
+        ax.set_xlabel("ADC")
+        ax.set_ylabel("ToT [ns]")
+        if np.any(profile_mask):
+            ax.legend(loc="upper right", fontsize=7)
+        if image is not None:
+            fig.colorbar(image, ax=ax, label="Counts")
 
     for idx in range(len(channel_data), nrows * ncols):
         axes[idx // ncols][idx % ncols].axis("off")
@@ -901,13 +1247,24 @@ def run_exit_gui() -> None:
 
     root.protocol("WM_DELETE_WINDOW", _exit_all)
 
-    exit_button = tk.Button(root, text="Exit", width=12, command=_exit_all)
+    exit_button = tk.Button(
+        root,
+        text="Exit",
+        width=12,
+        command=_exit_all,
+        bg="#f62828",
+        fg="white",
+        activebackground="#fe0000",
+        activeforeground="white",
+    )
     exit_button.pack(pady=8)
 
     root.mainloop()
 
 
-def build_pedestal_corrected_channel_data(channel_data: list[dict]) -> list[dict]:
+def build_pedestal_corrected_channel_data(
+    channel_data: list[dict], second_pass_adc_min: float = 25.0
+) -> list[dict]:
     """Build a second-pass dataset with pedestal-corrected ADC for each channel."""
     corrected_data = []
     for data in channel_data:
@@ -920,10 +1277,25 @@ def build_pedestal_corrected_channel_data(channel_data: list[dict]) -> list[dict
             continue
         corrected_row = dict(data)
         corrected_row["adc_pedestal_corrected"] = data["adc"] - pedestal
+
+        second_pass_mask = corrected_row["adc_pedestal_corrected"] > second_pass_adc_min
+        n_before = corrected_row["adc_pedestal_corrected"].size
+        n_after = int(np.count_nonzero(second_pass_mask))
+        if n_after == 0:
+            print(
+                f"Channel {data['channel']:02d}: no entries survive 2nd-pass cut "
+                f"ADC>{second_pass_adc_min}; skipping this channel."
+            )
+            continue
+
+        # Keep all per-entry arrays aligned after the second-pass ADC cut.
+        for key, value in list(corrected_row.items()):
+            if isinstance(value, np.ndarray) and value.shape[0] == n_before:
+                corrected_row[key] = value[second_pass_mask]
+
         corrected_adc_rms = float(np.std(corrected_row["adc_pedestal_corrected"]))
         corrected_row["adc_rms"] = corrected_adc_rms
-
-        shifted_peak_min = 25 if corrected_adc_rms < 50 else 50
+        corrected_row["second_pass_adc_min"] = second_pass_adc_min
 
         nonshifted_peak2_fit = data.get("peak2_fit")
         shifted_peak_fit = None
@@ -938,22 +1310,23 @@ def build_pedestal_corrected_channel_data(channel_data: list[dict]) -> list[dict
                 "mean_err": nonshifted_peak2_fit["mean_err"],
                 "sigma_err": nonshifted_peak2_fit["sigma_err"],
                 "fit_range": (
-                    max(shifted_peak_min, shifted_mean - shifted_sigma),
+                    max(second_pass_adc_min, shifted_mean - shifted_sigma),
                     min(ADC_CORRECTED_RANGE[1], shifted_mean + shifted_sigma),
                 ),
             }
 
-        corrected_row["shifted_peak_fit_threshold"] = shifted_peak_min
+        corrected_row["shifted_peak_fit_threshold"] = second_pass_adc_min
         corrected_row["shifted_peak2_fit"] = shifted_peak_fit
 
         if shifted_peak_fit is None:
             print(
                 f"Channel {data['channel']:02d}: shifted ADC peak2 parameters unavailable "
-                f"(missing non-shifted peak2 fit; threshold would be {shifted_peak_min})."
+                f"(missing non-shifted peak2 fit; threshold is {second_pass_adc_min})."
             )
         else:
             print(
-                f"Channel {data['channel']:02d}: shifted ADC peak2 (from non-shifted fit, ADC>{shifted_peak_min}) -> "
+                f"Channel {data['channel']:02d}: 2nd-pass cut kept {n_after}/{n_before} entries, "
+                f"shifted ADC peak2 (from non-shifted fit, ADC>{second_pass_adc_min}) -> "
                 f"mu={shifted_peak_fit['mean']:.2f}+/-{shifted_peak_fit['mean_err']:.2f}, "
                 f"sigma={shifted_peak_fit['sigma']:.2f}+/-{shifted_peak_fit['sigma_err']:.2f}"
             )
@@ -980,12 +1353,37 @@ def main() -> None:
         help="Directory for output plots (default: alongside the input file).",
     )
     parser.add_argument(
-        "--time-unit",
-        choices=("ns", "s"),
-        default=DEFAULT_TIME_UNIT,
-        help="Time unit used for the timing plots (default: %(default)s).",
+        "--time-walk-source",
+        choices=("pulse-time", "pulse-time-alt"),
+        default="pulse-time-alt",
+        help=(
+            "Variable used on the time-walk Y axis: "
+            "'pulse-time' uses (pmt_time%%25000)*4 ns; "
+            "'pulse-time-alt' (alternative) uses ((pmt_time<<4)+tdc_start)*0.25 ns."
+        ),
+    )
+    parser.add_argument(
+        "--pmt-pulse-modulo-ticks",
+        type=int,
+        default=PMT_PULSE_MODULO_TICKS,
+        help=(
+            "Modulo period (in coarse pmt_time ticks) used for pulse-cycle bookkeeping "
+            "(first-pulse-per-cycle selection) in pulse-time-alt mode "
+            "(default: %(default)s)."
+        ),
+    )
+    parser.add_argument(
+        "--second-pass-adc-min",
+        type=float,
+        default=0.0,
+        help="Second-pass cut for pedestal-corrected ADC: keep only ADC > value.",
     )
     args = parser.parse_args()
+
+    if args.pmt_pulse_modulo_ticks <= 0:
+        raise ValueError("--pmt-pulse-modulo-ticks must be > 0")
+    if not np.isfinite(args.second_pass_adc_min):
+        raise ValueError("--second-pass-adc-min must be finite")
 
     input_file = args.input
     output_dir = args.output_dir or os.path.dirname(os.path.abspath(input_file))
@@ -1018,6 +1416,8 @@ def main() -> None:
             tdc_stop[mask],
             t_ns[mask],
             args.pulser_freq_hz,
+            args.time_walk_source,
+            args.pmt_pulse_modulo_ticks,
         )
         if result:
             channel_data.append(result)
@@ -1048,77 +1448,119 @@ def main() -> None:
         print("No channel data available to plot.")
         return
 
-    corrected_channel_data = build_pedestal_corrected_channel_data(channel_data)
+    plot_adc_grid(channel_data, output_dir, stem)
+    # Time-variable plots disabled per user request.
+    # plot_1d_value_grid(
+    #     channel_data,
+    #     output_dir,
+    #     stem,
+    #     value_key="pmt_time",
+    #     xlabel="pmt_time",
+    #     output_suffix="pmt_time_grid",
+    #     title="pmt_time by channel",
+    # )
+    # plot_1d_value_grid(
+    #     channel_data,
+    #     output_dir,
+    #     stem,
+    #     value_key="pmt_time_shift4",
+    #     xlabel="pmt_time << 4",
+    #     output_suffix="pmt_time_shift4_grid",
+    #     title="pmt_time << 4 by channel",
+    # )
+    # plot_1d_value_grid(
+    #     channel_data,
+    #     output_dir,
+    #     stem,
+    #     value_key="tdc_start",
+    #     xlabel="tdc_start",
+    #     output_suffix="tdc_start_grid",
+    #     title="tdc_start by channel",
+    # )
+    # plot_1d_value_grid(
+    #     channel_data,
+    #     output_dir,
+    #     stem,
+    #     value_key="T",
+    #     xlabel="T = (pmt_time << 4) + tdc_start",
+    #     output_suffix="T_grid",
+    #     title="T by channel",
+    # )
+    # plot_1d_value_grid(
+    #     channel_data,
+    #     output_dir,
+    #     stem,
+    #     value_key="t_ns",
+    #     xlabel="t_ns [ns]",
+    #     output_suffix="t_ns_grid",
+    #     title="t_ns by channel",
+    # )
+    # plot_time_vs_adc_grid(
+    #     channel_data,
+    #     output_dir,
+    #     stem,
+    #     adc_key="adc",
+    #     adc_range=ADC_RANGE,
+    #     output_suffix="time_vs_adc_grid",
+    #     title="Time vs ADC by channel",
+    # )
+
+    corrected_channel_data = build_pedestal_corrected_channel_data(
+        channel_data, second_pass_adc_min=args.second_pass_adc_min
+    )
     if not corrected_channel_data:
         print("No channels with valid pedestal fit; skipping corrected ADC plots.")
-        return
+    else:
+        # Time-variable plots disabled per user request.
+        # time_walk_y_range_ns = (
+        #     TIME_2D_Y_RANGE_PULSE_TIME_ALT_NS
+        #     if args.time_walk_source == "pulse-time-alt"
+        #     else TIME_2D_Y_RANGE_PULSE_TIME_NS
+        # )
 
-    plot_adc_grid(channel_data, output_dir, stem)
-    plot_1d_value_grid(
-        channel_data,
-        output_dir,
-        stem,
-        value_key="pmt_time",
-        xlabel="pmt_time",
-        output_suffix="pmt_time_grid",
-        title="pmt_time by channel",
-    )
-    plot_1d_value_grid(
-        channel_data,
-        output_dir,
-        stem,
-        value_key="pmt_time_shift4",
-        xlabel="pmt_time << 4",
-        output_suffix="pmt_time_shift4_grid",
-        title="pmt_time << 4 by channel",
-    )
-    plot_1d_value_grid(
-        channel_data,
-        output_dir,
-        stem,
-        value_key="tdc_start",
-        xlabel="tdc_start",
-        output_suffix="tdc_start_grid",
-        title="tdc_start by channel",
-    )
-    plot_1d_value_grid(
-        channel_data,
-        output_dir,
-        stem,
-        value_key="T",
-        xlabel="T = (pmt_time << 4) + tdc_start",
-        output_suffix="T_grid",
-        title="T by channel",
-    )
-    plot_1d_value_grid(
-        channel_data,
-        output_dir,
-        stem,
-        value_key="t_ns",
-        xlabel="t_ns [ns]",
-        output_suffix="t_ns_grid",
-        title="t_ns by channel",
-    )
-    plot_adc_grid(
-        corrected_channel_data,
-        output_dir,
-        stem,
-        adc_key="adc_pedestal_corrected",
-        adc_range=ADC_CORRECTED_RANGE,
-        adc_bins=ADC_CORRECTED_HIST_BINS,
-        title="Pedestal-corrected ADC by channel",
-        output_suffix="adc_pedestal_corrected_grid",
-    )
-    plot_time_walk_grid(
-        corrected_channel_data,
-        output_dir,
-        stem,
-        adc_key="adc_pedestal_corrected",
-        adc_range=ADC_CORRECTED_RANGE,
-        output_suffix="time_walk_pedestal_corrected_grid",
-        title="Time walk: TDC arrival time vs pedestal-corrected ADC by channel",
-    )
-    plot_shifted_peak_mean_vs_channel(corrected_channel_data, output_dir, stem)
+        plot_adc_grid(
+            corrected_channel_data,
+            output_dir,
+            stem,
+            adc_key="adc_pedestal_corrected",
+            adc_range=ADC_CORRECTED_RANGE,
+            adc_bins=ADC_CORRECTED_HIST_BINS,
+            title="Pedestal-corrected ADC by channel",
+            output_suffix="adc_pedestal_corrected_grid",
+        )
+        # plot_time_vs_adc_grid(
+        #     corrected_channel_data,
+        #     output_dir,
+        #     stem,
+        #     adc_key="adc_pedestal_corrected",
+        #     adc_range=ADC_CORRECTED_RANGE,
+        #     output_suffix="time_vs_pedestal_corrected_adc_grid",
+        #     title="Time vs pedestal-corrected ADC by channel",
+        # )
+        # plot_time_walk_grid(
+        #     corrected_channel_data,
+        #     output_dir,
+        #     stem,
+        #     adc_key="adc_pedestal_corrected",
+        #     adc_range=ADC_CORRECTED_RANGE,
+        #     y_range_ns=time_walk_y_range_ns,
+        #     output_suffix=f"time_walk_{args.time_walk_source}_pedestal_corrected_grid",
+        #     title=(
+        #         "Time walk: "
+        #         + corrected_channel_data[0].get("time_walk_ylabel", "time-walk variable [ns]")
+        #         + " vs pedestal-corrected ADC by channel"
+        #     ),
+        # )
+        # plot_tot_grid(
+        #     corrected_channel_data,
+        #     output_dir,
+        #     stem,
+        #     adc_key="adc_pedestal_corrected",
+        #     adc_range=ADC_CORRECTED_RANGE,
+        #     output_suffix="tot_vs_pedestal_corrected_adc_grid",
+        #     title="ToT vs pedestal-corrected ADC by channel",
+        # )
+        plot_shifted_peak_mean_vs_channel(corrected_channel_data, output_dir, stem)
 
     if tk is None:
         plt.show()
