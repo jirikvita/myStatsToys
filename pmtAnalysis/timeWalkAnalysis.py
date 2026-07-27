@@ -45,7 +45,7 @@ PMT_PULSE_MODULO_TICKS = 25_000
 # Custom Y ranges (ns) for pulse-time 2D plots.
 # Set to None to auto-infer from data.
 PULSE_TIME_2D_Y_RANGE_OPTION1_NS: tuple[float, float] | None = (2150.0, 2300.0)
-PULSE_TIME_2D_Y_RANGE_OPTION2_NS: tuple[float, float] | None = (130.0, 180.0)
+PULSE_TIME_2D_Y_RANGE_OPTION2_NS: tuple[float, float] | None = (140.0, 165.0)
 
 # Default ADC cut applied before filling 2D pulse-time plots.
 ADC_2D_MIN_CUT = 25.0
@@ -265,13 +265,17 @@ def compute_pulse_time_ns(
         pulse_time_ns = T.astype(np.float64) * TDC_LSB_NS * 1e-9
         label = "Pulse time [ns] = ((pmt_time << 4) + tdc_start) * 0.25 * 1e-9"
     elif pulse_time_source == "option2":
-        # option2: (pmt_time % 25000) * 4 ns
+        # option2: (pmt_time % 25000) * 4 ns + tdc_start * 0.25 ns
         modulo_i64 = np.int64(pmt_pulse_modulo_ticks)
         pulse_time_ticks = np.mod(pmt_time_i64, modulo_i64)
-        pulse_time_ns = pulse_time_ticks.astype(np.float64) * PMT_TIME_TICK_NS
+        pulse_time_ns = (
+            pulse_time_ticks.astype(np.float64) * PMT_TIME_TICK_NS
+            + tdc_start_i64.astype(np.float64) * TDC_LSB_NS
+        )
         label = (
             "Pulse time [ns] = (pmt_time % "
             f"{pmt_pulse_modulo_ticks}) * {PMT_TIME_TICK_NS:.0f}"
+            f" + tdc_start * {TDC_LSB_NS:.2f}"
         )
     else:
         raise ValueError(f"Unsupported pulse_time_source: {pulse_time_source}")
@@ -546,6 +550,40 @@ def plot_shifted_peak_mean_vs_channel(
     return fig
 
 
+def plot_peak_to_valley_vs_channel(
+    channel_data: list[dict], output_dir: str, stem: str
+) -> plt.Figure | None:
+    """Plot peak-to-valley ratio vs channel."""
+    channels = []
+    ratios = []
+
+    for data in channel_data:
+        ratio = data.get("peak_valley_ratio")
+        if ratio is None or not np.isfinite(ratio):
+            continue
+        channels.append(data["channel"])
+        ratios.append(ratio)
+
+    if not channels:
+        print("No valid peak-to-valley ratios available for channel plot.")
+        return None
+
+    channels_arr = np.asarray(channels, dtype=np.float64)
+    ratios_arr = np.asarray(ratios, dtype=np.float64)
+
+    fig, ax = plt.subplots(figsize=(8.0, 4.8))
+    ax.plot(channels_arr, ratios_arr, "o-", color="seagreen", markersize=5, linewidth=1.5)
+    ax.set_xlabel("Channel")
+    ax.set_ylabel("Peak-to-valley ratio")
+    ax.set_title("Peak-to-valley ratio vs channel")
+    ax.set_ylim(bottom=0.0)
+    ax.grid(True, linestyle="--", alpha=0.4)
+    ax.set_xticks(channels_arr)
+    fig.tight_layout()
+    fig.savefig(os.path.join(output_dir, f"{stem}_peak_to_valley_vs_channel.png"), dpi=150)
+    return fig
+
+
 def plot_pulse_time_vs_adc_grid(
     channel_data: list[dict],
     output_dir: str,
@@ -557,7 +595,15 @@ def plot_pulse_time_vs_adc_grid(
     output_suffix: str = "pulse_time_vs_pedestal_corrected_adc_grid",
     title: str = "Pulse time vs pedestal-corrected ADC by channel",
 ) -> plt.Figure:
-    """Plot pulse time (ns) vs ADC as a 2D histogram for each channel."""
+    """Plot pulse time (ns) vs ADC as a 2D histogram for each channel.
+
+    Overlays a red Y-profile (mean pulse time per ADC bin) with statistical
+    uncertainties (standard error of the mean).
+    """
+    adc_bins_2d = max(1, int(round(adc_range[1] - adc_range[0])))
+    profile_min_counts = 20
+    profile_x_bins = int(adc_bins_2d / 10)
+
     nrows, ncols = _grid_shape(len(channel_data))
     fig, axes = plt.subplots(nrows, ncols, figsize=(4.5 * ncols, 3.8 * nrows), squeeze=False)
 
@@ -616,7 +662,7 @@ def plot_pulse_time_vs_adc_grid(
             _, _, _, image = ax.hist2d(
                 adc_vals,
                 pulse_time_ns,
-                bins=[150, 150],
+                bins=[int(adc_bins_2d/10), 75],
                 range=[list(adc_range), [y_min, y_max]],
                 cmap="viridis",
                 norm=LogNorm(),
@@ -634,11 +680,52 @@ def plot_pulse_time_vs_adc_grid(
                 color="dimgray",
             )
 
+        # Y-profile vs X: mean pulse time in each ADC bin with SEM uncertainty.
+        # Use only points inside the displayed 2D histogram Y-range.
+        profile_y_mask = (pulse_time_ns >= y_min) & (pulse_time_ns <= y_max)
+        adc_vals_profile = adc_vals[profile_y_mask]
+        pulse_time_profile = pulse_time_ns[profile_y_mask]
+
+        x_edges = np.linspace(adc_range[0], adc_range[1], profile_x_bins + 1)
+        x_centers = 0.5 * (x_edges[:-1] + x_edges[1:])
+        x_bin_idx = np.digitize(adc_vals_profile, x_edges) - 1
+        in_x_range = (x_bin_idx >= 0) & (x_bin_idx < profile_x_bins)
+
+        x_bin_idx = x_bin_idx[in_x_range]
+        y_in_range = pulse_time_profile[in_x_range]
+
+        counts = np.bincount(x_bin_idx, minlength=profile_x_bins)
+        sum_y = np.bincount(x_bin_idx, weights=y_in_range, minlength=profile_x_bins)
+        sum_y2 = np.bincount(x_bin_idx, weights=y_in_range * y_in_range, minlength=profile_x_bins)
+
+        mean_y = np.divide(sum_y, counts, out=np.full(profile_x_bins, np.nan), where=counts > 0)
+        mean_y2 = np.divide(sum_y2, counts, out=np.full(profile_x_bins, np.nan), where=counts > 0)
+        var_y = np.clip(mean_y2 - mean_y * mean_y, a_min=0.0, a_max=None)
+        sem_y = np.sqrt(var_y / counts, out=np.full(profile_x_bins, np.nan), where=counts > 0)
+
+        profile_mask = (counts >= profile_min_counts) & np.isfinite(mean_y) & np.isfinite(sem_y)
+        if np.any(profile_mask):
+            ax.errorbar(
+                x_centers[profile_mask],
+                mean_y[profile_mask],
+                yerr=sem_y[profile_mask],
+                fmt="o",
+                markersize=2.8,
+                color="red",
+                ecolor="red",
+                elinewidth=0.8,
+                capsize=2,
+                alpha=0.95,
+                label=f"Y profile (mean ± SEM, n>={profile_min_counts})",
+            )
+
         ax.set_xlim(*adc_range)
         ax.set_ylim(y_min, y_max)
         ax.set_title(f"Ch {data['channel']:02d}")
         ax.set_xlabel("ADC")
         ax.set_ylabel(data.get("pulse_time_label", "Pulse time [ns]"))
+        if np.any(profile_mask):
+            ax.legend(loc="upper right", fontsize=7)
         if image is not None:
             fig.colorbar(image, ax=ax, label="Counts")
 
@@ -661,7 +748,14 @@ def plot_tot_vs_adc_grid(
     output_suffix: str = "tot_vs_pedestal_corrected_adc_grid",
     title: str = "ToT vs pedestal-corrected ADC by channel",
 ) -> plt.Figure:
-    """Plot ToT (ns) vs ADC as a 2D histogram for each channel."""
+    """Plot ToT (ns) vs ADC as a 2D histogram for each channel.
+
+    Overlays a red Y-profile (mean ToT per ADC bin) with statistical
+    uncertainties (standard error of the mean).
+    """
+    adc_bins_2d = max(1, int(round(adc_range[1] - adc_range[0])))
+    profile_min_counts = 20
+    profile_x_bins = adc_bins_2d
     nrows, ncols = _grid_shape(len(channel_data))
     fig, axes = plt.subplots(nrows, ncols, figsize=(4.5 * ncols, 3.8 * nrows), squeeze=False)
 
@@ -713,7 +807,7 @@ def plot_tot_vs_adc_grid(
             _, _, _, image = ax.hist2d(
                 adc_vals,
                 tot_ns,
-                bins=[150, 150],
+                bins=[adc_bins_2d, 150],
                 range=[list(adc_range), [y_min, y_max]],
                 cmap="viridis",
                 norm=LogNorm(),
@@ -731,11 +825,52 @@ def plot_tot_vs_adc_grid(
                 color="dimgray",
             )
 
+        # Y-profile vs X: mean ToT in each ADC bin with SEM uncertainty.
+        # Use only points inside the displayed 2D histogram Y-range.
+        profile_y_mask = (tot_ns >= y_min) & (tot_ns <= y_max)
+        adc_vals_profile = adc_vals[profile_y_mask]
+        tot_profile = tot_ns[profile_y_mask]
+
+        x_edges = np.linspace(adc_range[0], adc_range[1], profile_x_bins + 1)
+        x_centers = 0.5 * (x_edges[:-1] + x_edges[1:])
+        x_bin_idx = np.digitize(adc_vals_profile, x_edges) - 1
+        in_x_range = (x_bin_idx >= 0) & (x_bin_idx < profile_x_bins)
+
+        x_bin_idx = x_bin_idx[in_x_range]
+        y_in_range = tot_profile[in_x_range]
+
+        counts = np.bincount(x_bin_idx, minlength=profile_x_bins)
+        sum_y = np.bincount(x_bin_idx, weights=y_in_range, minlength=profile_x_bins)
+        sum_y2 = np.bincount(x_bin_idx, weights=y_in_range * y_in_range, minlength=profile_x_bins)
+
+        mean_y = np.divide(sum_y, counts, out=np.full(profile_x_bins, np.nan), where=counts > 0)
+        mean_y2 = np.divide(sum_y2, counts, out=np.full(profile_x_bins, np.nan), where=counts > 0)
+        var_y = np.clip(mean_y2 - mean_y * mean_y, a_min=0.0, a_max=None)
+        sem_y = np.sqrt(var_y / counts, out=np.full(profile_x_bins, np.nan), where=counts > 0)
+
+        profile_mask = (counts >= profile_min_counts) & np.isfinite(mean_y) & np.isfinite(sem_y)
+        if np.any(profile_mask):
+            ax.errorbar(
+                x_centers[profile_mask],
+                mean_y[profile_mask],
+                yerr=sem_y[profile_mask],
+                fmt="o",
+                markersize=2.8,
+                color="red",
+                ecolor="red",
+                elinewidth=0.8,
+                capsize=2,
+                alpha=0.95,
+                label=f"Y profile (mean ± SEM, n>={profile_min_counts})",
+            )
+
         ax.set_xlim(*adc_range)
         ax.set_ylim(y_min, y_max)
         ax.set_title(f"Ch {data['channel']:02d}")
         ax.set_xlabel("ADC")
         ax.set_ylabel("ToT [ns]")
+        if np.any(profile_mask):
+            ax.legend(loc="upper right", fontsize=7)
         if image is not None:
             fig.colorbar(image, ax=ax, label="Counts")
 
@@ -877,7 +1012,7 @@ def main() -> None:
         help=(
             "Pulse-time definition for the 2D pulse-time-vs-ADC plot: "
             "option1=((pmt_time<<4)+tdc_start)*0.25 ns, "
-            "option2=(pmt_time%%25000)*4 ns."
+            "option2=(pmt_time%%25000)*4 ns + tdc_start*0.25 ns."
         ),
     )
     parser.add_argument(
@@ -957,6 +1092,7 @@ def main() -> None:
         return
 
     plot_adc_grid(channel_data, output_dir, stem)
+    plot_peak_to_valley_vs_channel(channel_data, output_dir, stem)
 
     corrected_channel_data = build_pedestal_corrected_channel_data(
         channel_data, second_pass_adc_min=args.second_pass_adc_min
@@ -974,21 +1110,6 @@ def main() -> None:
             title="Pedestal-corrected ADC by channel",
             output_suffix="adc_pedestal_corrected_grid",
         )
-        plot_pulse_time_vs_adc_grid(
-            corrected_channel_data,
-            output_dir,
-            stem,
-            pulse_time_source=args.pulse_time_source,
-            adc_key="adc_pedestal_corrected",
-            adc_range=ADC_CORRECTED_RANGE,
-            adc_min_cut=args.adc_2d_min_cut,
-            output_suffix=f"pulse_time_{args.pulse_time_source}_vs_pedestal_corrected_adc_grid",
-            title=(
-                "Pulse time vs pedestal-corrected ADC by channel ("
-                + args.pulse_time_source
-                + f", ADC>{args.adc_2d_min_cut:g})"
-            ),
-        )
         plot_tot_vs_adc_grid(
             corrected_channel_data,
             output_dir,
@@ -1000,6 +1121,21 @@ def main() -> None:
             title=f"ToT vs pedestal-corrected ADC by channel (ADC>{args.adc_2d_min_cut:g})",
         )
         plot_shifted_peak_mean_vs_channel(corrected_channel_data, output_dir, stem)
+        plot_pulse_time_vs_adc_grid(
+                    corrected_channel_data,
+                    output_dir,
+                    stem,
+                    pulse_time_source=args.pulse_time_source,
+                    adc_key="adc_pedestal_corrected",
+                    adc_range=ADC_CORRECTED_RANGE,
+                    adc_min_cut=args.adc_2d_min_cut,
+                    output_suffix=f"pulse_time_{args.pulse_time_source}_vs_pedestal_corrected_adc_grid",
+                    title=(
+                        "Pulse time vs pedestal-corrected ADC by channel ("
+                        + args.pulse_time_source
+                        + f", ADC>{args.adc_2d_min_cut:g})"
+                    ),
+                )
 
     if tk is None:
         plt.show()
