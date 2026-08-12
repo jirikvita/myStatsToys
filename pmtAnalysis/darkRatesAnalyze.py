@@ -5,16 +5,23 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 import matplotlib.pyplot as plt
+from matplotlib.widgets import Button
 import numpy as np
 
 
-#TARGET_CHANNELS = ["1", "2", "3", "5", "8"]
-TARGET_CHANNELS = ["1", "2", "3", "4", "5", "6"]
+LOG_AXIS_MIN = 5.0
+LOG_AXIS_MAX = 12.5
+SPIKE_THRESHOLD = 3000.0
+
+
+# Keep widget objects alive for the lifetime of the UI.
+_UI_CONTROLS: list[Any] = []
 
 
 def _iter_timestamp_channel_nodes(obj: Any):
@@ -27,6 +34,29 @@ def _iter_timestamp_channel_nodes(obj: Any):
 	elif isinstance(obj, list):
 		for item in obj:
 			yield from _iter_timestamp_channel_nodes(item)
+
+
+def detect_channels_with_data(data: Any) -> list[str]:
+	detected: set[str] = set()
+	for node in _iter_timestamp_channel_nodes(data):
+		channels_dict = node.get("channels", {})
+		if not isinstance(channels_dict, dict):
+			continue
+		for ch, ch_data in channels_dict.items():
+			if not isinstance(ch_data, dict):
+				continue
+			r_mon = ch_data.get("r_mon")
+			if isinstance(r_mon, (int, float)):
+				detected.add(str(ch))
+
+	# Sort numerically when possible, then lexicographically as fallback.
+	def sort_key(value: str) -> tuple[int, float | str]:
+		try:
+			return (0, float(value))
+		except ValueError:
+			return (1, value)
+
+	return sorted(detected, key=sort_key)
 
 
 def extract_rmon_series(data: Any, channels: list[str]) -> dict[str, list[tuple[datetime, float]]]:
@@ -57,26 +87,34 @@ def extract_rmon_series(data: Any, channels: list[str]) -> dict[str, list[tuple[
 	return series
 
 
-def plot_rmon(series: dict[str, list[tuple[datetime, float]]], output_file: Path) -> None:
+def plot_rmon(
+	series: dict[str, list[tuple[datetime, float]]],
+	channels: list[str],
+	output_file: Path,
+	use_log_scale: bool,
+) -> None:
 	plt.figure(figsize=(11, 5))
 
 	has_points = False
-	for ch in TARGET_CHANNELS:
+	for ch in channels:
 		points = series.get(ch, [])
 		if not points:
 			continue
 		has_points = True
 		x = [t for t, _ in points]
-		y = [math.log1p(v) for _, v in points]
+		y = [math.log1p(v) for _, v in points] if use_log_scale else [v for _, v in points]
 		plt.plot(x, y, marker="o", markersize=2, linewidth=1.2, alpha=0.4, label=f"Ch {ch}")
 
 	if not has_points:
 		raise RuntimeError("No r_mon data found for requested channels.")
 
-	plt.title("Dark Rates log(1 + r_mon) vs Time")
+	title = "Dark Rates log(1 + r_mon) vs Time" if use_log_scale else "Dark Rates r_mon vs Time"
+	plt.title(title)
 	plt.xlabel("Timestamp")
-	plt.ylabel("log(1 + r_mon [Hz])")
-	plt.ylim(5, 11)
+	ylabel = "log(1 + r_mon [Hz])" if use_log_scale else "r_mon [Hz]"
+	plt.ylabel(ylabel)
+	if use_log_scale:
+		plt.ylim(LOG_AXIS_MIN, LOG_AXIS_MAX)
 	plt.grid(True, linestyle="--", alpha=0.4)
 	plt.legend()
 	plt.tight_layout()
@@ -87,11 +125,16 @@ def _series_to_timestamp_map(points: list[tuple[datetime, float]]) -> dict[datet
 	return {timestamp: value for timestamp, value in points}
 
 
-def plot_pairwise_scatter_grid(series: dict[str, list[tuple[datetime, float]]], output_file: Path) -> None:
+def plot_pairwise_scatter_grid(
+	series: dict[str, list[tuple[datetime, float]]],
+	channels: list[str],
+	output_file: Path,
+	use_log_scale: bool,
+) -> None:
 	pairs: list[tuple[str, str, list[float], list[float]]] = []
 
-	for i, ch_x in enumerate(TARGET_CHANNELS):
-		for ch_y in TARGET_CHANNELS[i + 1 :]:
+	for i, ch_x in enumerate(channels):
+		for ch_y in channels[i + 1 :]:
 			map_x = _series_to_timestamp_map(series.get(ch_x, []))
 			map_y = _series_to_timestamp_map(series.get(ch_y, []))
 			common_ts = sorted(set(map_x.keys()) & set(map_y.keys()))
@@ -116,20 +159,24 @@ def plot_pairwise_scatter_grid(series: dict[str, list[tuple[datetime, float]]], 
 		row = idx // n_cols
 		col = idx % n_cols
 		ax = axes[row][col]
-		x_vals_log = [math.log1p(v) for v in x_vals]
-		y_vals_log = [math.log1p(v) for v in y_vals]
+		x_plot = [math.log1p(v) for v in x_vals] if use_log_scale else x_vals
+		y_plot = [math.log1p(v) for v in y_vals] if use_log_scale else y_vals
 		ax.scatter(
-			x_vals_log,
-			y_vals_log,
+			x_plot,
+			y_plot,
 			s=10,
 			alpha=0.45,
 			color=palette(idx),
 		)
 		ax.set_title(f"Ch {ch_x} vs Ch {ch_y}")
-		ax.set_xlabel(f"log(1 + Ch {ch_x} r_mon [Hz])")
-		ax.set_ylabel(f"log(1 + Ch {ch_y} r_mon [Hz])")
-		ax.set_xlim(5, 11)
-		ax.set_ylim(5, 11)
+		if use_log_scale:
+			ax.set_xlabel(f"log(1 + Ch {ch_x} r_mon [Hz])")
+			ax.set_ylabel(f"log(1 + Ch {ch_y} r_mon [Hz])")
+			ax.set_xlim(LOG_AXIS_MIN, LOG_AXIS_MAX)
+			ax.set_ylim(LOG_AXIS_MIN, LOG_AXIS_MAX)
+		else:
+			ax.set_xlabel(f"Ch {ch_x} r_mon [Hz]")
+			ax.set_ylabel(f"Ch {ch_y} r_mon [Hz]")
 		ax.grid(True, linestyle="--", alpha=0.35)
 
 	for idx in range(n_pairs, n_rows * n_cols):
@@ -137,16 +184,25 @@ def plot_pairwise_scatter_grid(series: dict[str, list[tuple[datetime, float]]], 
 		col = idx % n_cols
 		axes[row][col].axis("off")
 
-	fig.suptitle("Pairwise Dark Rate Correlations in log(1 + r_mon)", y=1.02)
+	title = (
+		"Pairwise Dark Rate Correlations in log(1 + r_mon)"
+		if use_log_scale
+		else "Pairwise Dark Rate Correlations in r_mon"
+	)
+	fig.suptitle(title, y=1.02)
 	fig.tight_layout()
 	fig.savefig(output_file, dpi=150, bbox_inches="tight")
 
 
-def plot_fft_rate_histograms(series: dict[str, list[tuple[datetime, float]]], output_file: Path) -> None:
+def plot_fft_rate_histograms(
+	series: dict[str, list[tuple[datetime, float]]],
+	channels: list[str],
+	output_file: Path,
+) -> None:
 	plt.figure(figsize=(11, 5))
 
 	has_points = False
-	for ch in TARGET_CHANNELS:
+	for ch in channels:
 		rate_values = [rate for _, rate in series.get(ch, [])]
 		if len(rate_values) < 2:
 			continue
@@ -198,13 +254,21 @@ def _spike_centers_from_runs(points: list[tuple[datetime, float]], threshold: fl
 	return centers
 
 
-def plot_spike_delta_histograms(series: dict[str, list[tuple[datetime, float]]], output_file: Path) -> None:
+def count_spike_runs(points: list[tuple[datetime, float]], threshold: float) -> int:
+	return len(_spike_centers_from_runs(points, threshold=threshold))
+
+
+def plot_spike_delta_histograms(
+	series: dict[str, list[tuple[datetime, float]]],
+	channels: list[str],
+	output_file: Path,
+) -> None:
 	plt.figure(figsize=(11, 5))
 
-	alpha = 1.0 / len(TARGET_CHANNELS)
+	alpha = 1.0 / len(channels)
 	has_data = False
-	for ch in TARGET_CHANNELS:
-		spike_times = _spike_centers_from_runs(series.get(ch, []), threshold=3000.0)
+	for ch in channels:
+		spike_times = _spike_centers_from_runs(series.get(ch, []), threshold=SPIKE_THRESHOLD)
 		if len(spike_times) < 2:
 			continue
 
@@ -220,13 +284,13 @@ def plot_spike_delta_histograms(series: dict[str, list[tuple[datetime, float]]],
 
 	if not has_data:
 		# Keep the analysis flow running even when no spike deltas are available.
-		plt.title("Histogram of Consecutive Spike-Center Time Differences (r_mon > 3000)")
+		plt.title(f"Histogram of Consecutive Spike-Center Time Differences (r_mon > {int(SPIKE_THRESHOLD)})")
 		plt.xlabel("Time Difference Between Consecutive Spikes [s]")
 		plt.ylabel("Count")
 		plt.text(
 			0.5,
 			0.5,
-			"No consecutive spikes found for threshold r_mon > 3000.",
+			f"No consecutive spikes found for threshold r_mon > {int(SPIKE_THRESHOLD)}.",
 			ha="center",
 			va="center",
 			transform=plt.gca().transAxes,
@@ -236,13 +300,48 @@ def plot_spike_delta_histograms(series: dict[str, list[tuple[datetime, float]]],
 		plt.savefig(output_file, dpi=150)
 		return
 
-	plt.title("Histogram of Consecutive Spike-Center Time Differences (r_mon > 3000)")
+	plt.title(f"Histogram of Consecutive Spike-Center Time Differences (r_mon > {int(SPIKE_THRESHOLD)})")
 	plt.xlabel("Time Difference Between Consecutive Spikes [s]")
 	plt.ylabel("Count")
 	plt.grid(True, linestyle="--", alpha=0.35)
 	plt.legend()
 	plt.tight_layout()
 	plt.savefig(output_file, dpi=150)
+
+
+def print_spike_counts_linear(
+	series: dict[str, list[tuple[datetime, float]]],
+	channels: list[str],
+	threshold: float,
+) -> None:
+	print(f"Spike counts in linear scale (r_mon > {int(threshold)}):")
+	total = 0
+	for ch in channels:
+		count = count_spike_runs(series.get(ch, []), threshold=threshold)
+		total += count
+		print(f"  Ch {ch}: {count}")
+	print(f"  Total: {total}")
+
+
+def add_exit_button() -> None:
+	control_fig = plt.figure("Controls", figsize=(2.6, 1.2))
+	control_fig.patch.set_facecolor("#ffe6e6")
+	button_ax = control_fig.add_axes([0.12, 0.2, 0.76, 0.62])
+	exit_button = Button(
+		button_ax,
+		"Exit",
+		color="lightcoral",
+		hovercolor="#ff6b6b",
+	)
+	exit_button.label.set_color("white")
+	exit_button.label.set_fontweight("bold")
+	_UI_CONTROLS.extend([control_fig, button_ax, exit_button])
+
+	def _close_all(_event):
+		plt.close("all")
+		sys.exit(0)
+
+	exit_button.on_clicked(_close_all)
 
 
 def main() -> None:
@@ -278,6 +377,11 @@ def main() -> None:
 		default=Path("dark_rates_spike_dt_hist_channels_1_2_3_5_8.png"),
 		help="Output histogram of consecutive spike time differences PNG path",
 	)
+	parser.add_argument(
+		"--linear",
+		action="store_true",
+		help="Use linear r_mon scale for time and pairwise scatter plots (default is log(1 + r_mon)).",
+	)
 	args = parser.parse_args()
 	output_dir = args.input.parent / args.input.stem
 	output_dir.mkdir(parents=True, exist_ok=True)
@@ -295,11 +399,19 @@ def main() -> None:
 	with args.input.open("r", encoding="utf-8") as f:
 		data = json.load(f)
 
-	series = extract_rmon_series(data, TARGET_CHANNELS)
-	plot_rmon(series, output_path)
-	plot_pairwise_scatter_grid(series, scatter_output_path)
-	plot_fft_rate_histograms(series, fft_output_path)
-	plot_spike_delta_histograms(series, spike_dt_output_path)
+	channels = detect_channels_with_data(data)
+	if not channels:
+		raise RuntimeError("No channels with numeric r_mon data were found in the input JSON.")
+	print(f"Auto-detected channels with data: {', '.join(channels)}")
+
+	series = extract_rmon_series(data, channels)
+	use_log_scale = not args.linear
+	plot_rmon(series, channels, output_path, use_log_scale=use_log_scale)
+	plot_pairwise_scatter_grid(series, channels, scatter_output_path, use_log_scale=use_log_scale)
+	plot_fft_rate_histograms(series, channels, fft_output_path)
+	plot_spike_delta_histograms(series, channels, spike_dt_output_path)
+	print_spike_counts_linear(series, channels, threshold=SPIKE_THRESHOLD)
+	add_exit_button()
 	plt.show()
 	print(f"Saved plot to: {output_path}")
 	print(f"Saved scatter grid to: {scatter_output_path}")

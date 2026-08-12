@@ -45,10 +45,10 @@ PMT_PULSE_MODULO_TICKS = 25_000
 # Custom Y ranges (ns) for pulse-time 2D plots.
 # Set to None to auto-infer from data.
 PULSE_TIME_2D_Y_RANGE_OPTION1_NS: tuple[float, float] | None = (2150.0, 2300.0)
-PULSE_TIME_2D_Y_RANGE_OPTION2_NS: tuple[float, float] | None = (140.0, 165.0)
+PULSE_TIME_2D_Y_RANGE_OPTION2_NS: tuple[float, float] | None = (100.0, 120.0)
 
 # Default ADC cut applied before filling 2D pulse-time plots.
-ADC_2D_MIN_CUT = 25.0
+ADC_2D_MIN_CUT = 15.0
 
 # Custom Y range (ns) for ToT 2D plots. Set to None to auto-infer from data.
 TOT_2D_Y_RANGE_NS: tuple[float, float] | None = (0.0, 75.0)
@@ -883,6 +883,175 @@ def plot_tot_vs_adc_grid(
     return fig
 
 
+def histogram_fwhm(bin_counts: np.ndarray, bin_edges: np.ndarray) -> float | None:
+    """Estimate FWHM from a histogram as width of bins above half-maximum."""
+    if bin_counts.size == 0 or bin_edges.size != bin_counts.size + 1:
+        return None
+
+    max_count = float(np.max(bin_counts))
+    if not np.isfinite(max_count) or max_count <= 0.0:
+        return None
+
+    half_max = 0.5 * max_count
+    above = np.flatnonzero(bin_counts >= half_max)
+    if above.size == 0:
+        return None
+
+    lo_idx = int(above[0])
+    hi_idx = int(above[-1])
+    fwhm = float(bin_edges[hi_idx + 1] - bin_edges[lo_idx])
+    if not np.isfinite(fwhm) or fwhm < 0.0:
+        return None
+    return fwhm
+
+
+def plot_pulse_time_hist_grid(
+    channel_data: list[dict],
+    output_dir: str,
+    stem: str,
+    pulse_time_source: str,
+    rebin_time: int = 1,
+    output_suffix: str = "pulse_time_hist_grid",
+    title: str = "Pulse time distribution by channel",
+) -> plt.Figure:
+    """Plot 1D pulse-time histograms for each channel as a grid."""
+    nrows, ncols = _grid_shape(len(channel_data))
+    fig, axes = plt.subplots(nrows, ncols, figsize=(4.5 * ncols, 3.8 * nrows), squeeze=False)
+
+    all_t = []
+    for data in channel_data:
+        t = np.asarray(data.get("pulse_time_ns", []), dtype=np.float64)
+        first_cycle_mask = np.asarray(
+            data.get("is_first_pulse_in_cycle", np.ones_like(t, dtype=bool)),
+            dtype=bool,
+        )
+        if first_cycle_mask.shape[0] == t.shape[0]:
+            t = t[first_cycle_mask]
+        t = t[np.isfinite(t)]
+        if t.size > 0:
+            all_t.append(t)
+
+    custom_range = (
+        PULSE_TIME_2D_Y_RANGE_OPTION1_NS
+        if pulse_time_source == "option1"
+        else PULSE_TIME_2D_Y_RANGE_OPTION2_NS
+    )
+
+    if custom_range is not None:
+        t_min, t_max = custom_range
+    elif all_t:
+        merged = np.concatenate(all_t)
+        t_min = float(np.min(merged))
+        t_max = float(np.max(merged))
+        if t_max <= t_min:
+            t_max = t_min + 1.0
+        pad = max((t_max - t_min) * 0.05, TDC_LSB_NS)
+        t_min -= pad
+        t_max += pad
+    else:
+        t_min, t_max = 0.0, 1.0
+
+    for idx, data in enumerate(channel_data):
+        ax = axes[idx // ncols][idx % ncols]
+        t = np.asarray(data.get("pulse_time_ns", []), dtype=np.float64)
+        first_cycle_mask = np.asarray(
+            data.get("is_first_pulse_in_cycle", np.ones_like(t, dtype=bool)),
+            dtype=bool,
+        )
+        if first_cycle_mask.shape[0] == t.shape[0]:
+            t = t[first_cycle_mask]
+        t = t[np.isfinite(t)]
+        data["pulse_time_fwhm_ns"] = np.nan
+
+        if t.size > 0:
+            base_bins = 100
+            n_bins = max(1, int(base_bins / rebin_time))
+            counts, edges, _ = ax.hist(
+                t,
+                bins=n_bins,
+                range=(t_min, t_max),
+                histtype="stepfilled",
+                color="steelblue",
+                alpha=0.65,
+                edgecolor="black",
+                linewidth=0.3,
+            )
+            mean_t = float(np.mean(t))
+            fwhm = histogram_fwhm(counts.astype(np.float64), edges.astype(np.float64))
+            if fwhm is not None:
+                data["pulse_time_fwhm_ns"] = fwhm
+                legend_label = f"mean={mean_t:.2f} ns\nFWHM={fwhm:.2f} ns"
+            else:
+                legend_label = f"mean={mean_t:.2f} ns\nFWHM=N/A"
+            ax.axvline(
+                mean_t,
+                color="darkred",
+                linestyle="--",
+                linewidth=1.2,
+                label=legend_label,
+            )
+            ax.legend(fontsize=7, loc="upper right")
+        else:
+            ax.text(
+                0.5,
+                0.5,
+                "No finite points",
+                transform=ax.transAxes,
+                ha="center",
+                va="center",
+                fontsize=8,
+                color="dimgray",
+            )
+
+        ax.set_xlim(t_min, t_max)
+        ax.set_title(f"Ch {data['channel']:02d}")
+        ax.set_xlabel(data.get("pulse_time_label", "Pulse time [ns]"))
+        ax.set_ylabel("Counts")
+        ax.grid(True, linestyle="--", alpha=0.4)
+
+    for idx in range(len(channel_data), nrows * ncols):
+        axes[idx // ncols][idx % ncols].axis("off")
+
+    fig.suptitle(f"{title} ({pulse_time_source}, first pulse/cycle)")
+    fig.tight_layout()
+    fig.savefig(os.path.join(output_dir, f"{stem}_{output_suffix}.png"), dpi=150)
+    return fig
+
+
+def plot_pulse_time_fwhm_vs_channel(
+    channel_data: list[dict], output_dir: str, stem: str, pulse_time_source: str
+) -> plt.Figure | None:
+    """Plot pulse-time FWHM vs channel."""
+    channels = []
+    fwhm_values = []
+
+    for data in channel_data:
+        fwhm = data.get("pulse_time_fwhm_ns", np.nan)
+        if fwhm is None or not np.isfinite(fwhm):
+            continue
+        channels.append(data["channel"])
+        fwhm_values.append(float(fwhm))
+
+    if not channels:
+        print("No valid pulse-time FWHM values available for channel plot.")
+        return None
+
+    channels_arr = np.asarray(channels, dtype=np.float64)
+    fwhm_arr = np.asarray(fwhm_values, dtype=np.float64)
+
+    fig, ax = plt.subplots(figsize=(8.0, 4.8))
+    ax.plot(channels_arr, fwhm_arr, "o-", color="firebrick", markersize=5, linewidth=1.5)
+    ax.set_xlabel("Channel")
+    ax.set_ylabel("Pulse-time FWHM [ns]")
+    ax.set_title(f"Pulse-time FWHM vs channel ({pulse_time_source})")
+    ax.set_ylim(bottom=0.0)
+    ax.grid(True, linestyle="--", alpha=0.4)
+    ax.set_xticks(channels_arr)
+    fig.tight_layout()
+    fig.savefig(os.path.join(output_dir, f"{stem}_pulse_time_fwhm_vs_channel.png"), dpi=150)
+    return fig
+
+
 def build_pedestal_corrected_channel_data(
     channel_data: list[dict], second_pass_adc_min: float = 25.0
 ) -> list[dict]:
@@ -1008,7 +1177,7 @@ def main() -> None:
     parser.add_argument(
         "--pulse-time-source",
         choices=("option1", "option2"),
-        default="option1",
+        default="option2",
         help=(
             "Pulse-time definition for the 2D pulse-time-vs-ADC plot: "
             "option1=((pmt_time<<4)+tdc_start)*0.25 ns, "
@@ -1030,6 +1199,15 @@ def main() -> None:
             "keep only ADC > value (default: %(default)s)."
         ),
     )
+    parser.add_argument(
+        "--rebin-time",
+        type=int,
+        default=1,
+        help=(
+            "Rebin factor for 1D pulse-time histograms (default: %(default)s). "
+            "Effective bins are 100/rebin-time."
+        ),
+    )
     args = parser.parse_args()
 
     if not np.isfinite(args.second_pass_adc_min):
@@ -1038,6 +1216,8 @@ def main() -> None:
         raise ValueError("--pmt-pulse-modulo-ticks must be > 0")
     if not np.isfinite(args.adc_2d_min_cut):
         raise ValueError("--adc-2d-min-cut must be finite")
+    if args.rebin_time <= 0:
+        raise ValueError("--rebin-time must be > 0")
 
     input_file = args.input
     output_dir = args.output_dir or os.path.dirname(os.path.abspath(input_file))
@@ -1093,6 +1273,21 @@ def main() -> None:
 
     plot_adc_grid(channel_data, output_dir, stem)
     plot_peak_to_valley_vs_channel(channel_data, output_dir, stem)
+    plot_pulse_time_hist_grid(
+        channel_data,
+        output_dir,
+        stem,
+        pulse_time_source=args.pulse_time_source,
+        rebin_time=args.rebin_time,
+        output_suffix=f"pulse_time_{args.pulse_time_source}_hist_grid",
+        title="Pulse time distribution by channel",
+    )
+    plot_pulse_time_fwhm_vs_channel(
+        channel_data,
+        output_dir,
+        stem,
+        pulse_time_source=args.pulse_time_source,
+    )
 
     corrected_channel_data = build_pedestal_corrected_channel_data(
         channel_data, second_pass_adc_min=args.second_pass_adc_min
