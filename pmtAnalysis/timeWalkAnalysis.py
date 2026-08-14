@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 import math
 import os
+import re
 
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
@@ -46,6 +47,19 @@ PMT_PULSE_MODULO_TICKS = 25_000
 # Set to None to auto-infer from data.
 PULSE_TIME_2D_Y_RANGE_OPTION1_NS: tuple[float, float] | None = (2150.0, 2300.0)
 PULSE_TIME_2D_Y_RANGE_OPTION2_NS: tuple[float, float] | None = (100.0, 120.0)
+
+# Optional per-channel Y-range overrides (display channel indexing: 1, 2, ...).
+# Any channel absent from these maps falls back to the global ranges above.
+PULSE_TIME_2D_Y_RANGE_OPTION1_BY_CHANNEL_NS: dict[int, tuple[float, float]] = {
+    1: (2100.0, 2350.0),
+}
+PULSE_TIME_2D_Y_RANGE_OPTION2_BY_CHANNEL_NS: dict[int, tuple[float, float]] = {
+    1: (125.0, 165.0),
+}
+
+# Base bin width (ns) for 1D pulse-time histograms.
+# Final 1D width is this value multiplied by --rebin-time.
+PULSE_TIME_1D_BIN_WIDTH_NS = 0.25
 
 # Default ADC cut applied before filling 2D pulse-time plots.
 ADC_2D_MIN_CUT = 15.0
@@ -407,6 +421,28 @@ def _grid_shape(n_items: int) -> tuple[int, int]:
     return nrows, ncols
 
 
+def extract_threshold_tag_from_path(path: str) -> str | None:
+    """Extract threshold tag from a file path, e.g. Thr15mV or thr30mV.
+
+    Returns a canonical tag like "Thr15mV" when a match is found,
+    otherwise returns None.
+    """
+    match = re.search(r"thr\s*[_-]?\s*(\d+)\s*mv", path, flags=re.IGNORECASE)
+    if match is None:
+        return None
+    return f"Thr{match.group(1)}mV"
+
+
+def save_figure_dual_format(fig: plt.Figure, output_dir: str, base_name: str) -> None:
+    """Save figure as both PNG and PDF under png/ and pdf/ subdirectories."""
+    png_dir = os.path.join(output_dir, "png")
+    pdf_dir = os.path.join(output_dir, "pdf")
+    os.makedirs(png_dir, exist_ok=True)
+    os.makedirs(pdf_dir, exist_ok=True)
+    fig.savefig(os.path.join(png_dir, f"{base_name}.png"), dpi=150)
+    fig.savefig(os.path.join(pdf_dir, f"{base_name}.pdf"))
+
+
 def plot_adc_grid(
     channel_data: list[dict],
     output_dir: str,
@@ -416,6 +452,7 @@ def plot_adc_grid(
     adc_bins: int = ADC_HIST_BINS,
     title: str = "ADC by channel",
     output_suffix: str = "adc_grid",
+    dataset_tag: str | None = None,
 ) -> plt.Figure:
     """Plot ADC histogram of every channel as a single grid figure."""
     nrows, ncols = _grid_shape(len(channel_data))
@@ -490,6 +527,8 @@ def plot_adc_grid(
         ax.set_xlabel("ADC")
         ax.set_ylabel("Counts")
         ax.grid(True, linestyle="--", alpha=0.4)
+        if dataset_tag is not None:
+            ax.plot([], [], " ", label=dataset_tag)
         ax.legend(fontsize=7, loc="upper right")
 
     for idx in range(len(channel_data), nrows * ncols):
@@ -497,12 +536,12 @@ def plot_adc_grid(
 
     fig.suptitle(title)
     fig.tight_layout()
-    fig.savefig(os.path.join(output_dir, f"{stem}_{output_suffix}.png"), dpi=150)
+    save_figure_dual_format(fig, output_dir, f"{stem}_{output_suffix}")
     return fig
 
 
 def plot_shifted_peak_mean_vs_channel(
-    channel_data: list[dict], output_dir: str, stem: str
+    channel_data: list[dict], output_dir: str, stem: str, dataset_tag: str | None = None
 ) -> plt.Figure | None:
     """Plot shifted peak mean vs channel with fit-parameter mean errors."""
     channels = []
@@ -541,17 +580,20 @@ def plot_shifted_peak_mean_vs_channel(
     )
     ax.set_xlabel("Channel")
     ax.set_ylabel("Shifted peak mean [ADC]")
-    ax.set_title("Shifted peak mean vs channel")
+    title = "Shifted peak mean vs channel"
+    if dataset_tag is not None:
+        title += f" ({dataset_tag})"
+    ax.set_title(title)
     ax.set_ylim(bottom=0.0)
     ax.grid(True, linestyle="--", alpha=0.4)
     ax.set_xticks(channels_arr)
     fig.tight_layout()
-    fig.savefig(os.path.join(output_dir, f"{stem}_shifted_peak_mean_vs_channel.png"), dpi=150)
+    save_figure_dual_format(fig, output_dir, f"{stem}_shifted_peak_mean_vs_channel")
     return fig
 
 
 def plot_peak_to_valley_vs_channel(
-    channel_data: list[dict], output_dir: str, stem: str
+    channel_data: list[dict], output_dir: str, stem: str, dataset_tag: str | None = None
 ) -> plt.Figure | None:
     """Plot peak-to-valley ratio vs channel."""
     channels = []
@@ -575,12 +617,15 @@ def plot_peak_to_valley_vs_channel(
     ax.plot(channels_arr, ratios_arr, "o-", color="seagreen", markersize=5, linewidth=1.5)
     ax.set_xlabel("Channel")
     ax.set_ylabel("Peak-to-valley ratio")
-    ax.set_title("Peak-to-valley ratio vs channel")
+    title = "Peak-to-valley ratio vs channel"
+    if dataset_tag is not None:
+        title += f" ({dataset_tag})"
+    ax.set_title(title)
     ax.set_ylim(bottom=0.0)
     ax.grid(True, linestyle="--", alpha=0.4)
     ax.set_xticks(channels_arr)
     fig.tight_layout()
-    fig.savefig(os.path.join(output_dir, f"{stem}_peak_to_valley_vs_channel.png"), dpi=150)
+    save_figure_dual_format(fig, output_dir, f"{stem}_peak_to_valley_vs_channel")
     return fig
 
 
@@ -594,6 +639,7 @@ def plot_pulse_time_vs_adc_grid(
     adc_min_cut: float = ADC_2D_MIN_CUT,
     output_suffix: str = "pulse_time_vs_pedestal_corrected_adc_grid",
     title: str = "Pulse time vs pedestal-corrected ADC by channel",
+    dataset_tag: str | None = None,
 ) -> plt.Figure:
     """Plot pulse time (ns) vs ADC as a 2D histogram for each channel.
 
@@ -621,21 +667,28 @@ def plot_pulse_time_vs_adc_grid(
     )
 
     if custom_range is not None:
-        y_min, y_max = custom_range
+        default_y_min, default_y_max = custom_range
     elif all_t:
         merged = np.concatenate(all_t)
-        y_min = float(np.min(merged))
-        y_max = float(np.max(merged))
-        if y_max <= y_min:
-            y_max = y_min + 1.0
-        pad = max((y_max - y_min) * 0.05, TDC_LSB_NS)
-        y_min -= pad
-        y_max += pad
+        default_y_min = float(np.min(merged))
+        default_y_max = float(np.max(merged))
+        if default_y_max <= default_y_min:
+            default_y_max = default_y_min + 1.0
+        pad = max((default_y_max - default_y_min) * 0.05, TDC_LSB_NS)
+        default_y_min -= pad
+        default_y_max += pad
     else:
-        y_min, y_max = 0.0, 1.0
+        default_y_min, default_y_max = 0.0, 1.0
+
+    channel_range_overrides = (
+        PULSE_TIME_2D_Y_RANGE_OPTION1_BY_CHANNEL_NS
+        if pulse_time_source == "option1"
+        else PULSE_TIME_2D_Y_RANGE_OPTION2_BY_CHANNEL_NS
+    )
 
     for idx, data in enumerate(channel_data):
         ax = axes[idx // ncols][idx % ncols]
+        y_min, y_max = channel_range_overrides.get(data["channel"], (default_y_min, default_y_max))
         adc_vals = np.asarray(data[adc_key], dtype=np.float64)
         pulse_time_ns = np.asarray(data["pulse_time_ns"], dtype=np.float64)
         first_cycle_mask = np.asarray(
@@ -725,6 +778,11 @@ def plot_pulse_time_vs_adc_grid(
         ax.set_xlabel("ADC")
         ax.set_ylabel(data.get("pulse_time_label", "Pulse time [ns]"))
         if np.any(profile_mask):
+            if dataset_tag is not None:
+                ax.plot([], [], " ", label=dataset_tag)
+            ax.legend(loc="upper right", fontsize=7)
+        elif dataset_tag is not None:
+            ax.plot([], [], " ", label=dataset_tag)
             ax.legend(loc="upper right", fontsize=7)
         if image is not None:
             fig.colorbar(image, ax=ax, label="Counts")
@@ -734,7 +792,7 @@ def plot_pulse_time_vs_adc_grid(
 
     fig.suptitle(title)
     fig.tight_layout()
-    fig.savefig(os.path.join(output_dir, f"{stem}_{output_suffix}.png"), dpi=150)
+    save_figure_dual_format(fig, output_dir, f"{stem}_{output_suffix}")
     return fig
 
 
@@ -747,6 +805,7 @@ def plot_tot_vs_adc_grid(
     adc_min_cut: float = ADC_2D_MIN_CUT,
     output_suffix: str = "tot_vs_pedestal_corrected_adc_grid",
     title: str = "ToT vs pedestal-corrected ADC by channel",
+    dataset_tag: str | None = None,
 ) -> plt.Figure:
     """Plot ToT (ns) vs ADC as a 2D histogram for each channel.
 
@@ -870,6 +929,11 @@ def plot_tot_vs_adc_grid(
         ax.set_xlabel("ADC")
         ax.set_ylabel("ToT [ns]")
         if np.any(profile_mask):
+            if dataset_tag is not None:
+                ax.plot([], [], " ", label=dataset_tag)
+            ax.legend(loc="upper right", fontsize=7)
+        elif dataset_tag is not None:
+            ax.plot([], [], " ", label=dataset_tag)
             ax.legend(loc="upper right", fontsize=7)
         if image is not None:
             fig.colorbar(image, ax=ax, label="Counts")
@@ -879,7 +943,7 @@ def plot_tot_vs_adc_grid(
 
     fig.suptitle(title)
     fig.tight_layout()
-    fig.savefig(os.path.join(output_dir, f"{stem}_{output_suffix}.png"), dpi=150)
+    save_figure_dual_format(fig, output_dir, f"{stem}_{output_suffix}")
     return fig
 
 
@@ -911,8 +975,10 @@ def plot_pulse_time_hist_grid(
     stem: str,
     pulse_time_source: str,
     rebin_time: int = 1,
+    time_bin_width_ns: float = 0.25,
     output_suffix: str = "pulse_time_hist_grid",
     title: str = "Pulse time distribution by channel",
+    dataset_tag: str | None = None,
 ) -> plt.Figure:
     """Plot 1D pulse-time histograms for each channel as a grid."""
     nrows, ncols = _grid_shape(len(channel_data))
@@ -938,21 +1004,28 @@ def plot_pulse_time_hist_grid(
     )
 
     if custom_range is not None:
-        t_min, t_max = custom_range
+        default_t_min, default_t_max = custom_range
     elif all_t:
         merged = np.concatenate(all_t)
-        t_min = float(np.min(merged))
-        t_max = float(np.max(merged))
-        if t_max <= t_min:
-            t_max = t_min + 1.0
-        pad = max((t_max - t_min) * 0.05, TDC_LSB_NS)
-        t_min -= pad
-        t_max += pad
+        default_t_min = float(np.min(merged))
+        default_t_max = float(np.max(merged))
+        if default_t_max <= default_t_min:
+            default_t_max = default_t_min + 1.0
+        pad = max((default_t_max - default_t_min) * 0.05, TDC_LSB_NS)
+        default_t_min -= pad
+        default_t_max += pad
     else:
-        t_min, t_max = 0.0, 1.0
+        default_t_min, default_t_max = 0.0, 1.0
+
+    channel_range_overrides = (
+        PULSE_TIME_2D_Y_RANGE_OPTION1_BY_CHANNEL_NS
+        if pulse_time_source == "option1"
+        else PULSE_TIME_2D_Y_RANGE_OPTION2_BY_CHANNEL_NS
+    )
 
     for idx, data in enumerate(channel_data):
         ax = axes[idx // ncols][idx % ncols]
+        t_min, t_max = channel_range_overrides.get(data["channel"], (default_t_min, default_t_max))
         t = np.asarray(data.get("pulse_time_ns", []), dtype=np.float64)
         first_cycle_mask = np.asarray(
             data.get("is_first_pulse_in_cycle", np.ones_like(t, dtype=bool)),
@@ -964,8 +1037,10 @@ def plot_pulse_time_hist_grid(
         data["pulse_time_fwhm_ns"] = np.nan
 
         if t.size > 0:
-            base_bins = 100
-            n_bins = max(1, int(base_bins / rebin_time))
+            # Build 1D bins from a target bin width (ns), optionally rebinned.
+            effective_bin_width_ns = time_bin_width_ns * float(rebin_time)
+            t_span = max(t_max - t_min, effective_bin_width_ns)
+            n_bins = max(1, int(np.ceil(t_span / effective_bin_width_ns)))
             counts, edges, _ = ax.hist(
                 t,
                 bins=n_bins,
@@ -983,6 +1058,8 @@ def plot_pulse_time_hist_grid(
                 legend_label = f"mean={mean_t:.2f} ns\nFWHM={fwhm:.2f} ns"
             else:
                 legend_label = f"mean={mean_t:.2f} ns\nFWHM=N/A"
+            if dataset_tag is not None:
+                legend_label += f"\n{dataset_tag}"
             ax.axvline(
                 mean_t,
                 color="darkred",
@@ -1002,6 +1079,9 @@ def plot_pulse_time_hist_grid(
                 fontsize=8,
                 color="dimgray",
             )
+            if dataset_tag is not None:
+                ax.plot([], [], " ", label=dataset_tag)
+                ax.legend(fontsize=7, loc="upper right")
 
         ax.set_xlim(t_min, t_max)
         ax.set_title(f"Ch {data['channel']:02d}")
@@ -1014,12 +1094,16 @@ def plot_pulse_time_hist_grid(
 
     fig.suptitle(f"{title} ({pulse_time_source}, first pulse/cycle)")
     fig.tight_layout()
-    fig.savefig(os.path.join(output_dir, f"{stem}_{output_suffix}.png"), dpi=150)
+    save_figure_dual_format(fig, output_dir, f"{stem}_{output_suffix}")
     return fig
 
 
 def plot_pulse_time_fwhm_vs_channel(
-    channel_data: list[dict], output_dir: str, stem: str, pulse_time_source: str
+    channel_data: list[dict],
+    output_dir: str,
+    stem: str,
+    pulse_time_source: str,
+    dataset_tag: str | None = None,
 ) -> plt.Figure | None:
     """Plot pulse-time FWHM vs channel."""
     channels = []
@@ -1043,12 +1127,15 @@ def plot_pulse_time_fwhm_vs_channel(
     ax.plot(channels_arr, fwhm_arr, "o-", color="firebrick", markersize=5, linewidth=1.5)
     ax.set_xlabel("Channel")
     ax.set_ylabel("Pulse-time FWHM [ns]")
-    ax.set_title(f"Pulse-time FWHM vs channel ({pulse_time_source})")
+    title = f"Pulse-time FWHM vs channel ({pulse_time_source})"
+    if dataset_tag is not None:
+        title += f" ({dataset_tag})"
+    ax.set_title(title)
     ax.set_ylim(bottom=0.0)
     ax.grid(True, linestyle="--", alpha=0.4)
     ax.set_xticks(channels_arr)
     fig.tight_layout()
-    fig.savefig(os.path.join(output_dir, f"{stem}_pulse_time_fwhm_vs_channel.png"), dpi=150)
+    save_figure_dual_format(fig, output_dir, f"{stem}_pulse_time_fwhm_vs_channel")
     return fig
 
 
@@ -1166,7 +1253,10 @@ def main() -> None:
     parser.add_argument(
         "--output-dir",
         default=None,
-        help="Directory for output plots (default: alongside the input file).",
+        help=(
+            "Base directory for outputs (default: alongside the input file). "
+            "Plots are saved as PNG and PDF under png/ and pdf/ subdirectories."
+        ),
     )
     parser.add_argument(
         "--second-pass-adc-min",
@@ -1205,7 +1295,15 @@ def main() -> None:
         default=1,
         help=(
             "Rebin factor for 1D pulse-time histograms (default: %(default)s). "
-            "Effective bins are 100/rebin-time."
+            "Effective 1D time-bin width is --time-bin-width * rebin-time."
+        ),
+    )
+    parser.add_argument(
+        "--time-bin-width",
+        type=float,
+        default=PULSE_TIME_1D_BIN_WIDTH_NS,
+        help=(
+            "Base 1D pulse-time histogram bin width in ns (default: %(default)s)."
         ),
     )
     args = parser.parse_args()
@@ -1218,10 +1316,17 @@ def main() -> None:
         raise ValueError("--adc-2d-min-cut must be finite")
     if args.rebin_time <= 0:
         raise ValueError("--rebin-time must be > 0")
+    if not np.isfinite(args.time_bin_width) or args.time_bin_width <= 0:
+        raise ValueError("--time-bin-width must be finite and > 0")
 
     input_file = args.input
+    dataset_tag = extract_threshold_tag_from_path(input_file)
     output_dir = args.output_dir or os.path.dirname(os.path.abspath(input_file))
     os.makedirs(output_dir, exist_ok=True)
+    png_output_dir = os.path.join(output_dir, "png")
+    pdf_output_dir = os.path.join(output_dir, "pdf")
+    os.makedirs(png_output_dir, exist_ok=True)
+    os.makedirs(pdf_output_dir, exist_ok=True)
     stem = os.path.splitext(os.path.basename(input_file))[0]
 
     print(f"Reading {input_file} ...")
@@ -1266,27 +1371,32 @@ def main() -> None:
                 f"{peak2:.6f} {valley:.6f} {ratio:.6f}\n"
             )
     print(f"Saved ADC summary to {summary_path}")
+    print(f"Saving PNG plots to {png_output_dir}")
+    print(f"Saving PDF plots to {pdf_output_dir}")
 
     if not channel_data:
         print("No channel data available to plot.")
         return
 
-    plot_adc_grid(channel_data, output_dir, stem)
-    plot_peak_to_valley_vs_channel(channel_data, output_dir, stem)
+    plot_adc_grid(channel_data, output_dir, stem, dataset_tag=dataset_tag)
+    plot_peak_to_valley_vs_channel(channel_data, output_dir, stem, dataset_tag=dataset_tag)
     plot_pulse_time_hist_grid(
         channel_data,
         output_dir,
         stem,
         pulse_time_source=args.pulse_time_source,
         rebin_time=args.rebin_time,
+        time_bin_width_ns=args.time_bin_width,
         output_suffix=f"pulse_time_{args.pulse_time_source}_hist_grid",
         title="Pulse time distribution by channel",
+        dataset_tag=dataset_tag,
     )
     plot_pulse_time_fwhm_vs_channel(
         channel_data,
         output_dir,
         stem,
         pulse_time_source=args.pulse_time_source,
+        dataset_tag=dataset_tag,
     )
 
     corrected_channel_data = build_pedestal_corrected_channel_data(
@@ -1304,6 +1414,7 @@ def main() -> None:
             adc_bins=ADC_CORRECTED_HIST_BINS,
             title="Pedestal-corrected ADC by channel",
             output_suffix="adc_pedestal_corrected_grid",
+            dataset_tag=dataset_tag,
         )
         plot_tot_vs_adc_grid(
             corrected_channel_data,
@@ -1314,8 +1425,14 @@ def main() -> None:
             adc_min_cut=args.adc_2d_min_cut,
             output_suffix="tot_vs_pedestal_corrected_adc_grid",
             title=f"ToT vs pedestal-corrected ADC by channel (ADC>{args.adc_2d_min_cut:g})",
+            dataset_tag=dataset_tag,
         )
-        plot_shifted_peak_mean_vs_channel(corrected_channel_data, output_dir, stem)
+        plot_shifted_peak_mean_vs_channel(
+            corrected_channel_data,
+            output_dir,
+            stem,
+            dataset_tag=dataset_tag,
+        )
         plot_pulse_time_vs_adc_grid(
                     corrected_channel_data,
                     output_dir,
@@ -1330,6 +1447,7 @@ def main() -> None:
                         + args.pulse_time_source
                         + f", ADC>{args.adc_2d_min_cut:g})"
                     ),
+                    dataset_tag=dataset_tag,
                 )
 
     if tk is None:

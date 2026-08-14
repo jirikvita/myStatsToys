@@ -23,8 +23,10 @@ python plotConv.py
 --- timewalk and TTS:
 
 ./timeWalkAnalysis.py TESTER_0_pmt_test_20260812_115919_MCP_3p05kV_dataTaking_Thr15mV/data_run_20260812_121315_data_taking_run.root
-
 ./timeWalkAnalysis.py TESTER_0_pmt_test_20260812_125451_3p05kV_dataTaking_Thr10mV/data_run_20260812_130404_data_taking_run.root
 
-
+13.8.2026:
+analysis of channels 1 (PMT) and 6 (MCP):
+./timeWalkAnalysis.py TESTER_0_pmt_test_20260813_153745_MCP6_PMT1_Thr15mV/data_run_20260813_154552_data_taking_run.root
+./timeWalkAnalysis.py TESTER_0_pmt_test_20260813_155612_MCP6_PMT1_Thr30mV/data_run_20260813_160422_data_taking_run.root
 
