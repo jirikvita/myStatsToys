@@ -46,7 +46,7 @@ PMT_PULSE_MODULO_TICKS = 25_000
 # Custom Y ranges (ns) for pulse-time 2D plots.
 # Set to None to auto-infer from data.
 PULSE_TIME_2D_Y_RANGE_OPTION1_NS: tuple[float, float] | None = (2.0, 2030.0)
-PULSE_TIME_2D_Y_RANGE_OPTION2_NS: tuple[float, float] | None = (10.0, 2120.0)
+PULSE_TIME_2D_Y_RANGE_OPTION2_NS: tuple[float, float] | None = (140.0, 200.0)
 
 # Optional per-channel Y-range overrides (display channel indexing: 1, 2, ...).
 # Any channel absent from these maps falls back to the global ranges above.
@@ -54,10 +54,10 @@ PULSE_TIME_2D_Y_RANGE_OPTION1_BY_CHANNEL_NS: dict[int, tuple[float, float]] = {
     1: (210.0, 235.0),
 }
 PULSE_TIME_2D_Y_RANGE_OPTION2_BY_CHANNEL_NS: dict[int, tuple[float, float]] = {
-    1: (110.0, 120.0),
-    4: (140.0, 165.0),
-    18: (140.0, 165.0),
-    6: (110.0, 120.0),
+    #1: (110.0, 120.0),
+    #4: (140.0, 165.0),
+    #18: (140.0, 165.0),
+    #6: (110.0, 120.0),
 }
 
 # Base bin width (ns) for 1D pulse-time histograms.
