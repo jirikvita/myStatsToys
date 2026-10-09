@@ -64,8 +64,8 @@ PULSE_TIME_2D_Y_RANGE_OPTION2_BY_CHANNEL_NS: dict[int, tuple[float, float]] = {
 # Final 1D width is this value multiplied by --rebin-time.
 PULSE_TIME_1D_BIN_WIDTH_NS = 0.25
 
-# Default ADC cut applied before filling 2D pulse-time plots.
-ADC_2D_MIN_CUT = 15.0
+# Global minimum ADC threshold used for timing-related plots.
+ADC_THRESHOLD_DEFAULT = 60.0
 
 # Custom Y range (ns) for ToT 2D plots. Set to None to auto-infer from data.
 TOT_2D_Y_RANGE_NS: tuple[float, float] | None = (0.0, 75.0)
@@ -526,6 +526,7 @@ def plot_adc_grid(
                 )
 
         ax.set_xlim(*adc_range)
+        ax.set_yscale("log")
         ax.set_title(f"Ch {data['channel']:02d}")
         ax.set_xlabel("ADC")
         ax.set_ylabel("Counts")
@@ -639,7 +640,7 @@ def plot_pulse_time_vs_adc_grid(
     pulse_time_source: str,
     adc_key: str = "adc_pedestal_corrected",
     adc_range: tuple[float, float] = ADC_CORRECTED_RANGE,
-    adc_min_cut: float = ADC_2D_MIN_CUT,
+    adc_min_cut: float = ADC_THRESHOLD_DEFAULT,
     output_suffix: str = "pulse_time_vs_pedestal_corrected_adc_grid",
     title: str = "Pulse time vs pedestal-corrected ADC by channel",
     dataset_tag: str | None = None,
@@ -708,8 +709,8 @@ def plot_pulse_time_vs_adc_grid(
         adc_vals = adc_vals[finite_mask]
         pulse_time_ns = pulse_time_ns[finite_mask]
 
-        # Apply ADC threshold before filling the 2D histogram.
-        adc_cut_mask = adc_vals > adc_min_cut
+        # Apply global ADC threshold before filling the 2D histogram.
+        adc_cut_mask = adc_vals >= adc_min_cut
         adc_vals = adc_vals[adc_cut_mask]
         pulse_time_ns = pulse_time_ns[adc_cut_mask]
 
@@ -805,7 +806,7 @@ def plot_tot_vs_adc_grid(
     stem: str,
     adc_key: str = "adc_pedestal_corrected",
     adc_range: tuple[float, float] = ADC_CORRECTED_RANGE,
-    adc_min_cut: float = ADC_2D_MIN_CUT,
+    adc_min_cut: float = ADC_THRESHOLD_DEFAULT,
     output_suffix: str = "tot_vs_pedestal_corrected_adc_grid",
     title: str = "ToT vs pedestal-corrected ADC by channel",
     dataset_tag: str | None = None,
@@ -860,7 +861,7 @@ def plot_tot_vs_adc_grid(
         adc_vals = adc_vals[finite_mask]
         tot_ns = tot_ns[finite_mask]
 
-        adc_cut_mask = adc_vals > adc_min_cut
+        adc_cut_mask = adc_vals >= adc_min_cut
         adc_vals = adc_vals[adc_cut_mask]
         tot_ns = tot_ns[adc_cut_mask]
 
@@ -977,26 +978,40 @@ def plot_pulse_time_hist_grid(
     output_dir: str,
     stem: str,
     pulse_time_source: str,
+    adc_key: str = "adc",
+    adc_min_cut: float = ADC_THRESHOLD_DEFAULT,
     rebin_time: int = 1,
     time_bin_width_ns: float = 0.25,
     output_suffix: str = "pulse_time_hist_grid",
     title: str = "Pulse time distribution by channel",
     dataset_tag: str | None = None,
 ) -> plt.Figure:
-    """Plot 1D pulse-time histograms for each channel as a grid."""
+    """Plot 1D pulse-time histograms for each channel as a grid.
+
+    Applies a global ADC threshold cut before filling each histogram.
+    """
     nrows, ncols = _grid_shape(len(channel_data))
     fig, axes = plt.subplots(nrows, ncols, figsize=(4.5 * ncols, 3.8 * nrows), squeeze=False)
 
     all_t = []
     for data in channel_data:
         t = np.asarray(data.get("pulse_time_ns", []), dtype=np.float64)
+        adc_vals = np.asarray(data.get(adc_key, []), dtype=np.float64)
         first_cycle_mask = np.asarray(
             data.get("is_first_pulse_in_cycle", np.ones_like(t, dtype=bool)),
             dtype=bool,
         )
         if first_cycle_mask.shape[0] == t.shape[0]:
             t = t[first_cycle_mask]
-        t = t[np.isfinite(t)]
+        if first_cycle_mask.shape[0] == adc_vals.shape[0]:
+            adc_vals = adc_vals[first_cycle_mask]
+
+        finite_mask = np.isfinite(t) & np.isfinite(adc_vals)
+        t = t[finite_mask]
+        adc_vals = adc_vals[finite_mask]
+
+        adc_cut_mask = adc_vals >= adc_min_cut
+        t = t[adc_cut_mask]
         if t.size > 0:
             all_t.append(t)
 
@@ -1030,13 +1045,22 @@ def plot_pulse_time_hist_grid(
         ax = axes[idx // ncols][idx % ncols]
         t_min, t_max = channel_range_overrides.get(data["channel"], (default_t_min, default_t_max))
         t = np.asarray(data.get("pulse_time_ns", []), dtype=np.float64)
+        adc_vals = np.asarray(data.get(adc_key, []), dtype=np.float64)
         first_cycle_mask = np.asarray(
             data.get("is_first_pulse_in_cycle", np.ones_like(t, dtype=bool)),
             dtype=bool,
         )
         if first_cycle_mask.shape[0] == t.shape[0]:
             t = t[first_cycle_mask]
-        t = t[np.isfinite(t)]
+        if first_cycle_mask.shape[0] == adc_vals.shape[0]:
+            adc_vals = adc_vals[first_cycle_mask]
+
+        finite_mask = np.isfinite(t) & np.isfinite(adc_vals)
+        t = t[finite_mask]
+        adc_vals = adc_vals[finite_mask]
+
+        adc_cut_mask = adc_vals >= adc_min_cut
+        t = t[adc_cut_mask]
         data["pulse_time_fwhm_ns"] = np.nan
 
         if t.size > 0:
@@ -1284,12 +1308,14 @@ def main() -> None:
         help="Modulo period for option2 pulse time (default: %(default)s).",
     )
     parser.add_argument(
+        "--adc-threshold",
         "--adc-2d-min-cut",
+        dest="adc_threshold",
         type=float,
-        default=ADC_2D_MIN_CUT,
+        default=ADC_THRESHOLD_DEFAULT,
         help=(
-            "ADC threshold applied before filling pulse-time 2D histograms: "
-            "keep only ADC > value (default: %(default)s)."
+            "Global ADC threshold for TTS, ToT, and time-walk plots: "
+            "keep only ADC >= value (default: %(default)s)."
         ),
     )
     parser.add_argument(
@@ -1315,8 +1341,8 @@ def main() -> None:
         raise ValueError("--second-pass-adc-min must be finite")
     if args.pmt_pulse_modulo_ticks <= 0:
         raise ValueError("--pmt-pulse-modulo-ticks must be > 0")
-    if not np.isfinite(args.adc_2d_min_cut):
-        raise ValueError("--adc-2d-min-cut must be finite")
+    if not np.isfinite(args.adc_threshold):
+        raise ValueError("--adc-threshold must be finite")
     if args.rebin_time <= 0:
         raise ValueError("--rebin-time must be > 0")
     if not np.isfinite(args.time_bin_width) or args.time_bin_width <= 0:
@@ -1383,31 +1409,37 @@ def main() -> None:
 
     plot_adc_grid(channel_data, output_dir, stem, dataset_tag=dataset_tag)
     plot_peak_to_valley_vs_channel(channel_data, output_dir, stem, dataset_tag=dataset_tag)
-    plot_pulse_time_hist_grid(
-        channel_data,
-        output_dir,
-        stem,
-        pulse_time_source=args.pulse_time_source,
-        rebin_time=args.rebin_time,
-        time_bin_width_ns=args.time_bin_width,
-        output_suffix=f"pulse_time_{args.pulse_time_source}_hist_grid",
-        title="Pulse time distribution by channel",
-        dataset_tag=dataset_tag,
-    )
-    plot_pulse_time_fwhm_vs_channel(
-        channel_data,
-        output_dir,
-        stem,
-        pulse_time_source=args.pulse_time_source,
-        dataset_tag=dataset_tag,
-    )
-
     corrected_channel_data = build_pedestal_corrected_channel_data(
         channel_data, second_pass_adc_min=args.second_pass_adc_min
     )
     if not corrected_channel_data:
-        print("No channels with valid pedestal fit; skipping corrected ADC plots.")
+        print(
+            "No channels with valid pedestal fit; skipping pedestal-corrected timing and ADC plots."
+        )
     else:
+        plot_pulse_time_hist_grid(
+            corrected_channel_data,
+            output_dir,
+            stem,
+            pulse_time_source=args.pulse_time_source,
+            adc_key="adc_pedestal_corrected",
+            adc_min_cut=args.adc_threshold,
+            rebin_time=args.rebin_time,
+            time_bin_width_ns=args.time_bin_width,
+            output_suffix=f"pulse_time_{args.pulse_time_source}_hist_grid",
+            title=(
+                "Pulse time distribution by channel "
+                f"(pedestal-corrected ADC>={args.adc_threshold:g})"
+            ),
+            dataset_tag=dataset_tag,
+        )
+        plot_pulse_time_fwhm_vs_channel(
+            corrected_channel_data,
+            output_dir,
+            stem,
+            pulse_time_source=args.pulse_time_source,
+            dataset_tag=dataset_tag,
+        )
         plot_adc_grid(
             corrected_channel_data,
             output_dir,
@@ -1425,9 +1457,9 @@ def main() -> None:
             stem,
             adc_key="adc_pedestal_corrected",
             adc_range=ADC_CORRECTED_RANGE,
-            adc_min_cut=args.adc_2d_min_cut,
+            adc_min_cut=args.adc_threshold,
             output_suffix="tot_vs_pedestal_corrected_adc_grid",
-            title=f"ToT vs pedestal-corrected ADC by channel (ADC>{args.adc_2d_min_cut:g})",
+            title=f"ToT vs pedestal-corrected ADC by channel (ADC>={args.adc_threshold:g})",
             dataset_tag=dataset_tag,
         )
         plot_shifted_peak_mean_vs_channel(
@@ -1443,12 +1475,12 @@ def main() -> None:
                     pulse_time_source=args.pulse_time_source,
                     adc_key="adc_pedestal_corrected",
                     adc_range=ADC_CORRECTED_RANGE,
-                    adc_min_cut=args.adc_2d_min_cut,
+                    adc_min_cut=args.adc_threshold,
                     output_suffix=f"pulse_time_{args.pulse_time_source}_vs_pedestal_corrected_adc_grid",
                     title=(
                         "Pulse time vs pedestal-corrected ADC by channel ("
                         + args.pulse_time_source
-                        + f", ADC>{args.adc_2d_min_cut:g})"
+                        + f", ADC>={args.adc_threshold:g})"
                     ),
                     dataset_tag=dataset_tag,
                 )

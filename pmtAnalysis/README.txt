@@ -30,3 +30,8 @@ analysis of channels 1 (PMT) and 6 (MCP):
 ./timeWalkAnalysis.py TESTER_0_pmt_test_20260813_153745_MCP6_PMT1_Thr15mV/data_run_20260813_154552_data_taking_run.root
 ./timeWalkAnalysis.py TESTER_0_pmt_test_20260813_155612_MCP6_PMT1_Thr30mV/data_run_20260813_160422_data_taking_run.root
 
+10/2026:
+./timeWalkAnalysis.py test_run_20261001_154916/test_run_thr30_att790_20261001_155010.root
+./timeWalkAnalysis.py test_run_20261001_175725/test_run_thr30_att790_20261001_175819.root
+./timeWalkAnalysis.py test_run_20261001_180423/test_run_thr30_att790_20261001_180517.root
+
