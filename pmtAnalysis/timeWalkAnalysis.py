@@ -31,11 +31,11 @@ DEFAULT_INPUT = "1pe_measurement/28cm/test_run_thr30_att825_20260629_141522.root
 TREE_NAME = "pmt_events"
 
 # ADC axis limits used for both the 1D and 2D histograms.
-ADC_RANGE = (0, 800)
+ADC_RANGE = (180, 480)
 ADC_HIST_BINS = (ADC_RANGE[1] - ADC_RANGE[0]) // 2  # 2 ADC counts per bin
 
 # ADC axis limits for pedestal-corrected ADC plots.
-ADC_CORRECTED_RANGE = (-100, 500)
+ADC_CORRECTED_RANGE = (-10, 310)
 ADC_CORRECTED_HIST_BINS = (ADC_CORRECTED_RANGE[1] - ADC_CORRECTED_RANGE[0]) // 2
 
 # Time definitions for pulse-time plots.
@@ -46,7 +46,7 @@ PMT_PULSE_MODULO_TICKS = 25_000
 # Custom Y ranges (ns) for pulse-time 2D plots.
 # Set to None to auto-infer from data.
 PULSE_TIME_2D_Y_RANGE_OPTION1_NS: tuple[float, float] | None = (2.0, 2030.0)
-PULSE_TIME_2D_Y_RANGE_OPTION2_NS: tuple[float, float] | None = (140.0, 200.0)
+PULSE_TIME_2D_Y_RANGE_OPTION2_NS: tuple[float, float] | None = (140.0, 160.0)
 
 # Optional per-channel Y-range overrides (display channel indexing: 1, 2, ...).
 # Any channel absent from these maps falls back to the global ranges above.
@@ -65,7 +65,7 @@ PULSE_TIME_2D_Y_RANGE_OPTION2_BY_CHANNEL_NS: dict[int, tuple[float, float]] = {
 PULSE_TIME_1D_BIN_WIDTH_NS = 0.25
 
 # Global minimum ADC threshold used for timing-related plots.
-ADC_THRESHOLD_DEFAULT = 60.0
+ADC_THRESHOLD_DEFAULT = 10.0
 
 # Custom Y range (ns) for ToT 2D plots. Set to None to auto-infer from data.
 TOT_2D_Y_RANGE_NS: tuple[float, float] | None = (0.0, 75.0)
