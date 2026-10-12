@@ -33,6 +33,7 @@ TREE_NAME = "pmt_events"
 # ADC axis limits used for both the 1D and 2D histograms.
 ADC_RANGE = (180, 480)
 ADC_HIST_BINS = (ADC_RANGE[1] - ADC_RANGE[0]) // 2  # 2 ADC counts per bin
+ADC_PLOT_LOGY = True
 
 # ADC axis limits for pedestal-corrected ADC plots.
 ADC_CORRECTED_RANGE = (-10, 310)
@@ -526,7 +527,9 @@ def plot_adc_grid(
                 )
 
         ax.set_xlim(*adc_range)
-        ax.set_yscale("log")
+        if ADC_PLOT_LOGY:
+            ax.set_yscale("log")
+            ax.set_ylim(bottom=0.5)
         ax.set_title(f"Ch {data['channel']:02d}")
         ax.set_xlabel("ADC")
         ax.set_ylabel("Counts")
