@@ -68,6 +68,10 @@ PULSE_TIME_1D_BIN_WIDTH_NS = 0.25
 # Global minimum ADC threshold used for timing-related plots.
 ADC_THRESHOLD_DEFAULT = 10.0
 
+# Global controls for pulse-time-vs-ADC profile extraction/fitting.
+PULSE_ADC_MIN_CUT_DEFAULT = 20.0
+PULSE_PROFILE_ADC_SUBRANGE_DEFAULT = (20.0, ADC_CORRECTED_RANGE[1])
+
 # Custom Y range (ns) for ToT 2D plots. Set to None to auto-infer from data.
 TOT_2D_Y_RANGE_NS: tuple[float, float] | None = (0.0, 75.0)
 
@@ -176,6 +180,11 @@ def fit_gaussian_peak(
 
 def parabola(x: np.ndarray, curvature: float, vertex: float, offset: float) -> np.ndarray:
     return offset - curvature * (x - vertex) ** 2
+
+
+def timewalk_model(adc: np.ndarray, c0: float, a0: float, b0: float) -> np.ndarray:
+    """Time-walk model: C + A * exp(-adc / B)."""
+    return c0 + a0 * np.exp(-adc / b0)
 
 
 def fit_valley(
@@ -713,7 +722,7 @@ def plot_pulse_time_vs_adc_grid(
         pulse_time_ns = pulse_time_ns[finite_mask]
 
         # Apply global ADC threshold before filling the 2D histogram.
-        adc_cut_mask = adc_vals >= adc_min_cut
+        adc_cut_mask = adc_vals > adc_min_cut
         adc_vals = adc_vals[adc_cut_mask]
         pulse_time_ns = pulse_time_ns[adc_cut_mask]
 
@@ -1133,9 +1142,10 @@ def plot_pulse_time_fwhm_vs_channel(
     output_dir: str,
     stem: str,
     pulse_time_source: str,
+    tts_data: list[dict] | None = None,
     dataset_tag: str | None = None,
 ) -> plt.Figure | None:
-    """Plot pulse-time FWHM vs channel."""
+    """Plot pulse-time FWHM vs channel, optionally overlaid with TTS FWHM."""
     channels = []
     fwhm_values = []
 
@@ -1154,7 +1164,54 @@ def plot_pulse_time_fwhm_vs_channel(
     fwhm_arr = np.asarray(fwhm_values, dtype=np.float64)
 
     fig, ax = plt.subplots(figsize=(8.0, 4.8))
-    ax.plot(channels_arr, fwhm_arr, "o-", color="firebrick", markersize=5, linewidth=1.5)
+    ax.plot(
+        channels_arr,
+        fwhm_arr,
+        "o-",
+        color="firebrick",
+        markersize=5,
+        linewidth=1.5,
+        label="Pulse-time FWHM",
+    )
+
+    if tts_data:
+        tts_channels: list[float] = []
+        tts_fwhm_values: list[float] = []
+        tts_bin_width_ns = 0.15
+        for row in tts_data:
+            values = np.asarray(row.get("tts", []), dtype=np.float64)
+            values = values[np.isfinite(values)]
+            if values.size == 0:
+                continue
+            vmin = float(np.min(values))
+            vmax = float(np.max(values))
+            if not np.isfinite(vmin) or not np.isfinite(vmax):
+                continue
+            if vmax <= vmin:
+                vmax = vmin + tts_bin_width_ns
+            pad = max(0.05 * (vmax - vmin), tts_bin_width_ns)
+            x_range = (vmin - pad, vmax + pad)
+            n_bins = max(1, int(np.ceil((x_range[1] - x_range[0]) / tts_bin_width_ns)))
+            counts, edges = np.histogram(values, bins=n_bins, range=x_range)
+            tts_fwhm = histogram_fwhm(counts.astype(np.float64), edges.astype(np.float64))
+            if tts_fwhm is None or not np.isfinite(tts_fwhm):
+                continue
+            tts_channels.append(float(row["channel"]))
+            tts_fwhm_values.append(float(tts_fwhm))
+
+        if tts_channels:
+            tts_channels_arr = np.asarray(tts_channels, dtype=np.float64)
+            tts_fwhm_arr = np.asarray(tts_fwhm_values, dtype=np.float64)
+            ax.plot(
+                tts_channels_arr,
+                tts_fwhm_arr,
+                "s-",
+                color="navy",
+                markersize=5,
+                linewidth=1.5,
+                label="TTS-corrected FWHM",
+            )
+
     ax.set_xlabel("Channel")
     ax.set_ylabel("Pulse-time FWHM [ns]")
     title = f"Pulse-time FWHM vs channel ({pulse_time_source})"
@@ -1164,8 +1221,488 @@ def plot_pulse_time_fwhm_vs_channel(
     ax.set_ylim(bottom=0.0)
     ax.grid(True, linestyle="--", alpha=0.4)
     ax.set_xticks(channels_arr)
+    ax.legend(loc="upper right", fontsize=9)
     fig.tight_layout()
     save_figure_dual_format(fig, output_dir, f"{stem}_pulse_time_fwhm_vs_channel")
+    return fig
+
+
+def get_pulse_time_display_range_by_channel(
+    channel_data: list[dict], pulse_time_source: str
+) -> tuple[tuple[float, float], dict[int, tuple[float, float]]]:
+    """Return default and per-channel pulse-time ranges used for profile extraction."""
+    all_t = []
+    for data in channel_data:
+        t = np.asarray(data.get("pulse_time_ns", []), dtype=np.float64)
+        t = t[np.isfinite(t)]
+        if t.size > 0:
+            all_t.append(t)
+
+    custom_range = (
+        PULSE_TIME_2D_Y_RANGE_OPTION1_NS
+        if pulse_time_source == "option1"
+        else PULSE_TIME_2D_Y_RANGE_OPTION2_NS
+    )
+
+    if custom_range is not None:
+        default_y_min, default_y_max = custom_range
+    elif all_t:
+        merged = np.concatenate(all_t)
+        default_y_min = float(np.min(merged))
+        default_y_max = float(np.max(merged))
+        if default_y_max <= default_y_min:
+            default_y_max = default_y_min + 1.0
+        pad = max((default_y_max - default_y_min) * 0.05, TDC_LSB_NS)
+        default_y_min -= pad
+        default_y_max += pad
+    else:
+        default_y_min, default_y_max = 0.0, 1.0
+
+    channel_range_overrides = (
+        PULSE_TIME_2D_Y_RANGE_OPTION1_BY_CHANNEL_NS
+        if pulse_time_source == "option1"
+        else PULSE_TIME_2D_Y_RANGE_OPTION2_BY_CHANNEL_NS
+    )
+    return (default_y_min, default_y_max), channel_range_overrides
+
+
+def fit_timewalk_profile_per_channel(
+    channel_data: list[dict],
+    pulse_time_source: str,
+    adc_key: str = "adc_pedestal_corrected",
+    adc_range: tuple[float, float] = ADC_CORRECTED_RANGE,
+    adc_min_cut: float = ADC_THRESHOLD_DEFAULT,
+    profile_x_bins: int = 40,
+    profile_min_counts: int = 20,
+) -> list[dict]:
+    """Fit pulse-time profile vs ADC for each channel with C + A*exp(-adc/B).
+
+    Uses the same restricted pulse-time Y-ranges as the extracted profile plots.
+    """
+    fit_results: list[dict] = []
+    (default_y_min, default_y_max), channel_range_overrides = get_pulse_time_display_range_by_channel(
+        channel_data, pulse_time_source
+    )
+
+    for data in channel_data:
+        adc_vals = np.asarray(data.get(adc_key, []), dtype=np.float64)
+        pulse_time_ns = np.asarray(data.get("pulse_time_ns", []), dtype=np.float64)
+        first_cycle_mask = np.asarray(
+            data.get("is_first_pulse_in_cycle", np.ones_like(pulse_time_ns, dtype=bool)),
+            dtype=bool,
+        )
+
+        if first_cycle_mask.shape[0] == adc_vals.shape[0]:
+            adc_vals = adc_vals[first_cycle_mask]
+        if first_cycle_mask.shape[0] == pulse_time_ns.shape[0]:
+            pulse_time_ns = pulse_time_ns[first_cycle_mask]
+
+        finite_mask = np.isfinite(adc_vals) & np.isfinite(pulse_time_ns)
+        adc_vals = adc_vals[finite_mask]
+        pulse_time_ns = pulse_time_ns[finite_mask]
+
+        cut_mask = (
+            (adc_vals > adc_min_cut)
+            & (adc_vals >= adc_range[0])
+            & (adc_vals <= adc_range[1])
+        )
+        adc_vals = adc_vals[cut_mask]
+        pulse_time_ns = pulse_time_ns[cut_mask]
+
+        y_min, y_max = channel_range_overrides.get(data["channel"], (default_y_min, default_y_max))
+        y_mask = (pulse_time_ns >= y_min) & (pulse_time_ns <= y_max)
+        adc_vals = adc_vals[y_mask]
+        pulse_time_ns = pulse_time_ns[y_mask]
+
+        x_edges = np.linspace(adc_range[0], adc_range[1], profile_x_bins + 1)
+        x_centers = 0.5 * (x_edges[:-1] + x_edges[1:])
+
+        x_bin_idx = np.digitize(adc_vals, x_edges) - 1
+        in_x_range = (x_bin_idx >= 0) & (x_bin_idx < profile_x_bins)
+        x_bin_idx = x_bin_idx[in_x_range]
+        y_in_range = pulse_time_ns[in_x_range]
+
+        counts = np.bincount(x_bin_idx, minlength=profile_x_bins)
+        sum_y = np.bincount(x_bin_idx, weights=y_in_range, minlength=profile_x_bins)
+        sum_y2 = np.bincount(x_bin_idx, weights=y_in_range * y_in_range, minlength=profile_x_bins)
+
+        mean_y = np.divide(sum_y, counts, out=np.full(profile_x_bins, np.nan), where=counts > 0)
+        mean_y2 = np.divide(sum_y2, counts, out=np.full(profile_x_bins, np.nan), where=counts > 0)
+        var_y = np.clip(mean_y2 - mean_y * mean_y, a_min=0.0, a_max=None)
+        sem_y = np.sqrt(var_y / counts, out=np.full(profile_x_bins, np.nan), where=counts > 0)
+
+        profile_mask = (counts >= profile_min_counts) & np.isfinite(mean_y) & np.isfinite(sem_y)
+        x_fit = x_centers[profile_mask]
+        y_fit = mean_y[profile_mask]
+        y_err = sem_y[profile_mask]
+
+        result = {
+            "channel": data["channel"],
+            "fit_success": False,
+            "x_profile": x_fit,
+            "y_profile": y_fit,
+            "yerr_profile": y_err,
+            "n_profile_points": int(x_fit.size),
+        }
+
+        if x_fit.size < 4:
+            fit_results.append(result)
+            continue
+
+        c_guess = float(np.median(y_fit[max(0, y_fit.size // 2) :]))
+        a_guess = float(y_fit[0] - c_guess)
+        b_guess = max(5.0, 0.2 * (adc_range[1] - adc_range[0]))
+
+        try:
+            popt, pcov = curve_fit(
+                timewalk_model,
+                x_fit,
+                y_fit,
+                p0=[c_guess, a_guess, b_guess],
+                sigma=y_err,
+                absolute_sigma=True,
+                bounds=([-np.inf, -np.inf, 1e-6], [np.inf, np.inf, np.inf]),
+                maxfev=20_000,
+            )
+            perr = np.sqrt(np.diag(pcov))
+            y_pred = timewalk_model(x_fit, *popt)
+            chi2 = float(np.sum(((y_fit - y_pred) / y_err) ** 2))
+            ndf = int(x_fit.size - 3)
+            chi2_ndf = chi2 / ndf if ndf > 0 else np.nan
+
+            result.update(
+                {
+                    "fit_success": True,
+                    "C": float(popt[0]),
+                    "A": float(popt[1]),
+                    "B": float(popt[2]),
+                    "C_err": float(perr[0]),
+                    "A_err": float(perr[1]),
+                    "B_err": float(perr[2]),
+                    "chi2": chi2,
+                    "ndf": ndf,
+                    "chi2_ndf": chi2_ndf,
+                }
+            )
+        except (RuntimeError, ValueError, OverflowError, FloatingPointError):
+            pass
+
+        fit_results.append(result)
+
+    return fit_results
+
+
+def plot_timewalk_fit_grid(
+    fit_results: list[dict],
+    output_dir: str,
+    stem: str,
+    adc_range: tuple[float, float] = ADC_CORRECTED_RANGE,
+    dataset_tag: str | None = None,
+) -> plt.Figure:
+    """Plot per-channel pulse-time profile points and exponential fit curves."""
+    nrows, ncols = _grid_shape(len(fit_results))
+    fig, axes = plt.subplots(nrows, ncols, figsize=(4.5 * ncols, 3.8 * nrows), squeeze=False)
+
+    for idx, fit in enumerate(fit_results):
+        ax = axes[idx // ncols][idx % ncols]
+        x = np.asarray(fit.get("x_profile", []), dtype=np.float64)
+        y = np.asarray(fit.get("y_profile", []), dtype=np.float64)
+        yerr = np.asarray(fit.get("yerr_profile", []), dtype=np.float64)
+
+        if x.size > 0:
+            ax.errorbar(
+                x,
+                y,
+                yerr=yerr,
+                fmt="o",
+                markersize=3,
+                color="black",
+                ecolor="gray",
+                elinewidth=0.8,
+                capsize=2,
+                alpha=0.9,
+                label="Profile mean ± SEM",
+            )
+
+        if fit.get("fit_success", False):
+            xx = np.linspace(adc_range[0], adc_range[1], 300)
+            yy = timewalk_model(xx, fit["C"], fit["A"], fit["B"])
+            label = (
+                f"C={fit['C']:.3g}, A={fit['A']:.3g}, B={fit['B']:.3g}\n"
+                f"chi2/ndf={fit['chi2_ndf']:.2f}"
+            )
+            ax.plot(xx, yy, color="crimson", linewidth=1.8, label=label)
+
+        ax.set_xlim(*adc_range)
+        ax.set_title(f"Ch {fit['channel']:02d}")
+        ax.set_xlabel("Pedestal-corrected ADC")
+        ax.set_ylabel("Pulse time [ns]")
+        ax.grid(True, linestyle="--", alpha=0.4)
+        if dataset_tag is not None:
+            ax.plot([], [], " ", label=dataset_tag)
+        if x.size > 0 or fit.get("fit_success", False) or dataset_tag is not None:
+            ax.legend(fontsize=7, loc="upper right")
+
+    for idx in range(len(fit_results), nrows * ncols):
+        axes[idx // ncols][idx % ncols].axis("off")
+
+    fig.suptitle("Pulse-time profile fits by channel: C + A*exp(-ADC/B)")
+    fig.tight_layout()
+    save_figure_dual_format(fig, output_dir, f"{stem}_timewalk_profile_fit_grid")
+    return fig
+
+
+def plot_timewalk_chi2ndf_vs_channel(
+    fit_results: list[dict], output_dir: str, stem: str, dataset_tag: str | None = None
+) -> plt.Figure | None:
+    """Plot chi2/ndf of time-walk fits vs channel."""
+    channels = []
+    chi2ndf = []
+    for fit in fit_results:
+        if not fit.get("fit_success", False):
+            continue
+        value = fit.get("chi2_ndf", np.nan)
+        if value is None or not np.isfinite(value):
+            continue
+        channels.append(fit["channel"])
+        chi2ndf.append(float(value))
+
+    if not channels:
+        print("No successful time-walk fits available for chi2/ndf plot.")
+        return None
+
+    x = np.asarray(channels, dtype=np.float64)
+    y = np.asarray(chi2ndf, dtype=np.float64)
+
+    fig, ax = plt.subplots(figsize=(8.0, 4.8))
+    ax.plot(x, y, "o-", color="darkgreen", linewidth=1.5, markersize=5)
+    ax.axhline(1.0, color="gray", linestyle="--", linewidth=1.0)
+    ax.set_xlabel("Channel")
+    ax.set_ylabel("chi2/ndf")
+    title = "Time-walk fit quality vs channel"
+    if dataset_tag is not None:
+        title += f" ({dataset_tag})"
+    ax.set_title(title)
+    ax.grid(True, linestyle="--", alpha=0.4)
+    ax.set_xticks(x)
+    fig.tight_layout()
+    save_figure_dual_format(fig, output_dir, f"{stem}_timewalk_fit_chi2ndf_vs_channel")
+    return fig
+
+
+def plot_timewalk_parameter_histograms(
+    fit_results: list[dict], output_dir: str, stem: str, dataset_tag: str | None = None
+) -> plt.Figure | None:
+    """Plot channel-wise distributions of fitted C, A, B parameters."""
+    params = {"C": [], "A": [], "B": []}
+    for fit in fit_results:
+        if not fit.get("fit_success", False):
+            continue
+        for key in params:
+            value = fit.get(key, np.nan)
+            if value is not None and np.isfinite(value):
+                params[key].append(float(value))
+
+    if not params["C"] or not params["A"] or not params["B"]:
+        print("No complete C/A/B fit-parameter set available for histogram plot.")
+        return None
+
+    fig, axes = plt.subplots(1, 3, figsize=(14.0, 4.2))
+    colors = {"C": "royalblue", "A": "darkorange", "B": "seagreen"}
+    for ax, key in zip(axes, ("C", "A", "B")):
+        values = np.asarray(params[key], dtype=np.float64)
+        bins = max(10, int(np.sqrt(values.size)))
+        ax.hist(values, bins=bins, histtype="stepfilled", alpha=0.65, color=colors[key], edgecolor="black")
+        ax.set_xlabel(key)
+        ax.set_ylabel("Channels")
+        ax.set_title(f"{key} over channels")
+        ax.grid(True, linestyle="--", alpha=0.4)
+
+    title = "Time-walk fit parameter distributions"
+    if dataset_tag is not None:
+        title += f" ({dataset_tag})"
+    fig.suptitle(title)
+    fig.tight_layout()
+    save_figure_dual_format(fig, output_dir, f"{stem}_timewalk_fit_param_histograms")
+    return fig
+
+
+def build_tts_from_second_tree_pass(
+    arrays: dict,
+    fit_results: list[dict],
+    pedestal_by_channel: dict[int, float],
+    pulse_time_source: str,
+    pmt_pulse_modulo_ticks: int,
+    adc_min_cut: float,
+    adc_range: tuple[float, float],
+    default_pulse_time_range: tuple[float, float],
+    pulse_time_range_by_channel: dict[int, tuple[float, float]],
+) -> list[dict]:
+    """Second pass over tree arrays to build event-wise corrected TTS.
+
+    Correction requested by user:
+        TTS_corr = pulse_time - fit(ADC) + C
+    where fit(ADC) = C + A * exp(-ADC/B) from per-channel profile fits.
+    Selection for TTS filling uses the same restricted pulse-time window and
+    ADC cuts/range used to build profile points and fits.
+    """
+    fit_by_channel: dict[int, tuple[float, float, float]] = {}
+    for fit in fit_results:
+        if not fit.get("fit_success", False):
+            continue
+        fit_by_channel[int(fit["channel"])] = (fit["C"], fit["A"], fit["B"])
+
+    channel = arrays["channel"].astype(np.int64)
+    adc = arrays["adc"].astype(np.float64)
+    pmt_time = arrays["pmt_time"].astype(np.int64)
+    tdc_start = arrays["tdc_start"].astype(np.int64)
+
+    tts_data: list[dict] = []
+    for raw_ch in sorted(np.unique(channel).tolist()):
+        display_ch = int(raw_ch) + 1
+        if display_ch not in fit_by_channel:
+            continue
+        pedestal = pedestal_by_channel.get(display_ch)
+        if pedestal is None or not np.isfinite(pedestal):
+            continue
+
+        mask = channel == raw_ch
+        adc_ch = adc[mask]
+        pmt_time_ch = pmt_time[mask]
+        tdc_start_ch = tdc_start[mask]
+
+        pulse_time_ns, pulse_time_label = compute_pulse_time_ns(
+            pmt_time_ch,
+            tdc_start_ch,
+            pulse_time_source=pulse_time_source,
+            pmt_pulse_modulo_ticks=pmt_pulse_modulo_ticks,
+        )
+        cycle_index = np.floor_divide(pmt_time_ch.astype(np.int64), np.int64(pmt_pulse_modulo_ticks))
+        first_cycle_mask = first_pulse_in_cycle_mask(pulse_time_ns, cycle_index)
+        y_min, y_max = pulse_time_range_by_channel.get(display_ch, default_pulse_time_range)
+
+        adc_corr = adc_ch - pedestal
+        finite_mask = np.isfinite(adc_corr) & np.isfinite(pulse_time_ns)
+        keep = (
+            finite_mask
+            & first_cycle_mask
+            & (adc_corr > adc_min_cut)
+            & (adc_corr >= adc_range[0])
+            & (adc_corr <= adc_range[1])
+            & (pulse_time_ns >= y_min)
+            & (pulse_time_ns <= y_max)
+        )
+
+        adc_corr = adc_corr[keep]
+        pulse_time_ns = pulse_time_ns[keep]
+        if adc_corr.size == 0:
+            continue
+
+        c0, a0, b0 = fit_by_channel[display_ch]
+        fit_time = timewalk_model(adc_corr, c0, a0, b0)
+        valid = np.isfinite(fit_time) & (fit_time > 0.0)
+        if not np.any(valid):
+            continue
+
+        tts = pulse_time_ns[valid] - fit_time[valid] + c0
+        tts = tts[np.isfinite(tts)]
+        if tts.size == 0:
+            continue
+
+        tts_data.append(
+            {
+                "channel": display_ch,
+                "tts": tts,
+                "pulse_time_label": pulse_time_label,
+                "entries": int(tts.size),
+            }
+        )
+
+    return tts_data
+
+
+def plot_tts_hist_grid(
+    tts_data: list[dict],
+    output_dir: str,
+    stem: str,
+    dataset_tag: str | None = None,
+) -> plt.Figure | None:
+    """Plot event-by-event TTS histograms per channel."""
+    if not tts_data:
+        print("No TTS data available to plot.")
+        return None
+
+    all_tts = np.concatenate([np.asarray(row["tts"], dtype=np.float64) for row in tts_data])
+    all_tts = all_tts[np.isfinite(all_tts)]
+    if all_tts.size == 0:
+        print("No finite TTS values available to plot.")
+        return None
+
+    bin_width_ns = 0.15
+
+    nrows, ncols = _grid_shape(len(tts_data))
+    fig, axes = plt.subplots(nrows, ncols, figsize=(4.5 * ncols, 3.8 * nrows), squeeze=False)
+
+    for idx, row in enumerate(tts_data):
+        ax = axes[idx // ncols][idx % ncols]
+        values = np.asarray(row["tts"], dtype=np.float64)
+        values = values[np.isfinite(values)]
+
+        if values.size > 0:
+            vmin = float(np.min(values))
+            vmax = float(np.max(values))
+            if not np.isfinite(vmin) or not np.isfinite(vmax):
+                vmin, vmax = -1.0, 1.0
+            if vmax <= vmin:
+                vmax = vmin + bin_width_ns
+            pad = max(0.05 * (vmax - vmin), bin_width_ns)
+            x_range = (vmin - pad, vmax + pad)
+            n_bins = max(1, int(np.ceil((x_range[1] - x_range[0]) / bin_width_ns)))
+            counts, edges, _ = ax.hist(
+                values,
+                bins=n_bins,
+                range=x_range,
+                histtype="stepfilled",
+                color="mediumpurple",
+                alpha=0.65,
+                edgecolor="black",
+                linewidth=0.3,
+            )
+            mean_v = float(np.mean(values))
+            fwhm = histogram_fwhm(counts.astype(np.float64), edges.astype(np.float64))
+            if fwhm is not None:
+                label = f"mean={mean_v:.4f}\nFWHM={fwhm:.4f}"
+            else:
+                label = f"mean={mean_v:.4f}\nFWHM=N/A"
+            if dataset_tag is not None:
+                label += f"\n{dataset_tag}"
+            ax.axvline(mean_v, color="darkred", linestyle="--", linewidth=1.2, label=label)
+            ax.legend(fontsize=7, loc="upper right")
+        else:
+            ax.text(
+                0.5,
+                0.5,
+                "No finite points",
+                transform=ax.transAxes,
+                ha="center",
+                va="center",
+                fontsize=8,
+                color="dimgray",
+            )
+
+        if values.size > 0:
+            ax.set_xlim(*x_range)
+        ax.set_title(f"Ch {row['channel']:02d}")
+        ax.set_xlabel("TTS_corr = pulse_time - fit(ADC) + C [ns]")
+        ax.set_ylabel("Counts")
+        ax.grid(True, linestyle="--", alpha=0.4)
+
+    for idx in range(len(tts_data), nrows * ncols):
+        axes[idx // ncols][idx % ncols].axis("off")
+
+    fig.suptitle("Event-by-event corrected TTS by channel")
+    fig.tight_layout()
+    save_figure_dual_format(fig, output_dir, f"{stem}_tts_hist_grid")
     return fig
 
 
@@ -1322,6 +1859,27 @@ def main() -> None:
         ),
     )
     parser.add_argument(
+        "--pulse-adc-min-cut",
+        type=float,
+        default=PULSE_ADC_MIN_CUT_DEFAULT,
+        help=(
+            "Global ADC lower cut for pulse-time-vs-ADC profile extraction/fits: "
+            "keep only ADC > value (default: %(default)s)."
+        ),
+    )
+    parser.add_argument(
+        "--pulse-adc-subrange-min",
+        type=float,
+        default=PULSE_PROFILE_ADC_SUBRANGE_DEFAULT[0],
+        help="Lower bound of ADC subrange used for pulse-time profiles/fits.",
+    )
+    parser.add_argument(
+        "--pulse-adc-subrange-max",
+        type=float,
+        default=PULSE_PROFILE_ADC_SUBRANGE_DEFAULT[1],
+        help="Upper bound of ADC subrange used for pulse-time profiles/fits.",
+    )
+    parser.add_argument(
         "--rebin-time",
         type=int,
         default=1,
@@ -1346,10 +1904,18 @@ def main() -> None:
         raise ValueError("--pmt-pulse-modulo-ticks must be > 0")
     if not np.isfinite(args.adc_threshold):
         raise ValueError("--adc-threshold must be finite")
+    if not np.isfinite(args.pulse_adc_min_cut):
+        raise ValueError("--pulse-adc-min-cut must be finite")
+    if not np.isfinite(args.pulse_adc_subrange_min) or not np.isfinite(args.pulse_adc_subrange_max):
+        raise ValueError("--pulse-adc-subrange-min/max must be finite")
+    if args.pulse_adc_subrange_max <= args.pulse_adc_subrange_min:
+        raise ValueError("--pulse-adc-subrange-max must be greater than --pulse-adc-subrange-min")
     if args.rebin_time <= 0:
         raise ValueError("--rebin-time must be > 0")
     if not np.isfinite(args.time_bin_width) or args.time_bin_width <= 0:
         raise ValueError("--time-bin-width must be finite and > 0")
+
+    pulse_profile_adc_range = (args.pulse_adc_subrange_min, args.pulse_adc_subrange_max)
 
     input_file = args.input
     dataset_tag = extract_threshold_tag_from_path(input_file)
@@ -1436,13 +2002,6 @@ def main() -> None:
             ),
             dataset_tag=dataset_tag,
         )
-        plot_pulse_time_fwhm_vs_channel(
-            corrected_channel_data,
-            output_dir,
-            stem,
-            pulse_time_source=args.pulse_time_source,
-            dataset_tag=dataset_tag,
-        )
         plot_adc_grid(
             corrected_channel_data,
             output_dir,
@@ -1477,16 +2036,114 @@ def main() -> None:
                     stem,
                     pulse_time_source=args.pulse_time_source,
                     adc_key="adc_pedestal_corrected",
-                    adc_range=ADC_CORRECTED_RANGE,
-                    adc_min_cut=args.adc_threshold,
+                    adc_range=pulse_profile_adc_range,
+                    adc_min_cut=args.pulse_adc_min_cut,
                     output_suffix=f"pulse_time_{args.pulse_time_source}_vs_pedestal_corrected_adc_grid",
                     title=(
                         "Pulse time vs pedestal-corrected ADC by channel ("
                         + args.pulse_time_source
-                        + f", ADC>={args.adc_threshold:g})"
+                        + f", ADC>{args.pulse_adc_min_cut:g}, ADC in [{pulse_profile_adc_range[0]:g}, {pulse_profile_adc_range[1]:g}])"
                     ),
                     dataset_tag=dataset_tag,
                 )
+
+        # Fit pulse-time profile vs ADC with C + A*exp(-ADC/B) for each channel.
+        timewalk_fit_results = fit_timewalk_profile_per_channel(
+            corrected_channel_data,
+            pulse_time_source=args.pulse_time_source,
+            adc_key="adc_pedestal_corrected",
+            adc_range=pulse_profile_adc_range,
+            adc_min_cut=args.pulse_adc_min_cut,
+            profile_x_bins=40,
+            profile_min_counts=20,
+        )
+
+        fit_summary_path = os.path.join(output_dir, f"{stem}_timewalk_fit_summary.txt")
+        with open(fit_summary_path, "w") as f:
+            f.write("channel fit_success n_profile_points C C_err A A_err B B_err chi2 ndf chi2_ndf\n")
+            for fit in timewalk_fit_results:
+                if fit.get("fit_success", False):
+                    f.write(
+                        f"{fit['channel']:02d} 1 {fit['n_profile_points']} "
+                        f"{fit['C']:.8g} {fit['C_err']:.8g} "
+                        f"{fit['A']:.8g} {fit['A_err']:.8g} "
+                        f"{fit['B']:.8g} {fit['B_err']:.8g} "
+                        f"{fit['chi2']:.8g} {fit['ndf']} {fit['chi2_ndf']:.8g}\n"
+                    )
+                else:
+                    f.write(
+                        f"{fit['channel']:02d} 0 {fit['n_profile_points']} "
+                        "nan nan nan nan nan nan nan -1 nan\n"
+                    )
+        print(f"Saved time-walk fit summary to {fit_summary_path}")
+
+        plot_timewalk_fit_grid(
+            timewalk_fit_results,
+            output_dir,
+            stem,
+            adc_range=pulse_profile_adc_range,
+            dataset_tag=dataset_tag,
+        )
+        plot_timewalk_chi2ndf_vs_channel(
+            timewalk_fit_results,
+            output_dir,
+            stem,
+            dataset_tag=dataset_tag,
+        )
+        plot_timewalk_parameter_histograms(
+            timewalk_fit_results,
+            output_dir,
+            stem,
+            dataset_tag=dataset_tag,
+        )
+
+        # Second tree pass: build event-by-event corrected TTS = pulse_time - fit(ADC) + C.
+        print("Re-reading tree for second-pass event-by-event TTS filling...")
+        arrays_second_pass = load_events(input_file)
+        default_pulse_time_range, pulse_time_range_by_channel = get_pulse_time_display_range_by_channel(
+            corrected_channel_data, args.pulse_time_source
+        )
+        pedestal_by_channel = {
+            int(row["channel"]): float(row["pedestal_adc"])
+            for row in corrected_channel_data
+            if row.get("pedestal_adc") is not None and np.isfinite(row.get("pedestal_adc"))
+        }
+        tts_data = build_tts_from_second_tree_pass(
+            arrays_second_pass,
+            timewalk_fit_results,
+            pedestal_by_channel,
+            pulse_time_source=args.pulse_time_source,
+            pmt_pulse_modulo_ticks=args.pmt_pulse_modulo_ticks,
+            adc_min_cut=args.pulse_adc_min_cut,
+            adc_range=pulse_profile_adc_range,
+            default_pulse_time_range=default_pulse_time_range,
+            pulse_time_range_by_channel=pulse_time_range_by_channel,
+        )
+
+        tts_summary_path = os.path.join(output_dir, f"{stem}_tts_summary.txt")
+        with open(tts_summary_path, "w") as f:
+            f.write("channel entries tts_mean tts_std\n")
+            for row in tts_data:
+                tts = np.asarray(row["tts"], dtype=np.float64)
+                mean_v = float(np.mean(tts)) if tts.size > 0 else np.nan
+                std_v = float(np.std(tts)) if tts.size > 0 else np.nan
+                f.write(f"{row['channel']:02d} {row['entries']} {mean_v:.8g} {std_v:.8g}\n")
+        print(f"Saved TTS summary to {tts_summary_path}")
+
+        plot_tts_hist_grid(
+            tts_data,
+            output_dir,
+            stem,
+            dataset_tag=dataset_tag,
+        )
+        plot_pulse_time_fwhm_vs_channel(
+            corrected_channel_data,
+            output_dir,
+            stem,
+            pulse_time_source=args.pulse_time_source,
+            tts_data=tts_data,
+            dataset_tag=dataset_tag,
+        )
 
     if tk is None:
         plt.show()
