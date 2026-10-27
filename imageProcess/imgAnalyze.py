@@ -21,8 +21,9 @@ EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".gif", ".webp"}
 ENTROPY_WINDOW = 5  # sliding window size in pixels
 ENTROPY_THRESHOLD = 2.0  # bits, default cut for the colour mask
 ENTROPY_BINS = 32  # grey levels used when estimating local entropy
-HOUGH_THRESHOLD = 0.5  # fraction of max edge strength counted as an edge pixel
+HOUGH_THRESHOLD = 0.1  # fraction of max edge strength counted as an edge pixel
 HOUGH_LINES = 10  # number of strongest lines drawn
+HOUGH_LINE_THR = 0.8  # fraction of max accumulator vote required for a line peak
 FFT_CUTOFF = 0.2  # radial frequency cut, fraction of Nyquist
 BLUR_WIDTH = 10  # gaussian sigma in pixels
 THUMB_SIZE = (300, 300)
@@ -54,7 +55,7 @@ def entropy_map(gray, window=ENTROPY_WINDOW, bins=ENTROPY_BINS):
     return ent
 
 
-def hough_lines(edge_img, thr_frac, n_lines, max_dim=800, n_theta=180):
+def hough_lines(edge_img, thr_frac, n_lines, line_thr_frac, max_dim=800, n_theta=180):
     """Standard Hough line transform (rho = x cos t + y sin t) on thresholded edges.
 
     Returns (accumulator, thetas, rho_axis, lines, scale); lines are (rho, theta, votes)
@@ -70,7 +71,8 @@ def hough_lines(edge_img, thr_frac, n_lines, max_dim=800, n_theta=180):
         rho = np.rint(xs * np.cos(t) + ys * np.sin(t)).astype(np.int64) + diag
         acc[:, j] = np.bincount(rho, minlength=acc.shape[0])
     # Peaks: local maxima in the accumulator, strongest first
-    peaks = (acc == ndimage.maximum_filter(acc, size=15)) & (acc > 0)
+    vote_thr = max(1, int(np.ceil(line_thr_frac * acc.max())))
+    peaks = (acc == ndimage.maximum_filter(acc, size=15)) & (acc >= vote_thr)
     pi, pj = np.nonzero(peaks)
     order = np.argsort(acc[pi, pj])[::-1][:n_lines]
     lines = [((pi[k] - diag) * step, thetas[pj[k]], acc[pi[k], pj[k]]) for k in order]
@@ -132,6 +134,7 @@ class ImageWindow:
         self.edges_img = None
         self.v_hthr = tk.DoubleVar(self.win, HOUGH_THRESHOLD)
         self.v_hlines = tk.IntVar(self.win, HOUGH_LINES)
+        self.v_hlinethr = tk.DoubleVar(self.win, HOUGH_LINE_THR)
         self.v_fcut = tk.DoubleVar(self.win, FFT_CUTOFF)
         self.v_finv = tk.BooleanVar(self.win, False)
         self._last_thr_view = self.show_binary
@@ -174,7 +177,9 @@ class ImageWindow:
                   command=self.show_threshold).pack(fill="x")
 
         self._row(left, "Hough transform", self.show_hough,
-                  [("thr", self.v_hthr, 0.05, 1, 0.05), ("lines", self.v_hlines, 1, 200, 1)],
+                  [("thr", self.v_hthr, 0.05, 1, 0.05),
+                   ("line thr", self.v_hlinethr, 0, 1, 0.05),
+                   ("lines", self.v_hlines, 1, 200, 1)],
                   pady=(8, 0))
 
         tk.Button(left, text="Fourier spectrum", command=self.show_fft).pack(fill="x", pady=(8, 0))
@@ -342,8 +347,9 @@ class ImageWindow:
         self.win.config(cursor="watch")
         self.win.update_idletasks()
         thr = self._get(self.v_hthr, 0.05, 1)
+        line_thr = self._get(self.v_hlinethr, 0, 1)
         n = int(self._get(self.v_hlines, 1, 200))
-        acc, thetas, rhos, lines, npts = hough_lines(self.edges_img, thr, n)
+        acc, thetas, rhos, lines, npts = hough_lines(self.edges_img, thr, n, line_thr)
         self.win.config(cursor="")
         self.fig.clear()
         ax1, ax2 = self.fig.subplots(1, 2)
@@ -357,10 +363,15 @@ class ImageWindow:
                 ax1.axvline(rho / np.cos(t), color="r", lw=1)
         ax1.set_xlim(0, w - 1)
         ax1.set_ylim(h - 1, 0)
-        ax1.set_title(f"Top {len(lines)} Hough lines")
+        ax1.set_title(f"Top {len(lines)} Hough lines (vote >= {line_thr:.2f} max)")
         ax1.axis("off")
         im = ax2.imshow(acc, cmap="inferno", aspect="auto",
                         extent=[-90, 90, rhos[-1], rhos[0]])
+        # Mark selected line peaks in Hough space
+        if lines:
+            ax2.scatter([np.rad2deg(t) for _, t, _ in lines],
+                        [rho for rho, _, _ in lines],
+                        s=80, facecolors="none", edgecolors="darkgreen", linewidths=1.8)
         self.fig.colorbar(im, ax=ax2, label="Votes")
         ax2.set_xlabel("theta (deg)")
         ax2.set_ylabel("rho (px)")
@@ -434,6 +445,7 @@ class ImageWindow:
         self.edge_key = "unset"
         self.v_hthr.set(HOUGH_THRESHOLD)
         self.v_hlines.set(HOUGH_LINES)
+        self.v_hlinethr.set(HOUGH_LINE_THR)
         self.v_fcut.set(FFT_CUTOFF)
         self.v_finv.set(False)
         self.data["entropy"] = self.data["blur"] = None
