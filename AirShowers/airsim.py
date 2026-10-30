@@ -14,6 +14,8 @@ import ROOT
 from math import sqrt, pow, log, exp, log10
 import os, sys, getopt
 import random
+from dataclasses import dataclass
+from typing import Optional
 from math import pow, log, exp, sqrt
 from numpy.random import exponential as exponential
 from numpy.random import poisson as Poisson
@@ -178,19 +180,15 @@ class cworld():
             makeDarkAxes(h2)
         
 ##########################################
+@dataclass(slots=True)
 class cpart:
-    
-    def __init__(self, E, pid, x, y, yend): #, interacted):
-        self.E = E
-        self.pid = pid
-        self.x = x # position where born
-        self.y = y # position where born
-        self.xend = None # end position
-        self.yend = yend # end position
-        #self.gen = gen # generation
-        #self.interacted = interacted
-    #def Print(self):
-    #    print(self.pid, self.E)
+    # slots=True keeps per-particle memory overhead low for large showers.
+    E: float
+    pid: str
+    x: float
+    y: float
+    yend: float
+    xend: Optional[float] = None
         
 ##########################################
 def checkResonantEnergy(E, world):
@@ -202,7 +200,7 @@ def checkResonantEnergy(E, world):
 
 def DrawParticle(part, world, halfSteps, verbose = 0):
     if verbose:
-        print(f'Drawing particle {part.pid} of generation {part.gen}...')
+        print(f'Drawing particle {part.pid}...')
     x0, y0, SFy = world.x0, world.y0, world.SFy
     x1 = part.xend
     y1 = part.yend
@@ -242,6 +240,10 @@ def genHadrons(pid, E, gamma, length, x, y, world, nMaxIters = 100):
     # gen pions and actually also gammas from pi0 decay;)
     # and some additional protons, too;)
     hadrons_and_photons = []
+    append_part = hadrons_and_photons.append
+    rand = random.random
+    debug = world.debug
+    tunables = world.Tunables
 
     # exp. not good, rather indicative of total number of pions produced;)
     #nCharged = int( Poisson(world.Tunables.PionsConst)*pow(E/gGeV, world.Tunables.PionsExp))
@@ -250,7 +252,7 @@ def genHadrons(pid, E, gamma, length, x, y, world, nMaxIters = 100):
     nCharged = -1
     while  nCharged < 0: 
         # DEFAULT!!!
-        nCharged = int( random.gauss(world.Tunables.PionsConst, world.Tunables.sigmaPionConst)*log(E/gGeV)) #*world.Tunables.PionsExp))
+        nCharged = int( random.gauss(tunables.PionsConst, tunables.sigmaPionConst)*log(E/gGeV)) #*world.Tunables.PionsExp))
         # HACK!!!
         #nCharged = 10
         if nCharged <= 1:
@@ -265,7 +267,7 @@ def genHadrons(pid, E, gamma, length, x, y, world, nMaxIters = 100):
 
     #print('PiZeroFrac , nCharged, nNeutral: ',  PiZeroFrac , nCharged, nNeutral)
 
-    if world.debug:
+    if debug:
         print(f'E={E:0.1f}, pi0 frac. {PiZeroFrac:1.3f}, Asking for: nCharged={nCharged}, nNeutral={nNeutral}, Ntot={nCharged+nNeutral}')
     
     # make some additinal protons, addition to the leading one already done before in place where calling genHadrons!
@@ -282,22 +284,21 @@ def genHadrons(pid, E, gamma, length, x, y, world, nMaxIters = 100):
         protonsToMake = 1
     Esum = 0.
     protonsToProduce = 0 + protonsToMake
+    x0_ch = 1.0*ECh
+    lmb_ch = ECh / nCharged
+    if nCharged > 2:
+        lmb_ch = E *(nCharged-1) / (nCharged-2) / nCharged
+    ymax_ch = ymax_pdf(x0_ch, lmb_ch)
     for ipi in range(0, nCharged):
         newpid = 'pi'
         if protonsToMake > 0:
             newpid = 'p'
             protonsToMake = protonsToMake - 1
-        #Epi = ECh / nCharged
-        x0 = 1.*ECh
-        lmb = ECh / nCharged
-        if nCharged > 2:
-            lmb = E *(nCharged-1) / (nCharged-2) / nCharged
-        ymax = ymax_pdf(x0, lmb)
         Epi = 999*ECh
         iter = 0
         while Esum + Epi > ECh:
-            Epi = sample_from_custom_pdf(x0, lmb, ymax)
-            if world.debug > 2:
+            Epi = sample_from_custom_pdf(x0_ch, lmb_ch, ymax_ch)
+            if debug > 2:
                 print(f'    ...ipi: {ipi}/{nCharged}, iter {iter}: E={E:0.1f} Esum={Esum:0.1f} Epi={Epi:0.1f}')
             iter += 1
             if iter > nMaxIters:
@@ -306,10 +307,10 @@ def genHadrons(pid, E, gamma, length, x, y, world, nMaxIters = 100):
         if iter > nMaxIters:
             Epi = ECh - Esum
         Esum += Epi
-        if world.debug > 2 and Epi > 20*gGeV:
+        if debug > 2 and Epi > 20*gGeV:
             print(f'   ....Epi={Epi} part={newpid}')
-        yrnd = getRndSign()*random.random() / gamma
-        hadrons_and_photons.append( cpart(Epi, newpid, x, y, y + yrnd*SFy*length*piySF) )
+        yrnd = getRndSign()*rand() / gamma
+        append_part(cpart(Epi, newpid, x, y, y + yrnd*SFy*length*piySF))
         if iter > nMaxIters:
             nCharged = 1*ipi
             break
@@ -322,18 +323,21 @@ def genHadrons(pid, E, gamma, length, x, y, world, nMaxIters = 100):
 
     # and now pi0 --> gamma gamma:
     Esum = 0.
-    for ipi in range(0, nNeutral ):
-        #Epi = ENeutral / nNeutral # to randmize later
-        x0 = 1.*ENeutral
-        lmb = ENeutral / nNeutral
+    x0_neutral = 0.0
+    lmb_neutral = 0.0
+    ymax_neutral = 0.0
+    if nNeutral > 0:
+        x0_neutral = 1.0*ENeutral
+        lmb_neutral = ENeutral / nNeutral
         if nNeutral > 2:
-            lmb = E *(nNeutral-1) / (nNeutral-2) / nNeutral
-        ymax = ymax_pdf(x0, lmb)
+            lmb_neutral = E *(nNeutral-1) / (nNeutral-2) / nNeutral
+        ymax_neutral = ymax_pdf(x0_neutral, lmb_neutral)
+    for ipi in range(0, nNeutral ):
         Epi = 999*ENeutral
         iter = 0
         while Esum + Epi >  ENeutral:
-            Epi = sample_from_custom_pdf(x0, lmb, ymax)
-            if world.debug > 2:
+            Epi = sample_from_custom_pdf(x0_neutral, lmb_neutral, ymax_neutral)
+            if debug > 2:
                 print(f'    ...ipi: {ipi}/{nNeutral}, iter {iter}: E={E:0.1f} Esum={Esum:0.1f} Epi={Epi:0.1f}')
             iter += 1
             if iter > nMaxIters:
@@ -344,12 +348,12 @@ def genHadrons(pid, E, gamma, length, x, y, world, nMaxIters = 100):
         Esum += Epi
         
         #print('Epi neutr.', Epi)
-        yrnd = getRndSign()*random.random() / gamma
-        zeta = random.random()
+        yrnd = getRndSign()*rand() / gamma
+        zeta = rand()
         # uniform distribution within doppler boundaries
         # is actually well approximated for large gamma and beta of 1 by U(0, Epi0)
-        hadrons_and_photons.append( cpart(    zeta*Epi, 'gamma', x, y, y + yrnd*SFy*length / gammaySF) )
-        hadrons_and_photons.append( cpart((1-zeta)*Epi, 'gamma', x, y, y - yrnd*SFy*length / gammaySF) )
+        append_part(cpart(    zeta*Epi, 'gamma', x, y, y + yrnd*SFy*length / gammaySF))
+        append_part(cpart((1-zeta)*Epi, 'gamma', x, y, y - yrnd*SFy*length / gammaySF))
         if iter > nMaxIters:
             nNeutral = 1*ipi
             break
@@ -357,7 +361,7 @@ def genHadrons(pid, E, gamma, length, x, y, world, nMaxIters = 100):
     #if ipi < nNeutral:
     #    nNeutral = 1*ipi
         
-    if world.debug:
+    if debug:
         print(f'                          Generated: nCharged={nCharged}, nNeutral={nNeutral}, Ntot={nCharged+nNeutral}')
 
     # to recompute!
@@ -431,7 +435,7 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
     length = -1.
     gamma = 1
 
-    if not 'A' in part.pid[0]:
+    if part.pid[0] != 'A':
         length = gLength[part.pid]
     
         if gmass[pid] > gEpsilon:
@@ -454,6 +458,7 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
         print(f' ...trying {part.pid}')
 
     # Electrons:
+    tunables = world.Tunables
     if part.pid == 'e' and part.E > gECEM:
         if verbose:
             print('  ...performing brehms!')
@@ -464,8 +469,9 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
         else:
             # random choice from falling exponential distribution, see
             # https://numpy.org/doc/2.1/reference/random/generated/numpy.random.exponential.html
-            dx = 10*world.Tunables.maxNlengthsEM*length
-            while dx > world.Tunables.maxNlengthsEM*length:
+            max_em_dx = tunables.maxNlengthsEM*length
+            dx = 10*max_em_dx
+            while dx > max_em_dx:
                 dx = exponential(length)
             x = min(part.x + dx, world.x2)
             # initial idea; follow the exp:
@@ -503,8 +509,9 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
         else:
             # random choice from falling exponential distribution, see
             # https://numpy.org/doc/2.1/reference/random/generated/numpy.random.exponential.html
-            dx = 10*world.Tunables.maxNlengthsEM*length
-            while dx > world.Tunables.maxNlengthsEM*length:
+            max_em_dx = tunables.maxNlengthsEM*length
+            dx = 10*max_em_dx
+            while dx > max_em_dx:
                 dx = exponential(length)
             x = part.x + dx
             if x > world.x2:
@@ -529,7 +536,7 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
         return [p1, p2]
     
     # decay the pions
-    elif (part.pid == 'pi' or part.pid == 'Pi') and part.E < ECpiThr:
+    elif part.pid in ('pi', 'Pi') and part.E < ECpiThr:
         ps, xend = twoParticleDecay(part, gamma, world, dy1, rnd1, dy2, rnd2, addSFy)
         # terminate muons and neutrinos:
         if len(ps) == 0:
@@ -541,32 +548,32 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
         #world.UpdateMaxGen()
         return ps
             
-    elif (part.pid == 'pi' or part.pid == 'Pi' or part.pid == 'p') and part.E >= ECpiThr:
+    elif part.pid in ('pi', 'Pi', 'p') and part.E >= ECpiThr:
             
             #pions = []
             #newps = []
-            if world.Tunables.doNewPhysics:
-                Ethr = pow(world.Tunables.MZprime, 2) / (2.*gmass['p'])
+            if tunables.doNewPhysics:
+                Ethr = pow(tunables.MZprime, 2) / (2.*gmass['p'])
                 #if world.debug > 0
                 #print(f'Zprime resonance? E = {part.E:10.0f} GeV = 10^{log10(part.E)+9:.2f} eV, mass: {world.Tunables.MZprime} GeV, Ethr = {Ethr:.0f} GeV = 10^{log10(Ethr)+9:1.2f} eV')
                 if checkResonantEnergy(part.E, world):
-                    reallydoNewPhysics = random.random() < world.Tunables.MZprimeHadXsectFraction
+                    reallydoNewPhysics = random.random() < tunables.MZprimeHadXsectFraction
                     world.h1s["doNewPhys"].Fill(1*reallydoNewPhysics)
                     world.h1s["logEforNewPhys"].Fill(log10(part.E) + 9)
                     #print(f'  ...realy do new physics? {reallydoNewPhysics}')
                     if reallydoNewPhysics:
                         pid0, pid1 = -1, -1
-                        if world.Tunables.decayMode == decayModes.kPiPi:
+                        if tunables.decayMode == decayModes.kPiPi:
                             pid0, pid1 = 'Pi', 'Pi'
-                        elif world.Tunables.decayMode == decayModes.kMuMu:
+                        elif tunables.decayMode == decayModes.kMuMu:
                             pid0, pid1 = 'mu', 'mu'
-                        elif world.Tunables.decayMode == decayModes.kee:
+                        elif tunables.decayMode == decayModes.kee:
                             pid0, pid1 = 'e', 'e'
-                        print(f'    ...Zprime resonance! E={part.E:.2f}, mass: {world.Tunables.MZprime:.0f} GeV, Ethr={Ethr:.2f} GeV')
+                        print(f'    ...Zprime resonance! E={part.E:.2f}, mass: {tunables.MZprime:.0f} GeV, Ethr={Ethr:.2f} GeV')
                         # recompute gamma factor
                         # care about additional particles produced in the interaction...?!?!?!
                         # add some Feynman x and compute how much energy goes to proton remnants?
-                        gamma = part.E / world.Tunables.MZprime
+                        gamma = part.E / tunables.MZprime
                         if verbose:
                             print(f'    new physics particle gamma: {gamma:1.3f}')
                         # GOOD, we decay the Zprime right away! ;) no usage of 'x' from the random exp;-)
@@ -579,8 +586,9 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
             if halfSteps:
                 x = part.x + length*log(2)
             else:
-                dx = 10*world.Tunables.maxNlengthsHad*length
-                while dx > world.Tunables.maxNlengthsHad*length:
+                max_had_dx = tunables.maxNlengthsHad*length
+                dx = 10*max_had_dx
+                while dx > max_had_dx:
                     dx = exponential(length)
                 #xi = exp(-dx / length)
                 x = part.x + dx
@@ -594,7 +602,7 @@ def splitParticle(world, part, randomizeY, halfSteps, verbose = 0):
             
             inelasticity = -1
             while inelasticity > 1 or inelasticity < 0:
-                inelasticity = random.gauss(world.Tunables.Inelasticity, world.Tunables.sigmaInelasticity)
+                inelasticity = random.gauss(tunables.Inelasticity, tunables.sigmaInelasticity)
 
             #if len(pions) == 0:
             # no new physics genewrated, so generate pions
@@ -641,10 +649,7 @@ def PerformInteractionStep(world, particles, randomizeY, halfSteps, verbose = 0)
     for p in particles:
         if verbose:
             print(f'...making {p.pid} interact...')
-        newparts = splitParticle(world, p, randomizeY, halfSteps, verbose)
-        for newp in newparts:
-            newparticles.append(newp)
-            #newp.Print()
+        newparticles.extend(splitParticle(world, p, randomizeY, halfSteps, verbose))
     return newparticles
     
 ##########################################
@@ -658,20 +663,23 @@ def Simulate(doDraw, primary, world, E0, randomizeY, halfSteps):
     nMax = 1e8
 
     allparticles = []
-    while len(newparticles) > 0 and len(allparticles) < nMax: # producing particles
+    fill_ids = {'e', 'pi', 'Pi', 'p'}
+    h1Nx_fill = world.h1Nx.Fill
+    processed_particles = 0
+    while len(newparticles) > 0 and processed_particles < nMax: # producing particles
         istep = istep + 1
-        print(f'step: {istep:3} | total particles count: {len(allparticles):11,} | new particles: {len(newparticles):11,}')
+        print(f'step: {istep:3} | total particles count: {processed_particles:11,} | new particles: {len(newparticles):11,}')
         todoparticles = PerformInteractionStep(world, newparticles, randomizeY, halfSteps)
         
         if doDraw:
             allparticles.extend(newparticles)
+        processed_particles += len(newparticles)
         newparticles = todoparticles
         for part in newparticles:
-            pid = part.pid
-            if pid == 'e' or pid == 'pi' or pid == 'Pi' or pid == 'p':
+            if part.pid in fill_ids:
                 # we do not have the xend information at this point
                 # so cannot average x and xend...
-                world.h1Nx.Fill(part.x - primary.xend)
+                h1Nx_fill(part.x - primary.xend)
 
     print('...done simulating!')
     world.steps = 1*istep
@@ -691,68 +699,41 @@ def DrawResults(world, particles, halfSteps):
     partialDraw = len(particles) > Ncut
     ipart = 0
 
-    # first draw elentrons and photons, muons and neutrinos
-    requids = ['Pi', 'pi', 'p']
-    skipmode = True
+    # first draw electrons/photons/muons/neutrinos, then pi, p, and Pi for readability.
+    pions = []
+    protons = []
+    cap_pions = []
+    other = []
     for part in particles:
-        if len(requids) > 0:
-            if part.pid in requids and skipmode:
-                continue
-            if not part.pid in requids and not skipmode:
-                continue
-        ipart = ipart + 1
-        if (ipart-1) % 1000000 == 0 and ipart > 0:
-            print(f'{ipart-1:10,} / {len(particles):10,}; drawn: {drawn:10,}')
-        if drawn < NmaxDraw:
-            #if (part.E > 0.1*gGeV) and (drawn < Ncut or (drawn >= Ncut and random.random() < drawFrac)):
-            if drawn < Ncut or (drawn >= Ncut and random.random() < drawFrac):
-                line = DrawParticle(part, world, halfSteps)
-                drawn = drawn + 1
-                #print('E: ', part.E)
-                lines.append(line)
-                
-    skipmode = False
-    # then draw pions
-    requids = ['pi']
-    for part in particles:
-        if len(requids) > 0:
-            if part.pid in requids and skipmode:
-                continue
-            if not part.pid in requids and not skipmode:
-                continue
-        ipart = ipart + 1
-        if (ipart-1) % 1000000 == 0 and ipart > 0:
-            print(f'{ipart-1:10,} / {len(particles):10,}; drawn: {drawn:10,}')
-        line = DrawParticle(part, world, halfSteps)
-        lines.append(line)
+        pid = part.pid
+        if pid == 'pi':
+            pions.append(part)
+        elif pid == 'p':
+            protons.append(part)
+        elif pid == 'Pi':
+            cap_pions.append(part)
+        else:
+            other.append(part)
 
-    # now protons
-    requids = ['p']
-    for part in particles:
-        if len(requids) > 0:
-            if part.pid in requids and skipmode:
-                continue
-            if not part.pid in requids and not skipmode:
-                continue
+    draw_particle = DrawParticle
+    rand = random.random
+    total_particles = len(particles)
+
+    for part in other:
         ipart = ipart + 1
         if (ipart-1) % 1000000 == 0 and ipart > 0:
-            print(f'{ipart-1:10,} / {len(particles):10,}; drawn: {drawn:10,}')
-        line = DrawParticle(part, world, halfSteps)
-        lines.append(line)
-        
-    # and last pions produced in resonance new physics interactions ;-)
-    requids = ['Pi']
-    for part in particles:
-        if len(requids) > 0:
-            if part.pid in requids and skipmode:
-                continue
-            if not part.pid in requids and not skipmode:
-                continue
-        ipart = ipart + 1
-        if (ipart-1) % 1000000 == 0 and ipart > 0:
-            print(f'{ipart-1:10,} / {len(particles):10,}; drawn: {drawn:10,}')
-        line = DrawParticle(part, world, halfSteps)
-        lines.append(line)
+            print(f'{ipart-1:10,} / {total_particles:10,}; drawn: {drawn:10,}')
+        if drawn < NmaxDraw and (drawn < Ncut or rand() < drawFrac):
+            line = draw_particle(part, world, halfSteps)
+            drawn = drawn + 1
+            lines.append(line)
+
+    for group in (pions, protons, cap_pions):
+        for part in group:
+            ipart = ipart + 1
+            if (ipart-1) % 1000000 == 0 and ipart > 0:
+                print(f'{ipart-1:10,} / {total_particles:10,}; drawn: {drawn:10,}')
+            lines.append(draw_particle(part, world, halfSteps))
 
     return can, h2, lines, partialDraw
 
