@@ -13,9 +13,10 @@ import json
 import math
 import os
 import re
+import shutil
+import subprocess
 
 import matplotlib.pyplot as plt
-from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.colors import LogNorm
 import numpy as np
 from scipy.optimize import curve_fit
@@ -74,6 +75,8 @@ PULSE_PROFILE_ADC_SUBRANGE_DEFAULT = (20.0, ADC_CORRECTED_RANGE[1])
 # Custom Y range (ns) for ToT 2D plots. Set to None to auto-infer from data.
 TOT_2D_Y_RANGE_NS: tuple[float, float] | None = (0.0, 75.0)
 PLOT_TOT_BY_DEFAULT = False
+REPORT_DOCUMENT_TITLE = "Batch Zero, wrong HV SNs"
+OUTLIER_SIGMA_SCALE_DEFAULT = 1.5
 
 PEDESTAL_JSON_SUBDIR = "json_results_to_db"
 
@@ -704,6 +707,8 @@ def compute_tts_fwhm_by_channel(tts_data: list[dict]) -> dict[int, float]:
 def make_tts_latex_table(
     channel_data: list[dict],
     tts_data: list[dict],
+    hv_sn_by_channel: dict[int, str],
+    outlier_sigma_scale: float,
 ) -> str:
     """Build a LaTeX tabular with per-channel FWHM before/after correction."""
     before_by_channel: dict[int, float] = {}
@@ -727,34 +732,40 @@ def make_tts_latex_table(
         if value is None:
             return "--"
         text = f"{value:.3f}"
-        if np.isfinite(mean) and np.isfinite(std) and std > 0.0 and abs(value - mean) > 1.5 * std:
+        if (
+            np.isfinite(mean)
+            and np.isfinite(std)
+            and std > 0.0
+            and abs(value - mean) > outlier_sigma_scale * std
+        ):
             return f"\\textcolor{{red}}{{{text}}}"
         return text
 
     lines = [
         "\\begin{table}[ht]",
         "\\centering",
-        "\\begin{tabular}{rcc}",
+        "\\begin{tabular}{rlll}",
         "\\hline",
-        "Channel & TTS before correction [ns] & TTS after correction [ns] \\\\",
+        "Channel & HV SN & TTS before correction [ns] & TTS after correction [ns] \\\\",
         "\\hline",
     ]
     if all_channels:
         for ch in all_channels:
             before = before_by_channel.get(ch)
             after = after_by_channel.get(ch)
+            hv_sn = hv_sn_by_channel.get(ch, "--")
             before_str = _format_value(before, before_mean, before_std)
             after_str = _format_value(after, after_mean, after_std)
-            lines.append(f"{ch:02d} & {before_str} & {after_str} \\\\")
+            lines.append(f"{ch:02d} & {latex_escape(hv_sn)} & {before_str} & {after_str} \\\\")
     else:
-        lines.append("-- & -- & -- \\\\")
+        lines.append("-- & -- & -- & -- \\\\")
     lines.extend(
         [
             "\\hline",
             "\\end{tabular}",
             (
                 "\\caption{Per-channel TTS widths before and after time-walk correction. "
-                "Red values are outliers outside mean $\\pm$ 1.5$\\sigma$.}"
+                f"Red values are outliers outside mean $\\pm$ {outlier_sigma_scale:g}$\\sigma$.}}"
             ),
             "\\end{table}",
         ]
@@ -762,32 +773,103 @@ def make_tts_latex_table(
     return "\n".join(lines)
 
 
-def plot_tts_latex_table_page(
-    channel_data: list[dict],
-    tts_data: list[dict],
-    pulse_time_source: str,
-    dataset_tag: str | None = None,
-) -> plt.Figure:
-    """Add a report page that shows the LaTeX table source for TTS comparison."""
-    table_text = make_tts_latex_table(channel_data, tts_data)
-    fig, ax = plt.subplots(figsize=(8.5, 11.0))
-    ax.axis("off")
-    title = f"LaTeX table: TTS before/after correction ({pulse_time_source})"
-    if dataset_tag is not None:
-        title += f"\n{dataset_tag}"
-    ax.text(0.01, 0.98, title, transform=ax.transAxes, va="top", ha="left", fontsize=13, weight="bold")
-    ax.text(
-        0.01,
-        0.93,
-        table_text,
-        transform=ax.transAxes,
-        va="top",
-        ha="left",
-        fontsize=10,
-        family="monospace",
+def latex_escape(text: str) -> str:
+    """Escape minimal LaTeX special characters in plain text."""
+    return (
+        text.replace("\\", "\\textbackslash{}")
+        .replace("&", "\\&")
+        .replace("%", "\\%")
+        .replace("_", "\\_")
+        .replace("#", "\\#")
+        .replace("{", "\\{")
+        .replace("}", "\\}")
     )
-    fig.tight_layout()
-    return fig
+
+
+def load_hv_sn_by_channel(summary_json_path: str) -> dict[int, str]:
+    """Load channel -> HV SN map from summary.json."""
+    if not os.path.isfile(summary_json_path):
+        print(f"summary.json not found at {summary_json_path}; HV SN column will use '--'.")
+        return {}
+
+    with open(summary_json_path) as f:
+        summary_rows = json.load(f)
+
+    if not isinstance(summary_rows, list):
+        raise ValueError(f"Expected list in {summary_json_path}, got {type(summary_rows).__name__}")
+
+    hv_sn_by_channel: dict[int, str] = {}
+    for row in summary_rows:
+        if not isinstance(row, dict):
+            continue
+        channel = row.get("Channel")
+        hv_sn = row.get("HV SN")
+        if isinstance(channel, int) and isinstance(hv_sn, str) and hv_sn.strip():
+            hv_sn_by_channel[channel] = hv_sn.strip()
+    return hv_sn_by_channel
+
+
+def write_and_compile_latex_report(
+    report_dir: str,
+    section_name: str,
+    table_latex: str,
+    plot_pdf_paths: list[str],
+) -> tuple[str, str]:
+    """Write tts_report.tex and compile it to tts_report.pdf."""
+    report_tex_path = os.path.join(report_dir, "tts_report.tex")
+    report_pdf_path = os.path.join(report_dir, "tts_report.pdf")
+    report_plots_dir = os.path.join(report_dir, "tts_report_plots")
+    os.makedirs(report_plots_dir, exist_ok=True)
+    plot_blocks = []
+    for pdf_path in plot_pdf_paths:
+        copied_pdf_path = os.path.join(report_plots_dir, os.path.basename(pdf_path))
+        shutil.copy2(pdf_path, copied_pdf_path)
+        rel_path = os.path.relpath(copied_pdf_path, start=report_dir)
+        rel_path_latex = rel_path.replace("\\", "/")
+        plot_blocks.append(
+            "\\begin{figure}[p]\n"
+            "\\centering\n"
+            f"\\includegraphics[width=\\textwidth]{{{rel_path_latex}}}\n"
+            f"\\caption{{{latex_escape(os.path.basename(pdf_path))}}}\n"
+            "\\end{figure}\n"
+            "\\clearpage\n"
+        )
+    document = (
+        "\\documentclass[11pt]{article}\n"
+        "\\usepackage[a4paper,margin=1.7cm]{geometry}\n"
+        "\\usepackage{graphicx}\n"
+        "\\usepackage[table]{xcolor}\n"
+        "\\usepackage[T1]{fontenc}\n"
+        "\\title{" + latex_escape(REPORT_DOCUMENT_TITLE) + "}\n"
+        "\\date{}\n"
+        "\\begin{document}\n"
+        "\\maketitle\n"
+        "\\section*{" + latex_escape(section_name) + "}\n"
+        + table_latex
+        + "\n\\clearpage\n"
+        + "".join(plot_blocks)
+        + "\\end{document}\n"
+    )
+    with open(report_tex_path, "w") as f:
+        f.write(document)
+
+    command = [
+        "pdflatex",
+        "-interaction=nonstopmode",
+        "-halt-on-error",
+        "-output-directory",
+        report_dir,
+        report_tex_path,
+    ]
+    run = subprocess.run(command, cwd=report_dir, capture_output=True, text=True)
+    if run.returncode != 0:
+        raise RuntimeError(
+            "Failed to compile LaTeX report.\n"
+            f"Command: {' '.join(command)}\n"
+            f"stdout:\n{run.stdout}\n"
+            f"stderr:\n{run.stderr}"
+        )
+    return report_tex_path, report_pdf_path
 
 
 def plot_pulse_time_hist_grid(
@@ -1712,6 +1794,15 @@ def main() -> None:
             f"(default: <input dir>/{PEDESTAL_JSON_SUBDIR})."
         ),
     )
+    parser.add_argument(
+        "--outlier-sigma-scale",
+        type=float,
+        default=OUTLIER_SIGMA_SCALE_DEFAULT,
+        help=(
+            "Outlier marking scale for table values: highlight entries outside "
+            "mean ± scale*std-dev (default: %(default)s)."
+        ),
+    )
     args = parser.parse_args()
 
     if not np.isfinite(args.second_pass_adc_min):
@@ -1730,6 +1821,8 @@ def main() -> None:
         raise ValueError("--rebin-time must be > 0")
     if not np.isfinite(args.time_bin_width) or args.time_bin_width <= 0:
         raise ValueError("--time-bin-width must be finite and > 0")
+    if not np.isfinite(args.outlier_sigma_scale) or args.outlier_sigma_scale <= 0:
+        raise ValueError("--outlier-sigma-scale must be finite and > 0")
 
     pulse_profile_adc_range = (args.pulse_adc_subrange_min, args.pulse_adc_subrange_max)
 
@@ -1948,18 +2041,37 @@ def main() -> None:
             tts_data=tts_data,
             dataset_tag=dataset_tag,
         )
-        plot_tts_latex_table_page(
-            corrected_channel_data,
-            tts_data,
-            pulse_time_source=args.pulse_time_source,
-            dataset_tag=dataset_tag,
-        )
 
-    report_path = os.path.join(os.path.dirname(os.path.abspath(input_file)), "tts_report.pdf")
-    with PdfPages(report_path) as pdf:
-        for fig_num in plt.get_fignums():
-            pdf.savefig(plt.figure(fig_num))
-    print(f"Saved PDF report to {report_path}")
+    root_dir = os.path.dirname(os.path.abspath(input_file))
+    summary_json_path = os.path.join(root_dir, "summary.json")
+    hv_sn_by_channel = load_hv_sn_by_channel(summary_json_path)
+    tts_data_for_table = locals().get("tts_data", [])
+    table_latex = make_tts_latex_table(
+        corrected_channel_data,
+        tts_data_for_table,
+        hv_sn_by_channel,
+        outlier_sigma_scale=args.outlier_sigma_scale,
+    )
+
+    section_name = os.path.basename(root_dir)
+    plot_pdf_dir = os.path.join(output_dir, "pdf")
+    plot_pdf_paths = sorted(
+        os.path.join(plot_pdf_dir, name)
+        for name in os.listdir(plot_pdf_dir)
+        if name.startswith(f"{stem}_") and name.endswith(".pdf")
+        and "tot_vs" not in name
+    )
+    if not plot_pdf_paths:
+        raise RuntimeError(f"No plot PDFs found in {plot_pdf_dir} for stem {stem}")
+
+    report_tex_path, report_pdf_path = write_and_compile_latex_report(
+        report_dir=root_dir,
+        section_name=section_name,
+        table_latex=table_latex,
+        plot_pdf_paths=plot_pdf_paths,
+    )
+    print(f"Saved LaTeX report source to {report_tex_path}")
+    print(f"Saved PDF report to {report_pdf_path}")
 
     if tk is None:
         plt.show()
