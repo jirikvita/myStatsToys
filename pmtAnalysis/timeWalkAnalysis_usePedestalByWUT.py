@@ -73,6 +73,7 @@ PULSE_PROFILE_ADC_SUBRANGE_DEFAULT = (20.0, ADC_CORRECTED_RANGE[1])
 
 # Custom Y range (ns) for ToT 2D plots. Set to None to auto-infer from data.
 TOT_2D_Y_RANGE_NS: tuple[float, float] | None = (0.0, 75.0)
+PLOT_TOT_BY_DEFAULT = False
 
 PEDESTAL_JSON_SUBDIR = "json_results_to_db"
 
@@ -674,6 +675,121 @@ def histogram_fwhm(bin_counts: np.ndarray, bin_edges: np.ndarray) -> float | Non
     return fwhm
 
 
+def compute_tts_fwhm_by_channel(tts_data: list[dict]) -> dict[int, float]:
+    """Compute per-channel FWHM from corrected TTS arrays."""
+    tts_fwhm_by_channel: dict[int, float] = {}
+    tts_bin_width_ns = 0.15
+    for row in tts_data:
+        values = np.asarray(row.get("tts", []), dtype=np.float64)
+        values = values[np.isfinite(values)]
+        if values.size == 0:
+            continue
+        vmin = float(np.min(values))
+        vmax = float(np.max(values))
+        if not np.isfinite(vmin) or not np.isfinite(vmax):
+            continue
+        if vmax <= vmin:
+            vmax = vmin + tts_bin_width_ns
+        pad = max(0.05 * (vmax - vmin), tts_bin_width_ns)
+        x_range = (vmin - pad, vmax + pad)
+        n_bins = max(1, int(np.ceil((x_range[1] - x_range[0]) / tts_bin_width_ns)))
+        counts, edges = np.histogram(values, bins=n_bins, range=x_range)
+        tts_fwhm = histogram_fwhm(counts.astype(np.float64), edges.astype(np.float64))
+        if tts_fwhm is None or not np.isfinite(tts_fwhm):
+            continue
+        tts_fwhm_by_channel[int(row["channel"])] = float(tts_fwhm)
+    return tts_fwhm_by_channel
+
+
+def make_tts_latex_table(
+    channel_data: list[dict],
+    tts_data: list[dict],
+) -> str:
+    """Build a LaTeX tabular with per-channel FWHM before/after correction."""
+    before_by_channel: dict[int, float] = {}
+    for data in channel_data:
+        fwhm = data.get("pulse_time_fwhm_ns", np.nan)
+        if fwhm is None or not np.isfinite(fwhm):
+            continue
+        before_by_channel[int(data["channel"])] = float(fwhm)
+
+    after_by_channel = compute_tts_fwhm_by_channel(tts_data)
+    all_channels = sorted(set(before_by_channel) | set(after_by_channel))
+
+    before_values = np.asarray(list(before_by_channel.values()), dtype=np.float64)
+    after_values = np.asarray(list(after_by_channel.values()), dtype=np.float64)
+    before_mean = float(np.mean(before_values)) if before_values.size > 0 else np.nan
+    before_std = float(np.std(before_values)) if before_values.size > 0 else np.nan
+    after_mean = float(np.mean(after_values)) if after_values.size > 0 else np.nan
+    after_std = float(np.std(after_values)) if after_values.size > 0 else np.nan
+
+    def _format_value(value: float | None, mean: float, std: float) -> str:
+        if value is None:
+            return "--"
+        text = f"{value:.3f}"
+        if np.isfinite(mean) and np.isfinite(std) and std > 0.0 and abs(value - mean) > 1.5 * std:
+            return f"\\textcolor{{red}}{{{text}}}"
+        return text
+
+    lines = [
+        "\\begin{table}[ht]",
+        "\\centering",
+        "\\begin{tabular}{rcc}",
+        "\\hline",
+        "Channel & TTS before correction [ns] & TTS after correction [ns] \\\\",
+        "\\hline",
+    ]
+    if all_channels:
+        for ch in all_channels:
+            before = before_by_channel.get(ch)
+            after = after_by_channel.get(ch)
+            before_str = _format_value(before, before_mean, before_std)
+            after_str = _format_value(after, after_mean, after_std)
+            lines.append(f"{ch:02d} & {before_str} & {after_str} \\\\")
+    else:
+        lines.append("-- & -- & -- \\\\")
+    lines.extend(
+        [
+            "\\hline",
+            "\\end{tabular}",
+            (
+                "\\caption{Per-channel TTS widths before and after time-walk correction. "
+                "Red values are outliers outside mean $\\pm$ 1.5$\\sigma$.}"
+            ),
+            "\\end{table}",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def plot_tts_latex_table_page(
+    channel_data: list[dict],
+    tts_data: list[dict],
+    pulse_time_source: str,
+    dataset_tag: str | None = None,
+) -> plt.Figure:
+    """Add a report page that shows the LaTeX table source for TTS comparison."""
+    table_text = make_tts_latex_table(channel_data, tts_data)
+    fig, ax = plt.subplots(figsize=(8.5, 11.0))
+    ax.axis("off")
+    title = f"LaTeX table: TTS before/after correction ({pulse_time_source})"
+    if dataset_tag is not None:
+        title += f"\n{dataset_tag}"
+    ax.text(0.01, 0.98, title, transform=ax.transAxes, va="top", ha="left", fontsize=13, weight="bold")
+    ax.text(
+        0.01,
+        0.93,
+        table_text,
+        transform=ax.transAxes,
+        va="top",
+        ha="left",
+        fontsize=10,
+        family="monospace",
+    )
+    fig.tight_layout()
+    return fig
+
+
 def plot_pulse_time_hist_grid(
     channel_data: list[dict],
     output_dir: str,
@@ -862,31 +978,33 @@ def plot_pulse_time_fwhm_vs_channel(
         linewidth=1.5,
         label="Pulse-time FWHM",
     )
+    fwhm_mean = float(np.mean(fwhm_arr))
+    fwhm_std = float(np.std(fwhm_arr))
+
+    x_min = float(np.min(channels_arr))
+    x_max = float(np.max(channels_arr))
+    ax.hlines(
+        fwhm_mean,
+        x_min,
+        x_max,
+        colors="firebrick",
+        linestyles="--",
+        linewidth=1.2,
+        label=f"Pulse-time mean={fwhm_mean:.3f}",
+    )
+    ax.fill_between(
+        [x_min, x_max],
+        [fwhm_mean - fwhm_std, fwhm_mean - fwhm_std],
+        [fwhm_mean + fwhm_std, fwhm_mean + fwhm_std],
+        color="firebrick",
+        alpha=0.3,
+        label=f"Pulse-time ±1σ ({fwhm_std:.3f})",
+    )
 
     if tts_data:
-        tts_channels: list[float] = []
-        tts_fwhm_values: list[float] = []
-        tts_bin_width_ns = 0.15
-        for row in tts_data:
-            values = np.asarray(row.get("tts", []), dtype=np.float64)
-            values = values[np.isfinite(values)]
-            if values.size == 0:
-                continue
-            vmin = float(np.min(values))
-            vmax = float(np.max(values))
-            if not np.isfinite(vmin) or not np.isfinite(vmax):
-                continue
-            if vmax <= vmin:
-                vmax = vmin + tts_bin_width_ns
-            pad = max(0.05 * (vmax - vmin), tts_bin_width_ns)
-            x_range = (vmin - pad, vmax + pad)
-            n_bins = max(1, int(np.ceil((x_range[1] - x_range[0]) / tts_bin_width_ns)))
-            counts, edges = np.histogram(values, bins=n_bins, range=x_range)
-            tts_fwhm = histogram_fwhm(counts.astype(np.float64), edges.astype(np.float64))
-            if tts_fwhm is None or not np.isfinite(tts_fwhm):
-                continue
-            tts_channels.append(float(row["channel"]))
-            tts_fwhm_values.append(float(tts_fwhm))
+        tts_fwhm_by_channel = compute_tts_fwhm_by_channel(tts_data)
+        tts_channels = sorted(tts_fwhm_by_channel)
+        tts_fwhm_values = [tts_fwhm_by_channel[ch] for ch in tts_channels]
 
         if tts_channels:
             tts_channels_arr = np.asarray(tts_channels, dtype=np.float64)
@@ -900,6 +1018,27 @@ def plot_pulse_time_fwhm_vs_channel(
                 linewidth=1.5,
                 label="TTS-corrected FWHM",
             )
+            tts_mean = float(np.mean(tts_fwhm_arr))
+            tts_std = float(np.std(tts_fwhm_arr))
+            x_min = min(x_min, float(np.min(tts_channels_arr)))
+            x_max = max(x_max, float(np.max(tts_channels_arr)))
+            ax.hlines(
+                tts_mean,
+                x_min,
+                x_max,
+                colors="navy",
+                linestyles="--",
+                linewidth=1.2,
+                label=f"TTS-corrected mean={tts_mean:.3f}",
+            )
+            ax.fill_between(
+                [x_min, x_max],
+                [tts_mean - tts_std, tts_mean - tts_std],
+                [tts_mean + tts_std, tts_mean + tts_std],
+                color="navy",
+                alpha=0.3,
+                label=f"TTS-corrected ±1σ ({tts_std:.3f})",
+            )
 
     ax.set_xlabel("Channel")
     ax.set_ylabel("Pulse-time FWHM [ns]")
@@ -910,7 +1049,7 @@ def plot_pulse_time_fwhm_vs_channel(
     ax.set_ylim(bottom=0.0)
     ax.grid(True, linestyle="--", alpha=0.4)
     ax.set_xticks(channels_arr)
-    ax.legend(loc="upper right", fontsize=9)
+    ax.legend(loc="lower right", fontsize=9)
     fig.tight_layout()
     save_figure_dual_format(fig, output_dir, f"{stem}_pulse_time_fwhm_vs_channel")
     return fig
@@ -1688,17 +1827,18 @@ def main() -> None:
             output_suffix="adc_pedestal_corrected_grid",
             dataset_tag=dataset_tag,
         )
-        plot_tot_vs_adc_grid(
-            corrected_channel_data,
-            output_dir,
-            stem,
-            adc_key="adc_pedestal_corrected",
-            adc_range=ADC_CORRECTED_RANGE,
-            adc_min_cut=args.adc_threshold,
-            output_suffix="tot_vs_pedestal_corrected_adc_grid",
-            title=f"ToT vs pedestal-corrected ADC by channel (ADC>={args.adc_threshold:g})",
-            dataset_tag=dataset_tag,
-        )
+        if PLOT_TOT_BY_DEFAULT:
+            plot_tot_vs_adc_grid(
+                corrected_channel_data,
+                output_dir,
+                stem,
+                adc_key="adc_pedestal_corrected",
+                adc_range=ADC_CORRECTED_RANGE,
+                adc_min_cut=args.adc_threshold,
+                output_suffix="tot_vs_pedestal_corrected_adc_grid",
+                title=f"ToT vs pedestal-corrected ADC by channel (ADC>={args.adc_threshold:g})",
+                dataset_tag=dataset_tag,
+            )
         plot_pulse_time_vs_adc_grid(
                     corrected_channel_data,
                     output_dir,
@@ -1806,6 +1946,12 @@ def main() -> None:
             stem,
             pulse_time_source=args.pulse_time_source,
             tts_data=tts_data,
+            dataset_tag=dataset_tag,
+        )
+        plot_tts_latex_table_page(
+            corrected_channel_data,
+            tts_data,
+            pulse_time_source=args.pulse_time_source,
             dataset_tag=dataset_tag,
         )
 
