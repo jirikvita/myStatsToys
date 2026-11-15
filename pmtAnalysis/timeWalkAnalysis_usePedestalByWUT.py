@@ -9,6 +9,7 @@ by the ADC threshold, and ToT, time-walk and TTS are computed on the selected pu
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import math
 import os
@@ -704,13 +705,13 @@ def compute_tts_fwhm_by_channel(tts_data: list[dict]) -> dict[int, float]:
     return tts_fwhm_by_channel
 
 
-def make_tts_latex_table(
+def build_tts_table_rows(
     channel_data: list[dict],
     tts_data: list[dict],
     hv_sn_by_channel: dict[int, str],
     outlier_sigma_scale: float,
-) -> str:
-    """Build a LaTeX tabular with per-channel FWHM before/after correction."""
+) -> list[dict]:
+    """Build table rows with before/after FWHM values and outlier flags."""
     before_by_channel: dict[int, float] = {}
     for data in channel_data:
         fwhm = data.get("pulse_time_fwhm_ns", np.nan)
@@ -728,16 +729,43 @@ def make_tts_latex_table(
     after_mean = float(np.mean(after_values)) if after_values.size > 0 else np.nan
     after_std = float(np.std(after_values)) if after_values.size > 0 else np.nan
 
-    def _format_value(value: float | None, mean: float, std: float) -> str:
-        if value is None:
-            return "--"
-        text = f"{value:.3f}"
-        if (
-            np.isfinite(mean)
+    def _is_outlier(value: float | None, mean: float, std: float) -> bool:
+        return (
+            value is not None
+            and np.isfinite(mean)
             and np.isfinite(std)
             and std > 0.0
             and abs(value - mean) > outlier_sigma_scale * std
-        ):
+        )
+
+    rows: list[dict] = []
+    for ch in all_channels:
+        before = before_by_channel.get(ch)
+        after = after_by_channel.get(ch)
+        rows.append(
+            {
+                "channel": ch,
+                "hv_sn": hv_sn_by_channel.get(ch, "--"),
+                "tts_before_ns": before,
+                "tts_after_ns": after,
+                "tts_before_outlier": _is_outlier(before, before_mean, before_std),
+                "tts_after_outlier": _is_outlier(after, after_mean, after_std),
+            }
+        )
+    return rows
+
+
+def make_tts_latex_table(
+    table_rows: list[dict],
+    outlier_sigma_scale: float,
+) -> str:
+    """Build a LaTeX tabular with per-channel FWHM before/after correction."""
+
+    def _format_value(value: float | None, is_outlier: bool) -> str:
+        if value is None:
+            return "--"
+        text = f"{value:.3f}"
+        if is_outlier:
             return f"\\textcolor{{red}}{{{text}}}"
         return text
 
@@ -749,14 +777,13 @@ def make_tts_latex_table(
         "Channel & HV SN & TTS before correction [ns] & TTS after correction [ns] \\\\",
         "\\hline",
     ]
-    if all_channels:
-        for ch in all_channels:
-            before = before_by_channel.get(ch)
-            after = after_by_channel.get(ch)
-            hv_sn = hv_sn_by_channel.get(ch, "--")
-            before_str = _format_value(before, before_mean, before_std)
-            after_str = _format_value(after, after_mean, after_std)
-            lines.append(f"{ch:02d} & {latex_escape(hv_sn)} & {before_str} & {after_str} \\\\")
+    if table_rows:
+        for row in table_rows:
+            before_str = _format_value(row["tts_before_ns"], row["tts_before_outlier"])
+            after_str = _format_value(row["tts_after_ns"], row["tts_after_outlier"])
+            lines.append(
+                f"{row['channel']:02d} & {latex_escape(row['hv_sn'])} & {before_str} & {after_str} \\\\"
+            )
     else:
         lines.append("-- & -- & -- & -- \\\\")
     lines.extend(
@@ -771,6 +798,50 @@ def make_tts_latex_table(
         ]
     )
     return "\n".join(lines)
+
+
+def adc_threshold_tag(adc_threshold: float) -> str:
+    """Return a filesystem-safe tag encoding ADC threshold cut."""
+    tag = f"adc_ge_{adc_threshold:.3f}".rstrip("0").rstrip(".")
+    tag = tag.replace("-", "m").replace(".", "p")
+    return re.sub(r"[^A-Za-z0-9_]+", "_", tag)
+
+
+def export_tts_table_csv(
+    report_dir: str,
+    table_rows: list[dict],
+    adc_threshold: float,
+) -> str:
+    """Export table rows to CSV, tagged with ADC threshold cut."""
+    csv_path = os.path.join(report_dir, f"tts_table_{adc_threshold_tag(adc_threshold)}.csv")
+    with open(csv_path, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(
+            [
+                "channel",
+                "hv_sn",
+                "tts_before_ns",
+                "tts_after_ns",
+                "tts_before_outlier",
+                "tts_after_outlier",
+                "adc_threshold_cut_ge",
+            ]
+        )
+        for row in table_rows:
+            before = row["tts_before_ns"]
+            after = row["tts_after_ns"]
+            writer.writerow(
+                [
+                    int(row["channel"]),
+                    row["hv_sn"],
+                    "" if before is None else f"{before:.6f}",
+                    "" if after is None else f"{after:.6f}",
+                    int(bool(row["tts_before_outlier"])),
+                    int(bool(row["tts_after_outlier"])),
+                    f"{adc_threshold:g}",
+                ]
+            )
+    return csv_path
 
 
 def latex_escape(text: str) -> str:
@@ -2046,11 +2117,20 @@ def main() -> None:
     summary_json_path = os.path.join(root_dir, "summary.json")
     hv_sn_by_channel = load_hv_sn_by_channel(summary_json_path)
     tts_data_for_table = locals().get("tts_data", [])
-    table_latex = make_tts_latex_table(
+    table_rows = build_tts_table_rows(
         corrected_channel_data,
         tts_data_for_table,
         hv_sn_by_channel,
         outlier_sigma_scale=args.outlier_sigma_scale,
+    )
+    table_latex = make_tts_latex_table(
+        table_rows=table_rows,
+        outlier_sigma_scale=args.outlier_sigma_scale,
+    )
+    table_csv_path = export_tts_table_csv(
+        report_dir=root_dir,
+        table_rows=table_rows,
+        adc_threshold=args.adc_threshold,
     )
 
     section_name = os.path.basename(root_dir)
@@ -2072,6 +2152,7 @@ def main() -> None:
     )
     print(f"Saved LaTeX report source to {report_tex_path}")
     print(f"Saved PDF report to {report_pdf_path}")
+    print(f"Saved TTS table CSV to {table_csv_path}")
 
     if tk is None:
         plt.show()
