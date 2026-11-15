@@ -66,6 +66,7 @@ def plot_comparisons(directory: Path) -> list[plt.Figure]:
         ax.set_xlabel("Channel")
         ax.set_ylabel("TTS FWHM [ns]")
         ax.set_xlim(0, 20)
+        ax.set_xticks(range(21))
         ax.set_ylim(0, 3.5)
         ax.grid(True, linestyle="--", alpha=0.4)
         if ax.lines:

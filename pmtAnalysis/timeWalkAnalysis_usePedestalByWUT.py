@@ -4,6 +4,7 @@
 Per-channel pedestals are read from `json_results_to_db/channel_??.json`
 (key `adc_pedestal`) instead of being fitted. The pedestal-corrected ADC is cut
 by the ADC threshold, and ToT, time-walk and TTS are computed on the selected pulses.
+The TTS table CSV and compiled report are named with the ADC threshold tag.
 """
 
 from __future__ import annotations
@@ -100,9 +101,11 @@ def load_pedestals_from_json(pedestal_dir: str, raw_channels: list[int]) -> dict
     return pedestals
 
 
-def timewalk_model(adc: np.ndarray, c0: float, a0: float, b0: float) -> np.ndarray:
-    """Time-walk model: C + A * exp(-adc / B)."""
-    return c0 + a0 * np.exp(-adc / b0)
+def timewalk_model(
+    adc: np.ndarray, c0: float, a0: float, b0: float, d0: float, e0: float
+) -> np.ndarray:
+    """Time-walk model: C + A * (exp(-adc / B) + D * exp(-adc / E))."""
+    return c0 + a0 * (np.exp(-adc / b0) + d0 * np.exp(-adc / e0))
 
 
 def load_events(root_file: str, tree_name: str = TREE_NAME) -> dict:
@@ -802,7 +805,8 @@ def make_tts_latex_table(
 
 def adc_threshold_tag(adc_threshold: float) -> str:
     """Return a filesystem-safe tag encoding ADC threshold cut."""
-    tag = f"adc_ge_{adc_threshold:.3f}".rstrip("0").rstrip(".")
+    threshold_text = str(float(adc_threshold)).removesuffix(".0")
+    tag = f"adc_ge_{threshold_text}"
     tag = tag.replace("-", "m").replace(".", "p")
     return re.sub(r"[^A-Za-z0-9_]+", "_", tag)
 
@@ -838,7 +842,7 @@ def export_tts_table_csv(
                     "" if after is None else f"{after:.6f}",
                     int(bool(row["tts_before_outlier"])),
                     int(bool(row["tts_after_outlier"])),
-                    f"{adc_threshold:g}",
+                    str(float(adc_threshold)),
                 ]
             )
     return csv_path
@@ -885,11 +889,13 @@ def write_and_compile_latex_report(
     section_name: str,
     table_latex: str,
     plot_pdf_paths: list[str],
+    adc_threshold: float,
 ) -> tuple[str, str]:
-    """Write tts_report.tex and compile it to tts_report.pdf."""
-    report_tex_path = os.path.join(report_dir, "tts_report.tex")
-    report_pdf_path = os.path.join(report_dir, "tts_report.pdf")
-    report_plots_dir = os.path.join(report_dir, "tts_report_plots")
+    """Write and compile a report tagged with the ADC threshold."""
+    report_name = f"tts_report_{adc_threshold_tag(adc_threshold)}"
+    report_tex_path = os.path.join(report_dir, f"{report_name}.tex")
+    report_pdf_path = os.path.join(report_dir, f"{report_name}.pdf")
+    report_plots_dir = os.path.join(report_dir, f"{report_name}_plots")
     os.makedirs(report_plots_dir, exist_ok=True)
     plot_blocks = []
     for pdf_path in plot_pdf_paths:
@@ -916,6 +922,7 @@ def write_and_compile_latex_report(
         "\\begin{document}\n"
         "\\maketitle\n"
         "\\section*{" + latex_escape(section_name) + "}\n"
+        + f"Pedestal-corrected ADC threshold: $\\geq {float(adc_threshold)}$.\\par\n"
         + table_latex
         + "\n\\clearpage\n"
         + "".join(plot_blocks)
@@ -1256,7 +1263,7 @@ def fit_timewalk_profile_per_channel(
     profile_x_bins: int = 40,
     profile_min_counts: int = 20,
 ) -> list[dict]:
-    """Fit pulse-time profile vs ADC for each channel with C + A*exp(-adc/B).
+    """Fit each channel's profile with C + A*(exp(-adc/B) + D*exp(-adc/E)).
 
     Uses the same restricted pulse-time Y-ranges as the extracted profile plots.
     """
@@ -1326,7 +1333,7 @@ def fit_timewalk_profile_per_channel(
             "n_profile_points": int(x_fit.size),
         }
 
-        if x_fit.size < 4:
+        if x_fit.size < 5:
             fit_results.append(result)
             continue
 
@@ -1339,16 +1346,19 @@ def fit_timewalk_profile_per_channel(
                 timewalk_model,
                 x_fit,
                 y_fit,
-                p0=[c_guess, a_guess, b_guess],
+                p0=[c_guess, a_guess, b_guess, 0.1, 2 * b_guess],
                 sigma=y_err,
                 absolute_sigma=True,
-                bounds=([-np.inf, -np.inf, 1e-6], [np.inf, np.inf, np.inf]),
+                bounds=(
+                    [-np.inf, -np.inf, 1e-6, -np.inf, 1e-6],
+                    [np.inf, np.inf, np.inf, np.inf, np.inf],
+                ),
                 maxfev=20_000,
             )
             perr = np.sqrt(np.diag(pcov))
             y_pred = timewalk_model(x_fit, *popt)
             chi2 = float(np.sum(((y_fit - y_pred) / y_err) ** 2))
-            ndf = int(x_fit.size - 3)
+            ndf = int(x_fit.size - 5)
             chi2_ndf = chi2 / ndf if ndf > 0 else np.nan
 
             result.update(
@@ -1357,9 +1367,13 @@ def fit_timewalk_profile_per_channel(
                     "C": float(popt[0]),
                     "A": float(popt[1]),
                     "B": float(popt[2]),
+                    "D": float(popt[3]),
+                    "E": float(popt[4]),
                     "C_err": float(perr[0]),
                     "A_err": float(perr[1]),
                     "B_err": float(perr[2]),
+                    "D_err": float(perr[3]),
+                    "E_err": float(perr[4]),
                     "chi2": chi2,
                     "ndf": ndf,
                     "chi2_ndf": chi2_ndf,
@@ -1407,9 +1421,10 @@ def plot_timewalk_fit_grid(
 
         if fit.get("fit_success", False):
             xx = np.linspace(adc_range[0], adc_range[1], 300)
-            yy = timewalk_model(xx, fit["C"], fit["A"], fit["B"])
+            yy = timewalk_model(xx, fit["C"], fit["A"], fit["B"], fit["D"], fit["E"])
             label = (
                 f"C={fit['C']:.3g}, A={fit['A']:.3g}, B={fit['B']:.3g}\n"
+                f"D={fit['D']:.3g}, E={fit['E']:.3g}\n"
                 f"chi2/ndf={fit['chi2_ndf']:.2f}"
             )
             ax.plot(xx, yy, color="crimson", linewidth=1.8, label=label)
@@ -1427,7 +1442,7 @@ def plot_timewalk_fit_grid(
     for idx in range(len(fit_results), nrows * ncols):
         axes[idx // ncols][idx % ncols].axis("off")
 
-    fig.suptitle("Pulse-time profile fits by channel: C + A*exp(-ADC/B)")
+    fig.suptitle("Pulse-time profile fits by channel: C + A*(exp(-ADC/B) + D*exp(-ADC/E))")
     fig.tight_layout()
     save_figure_dual_format(fig, output_dir, f"{stem}_timewalk_profile_fit_grid")
     return fig
@@ -1474,8 +1489,8 @@ def plot_timewalk_chi2ndf_vs_channel(
 def plot_timewalk_parameter_histograms(
     fit_results: list[dict], output_dir: str, stem: str, dataset_tag: str | None = None
 ) -> plt.Figure | None:
-    """Plot channel-wise distributions of fitted C, A, B parameters."""
-    params = {"C": [], "A": [], "B": []}
+    """Plot channel-wise distributions of fitted C, A, B, D, E parameters."""
+    params = {"C": [], "A": [], "B": [], "D": [], "E": []}
     for fit in fit_results:
         if not fit.get("fit_success", False):
             continue
@@ -1484,13 +1499,13 @@ def plot_timewalk_parameter_histograms(
             if value is not None and np.isfinite(value):
                 params[key].append(float(value))
 
-    if not params["C"] or not params["A"] or not params["B"]:
-        print("No complete C/A/B fit-parameter set available for histogram plot.")
+    if any(not values for values in params.values()):
+        print("No complete C/A/B/D/E fit-parameter set available for histogram plot.")
         return None
 
-    fig, axes = plt.subplots(1, 3, figsize=(14.0, 4.2))
-    colors = {"C": "royalblue", "A": "darkorange", "B": "seagreen"}
-    for ax, key in zip(axes, ("C", "A", "B")):
+    fig, axes = plt.subplots(1, 5, figsize=(22.0, 4.2))
+    colors = {"C": "royalblue", "A": "darkorange", "B": "seagreen", "D": "purple", "E": "teal"}
+    for ax, key in zip(axes, params):
         values = np.asarray(params[key], dtype=np.float64)
         bins = max(10, int(np.sqrt(values.size)))
         ax.hist(values, bins=bins, histtype="stepfilled", alpha=0.65, color=colors[key], edgecolor="black")
@@ -1523,15 +1538,15 @@ def build_tts_from_second_tree_pass(
 
     Correction requested by user:
         TTS_corr = pulse_time - fit(ADC) + C
-    where fit(ADC) = C + A * exp(-ADC/B) from per-channel profile fits.
+    where fit(ADC) = C + A * (exp(-ADC/B) + D * exp(-ADC/E)).
     Selection for TTS filling uses the same restricted pulse-time window and
     ADC cuts/range used to build profile points and fits.
     """
-    fit_by_channel: dict[int, tuple[float, float, float]] = {}
+    fit_by_channel: dict[int, tuple[float, float, float, float, float]] = {}
     for fit in fit_results:
         if not fit.get("fit_success", False):
             continue
-        fit_by_channel[int(fit["channel"])] = (fit["C"], fit["A"], fit["B"])
+        fit_by_channel[int(fit["channel"])] = (fit["C"], fit["A"], fit["B"], fit["D"], fit["E"])
 
     channel = arrays["channel"].astype(np.int64)
     adc = arrays["adc"].astype(np.float64)
@@ -1578,8 +1593,8 @@ def build_tts_from_second_tree_pass(
         if adc_corr.size == 0:
             continue
 
-        c0, a0, b0 = fit_by_channel[display_ch]
-        fit_time = timewalk_model(adc_corr, c0, a0, b0)
+        c0, a0, b0, d0, e0 = fit_by_channel[display_ch]
+        fit_time = timewalk_model(adc_corr, c0, a0, b0, d0, e0)
         valid = np.isfinite(fit_time) & (fit_time > 0.0)
         if not np.any(valid):
             continue
@@ -2020,7 +2035,7 @@ def main() -> None:
                     dataset_tag=dataset_tag,
                 )
 
-        # Fit pulse-time profile vs ADC with C + A*exp(-ADC/B) for each channel.
+        # Fit pulse-time profile vs ADC for each channel.
         timewalk_fit_results = fit_timewalk_profile_per_channel(
             corrected_channel_data,
             pulse_time_source=args.pulse_time_source,
@@ -2033,7 +2048,7 @@ def main() -> None:
 
         fit_summary_path = os.path.join(output_dir, f"{stem}_timewalk_fit_summary.txt")
         with open(fit_summary_path, "w") as f:
-            f.write("channel fit_success n_profile_points C C_err A A_err B B_err chi2 ndf chi2_ndf\n")
+            f.write("channel fit_success n_profile_points C C_err A A_err B B_err D D_err E E_err chi2 ndf chi2_ndf\n")
             for fit in timewalk_fit_results:
                 if fit.get("fit_success", False):
                     f.write(
@@ -2041,12 +2056,14 @@ def main() -> None:
                         f"{fit['C']:.8g} {fit['C_err']:.8g} "
                         f"{fit['A']:.8g} {fit['A_err']:.8g} "
                         f"{fit['B']:.8g} {fit['B_err']:.8g} "
+                        f"{fit['D']:.8g} {fit['D_err']:.8g} "
+                        f"{fit['E']:.8g} {fit['E_err']:.8g} "
                         f"{fit['chi2']:.8g} {fit['ndf']} {fit['chi2_ndf']:.8g}\n"
                     )
                 else:
                     f.write(
                         f"{fit['channel']:02d} 0 {fit['n_profile_points']} "
-                        "nan nan nan nan nan nan nan -1 nan\n"
+                        "nan nan nan nan nan nan nan nan nan nan nan -1 nan\n"
                     )
         print(f"Saved time-walk fit summary to {fit_summary_path}")
 
@@ -2149,6 +2166,7 @@ def main() -> None:
         section_name=section_name,
         table_latex=table_latex,
         plot_pdf_paths=plot_pdf_paths,
+        adc_threshold=args.adc_threshold,
     )
     print(f"Saved LaTeX report source to {report_tex_path}")
     print(f"Saved PDF report to {report_pdf_path}")
