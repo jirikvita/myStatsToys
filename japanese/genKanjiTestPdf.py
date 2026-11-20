@@ -4,8 +4,8 @@
 Run ``python3 genKanjiTestPdf.py`` to write kanji_test.tex and kanji_test.pdf
 in the current directory. Requires XeLaTeX, xeCJK and the IPAexGothic font.
 The entries "deimasu", "chii" and "furu" are interpreted as demasu,
-chiisai and furui respectively. Each unique vocabulary entry is shown with
-its hiragana reading and a blank line for writing.
+chiisai and furui respectively. Each unique vocabulary entry has a blank
+line for writing, followed by its hiragana reading.
 """
 
 import argparse
@@ -136,8 +136,8 @@ def make_latex():
     words = list(dict.fromkeys(romanji))
     random.shuffle(words)
     lines = [
-        r"\noindent " + japanese[word][0] + "（" + japanese[word][1] + "）"
-        + r"\quad\hrulefill\par\vspace{1em}"
+        r"\noindent " + japanese[word][0] + r"\quad\hrulefill\quad "
+        + "（" + japanese[word][1] + "）" + r"\par\vspace{1em}"
         for word in words
     ]
     return "\n".join([
