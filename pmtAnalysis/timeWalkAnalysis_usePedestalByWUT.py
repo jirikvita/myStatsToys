@@ -5,6 +5,7 @@ Per-channel pedestals are read from `json_results_to_db/channel_??.json`
 (key `adc_pedestal`) instead of being fitted. The pedestal-corrected ADC is cut
 by the ADC threshold, and ToT, time-walk and TTS are computed on the selected pulses.
 The TTS table CSV and compiled report are named with the ADC threshold tag.
+OPTION2_CENTERED_MODULO selects centered option2 times and matching cycle boundaries.
 """
 
 from __future__ import annotations
@@ -49,12 +50,19 @@ PMT_PULSE_MODULO_TICKS = 25_000
 # Custom Y ranges (ns) for pulse-time 2D plots.
 # Set to None to auto-infer from data.
 PULSE_TIME_2D_Y_RANGE_OPTION1_NS: tuple[float, float] | None = (2.0, 2030.0)
-PULSE_TIME_2D_Y_RANGE_OPTION2_NS: tuple[float, float] | None = (140.0, 160.0)
+
+# older data till, incl. Nov 6th 2026
+#PULSE_TIME_2D_Y_RANGE_OPTION2_NS: tuple[float, float] | None = (140.0, 160.0)
+
+# new data since ~Nov 16th 2026 ++
+PULSE_TIME_2D_Y_RANGE_OPTION2_NS: tuple[float, float] | None = (-10.0, 10.0)
+# Center option2 times and cycle boundaries around each period's zero.
+OPTION2_CENTERED_MODULO = True
 
 # Optional per-channel Y-range overrides (display channel indexing: 1, 2, ...).
 # Any channel absent from these maps falls back to the global ranges above.
 PULSE_TIME_2D_Y_RANGE_OPTION1_BY_CHANNEL_NS: dict[int, tuple[float, float]] = {
-    1: (210.0, 235.0),
+   # 1: (210.0, 235.0),
 }
 PULSE_TIME_2D_Y_RANGE_OPTION2_BY_CHANNEL_NS: dict[int, tuple[float, float]] = {
     #1: (110.0, 120.0),
@@ -167,10 +175,33 @@ def compute_pulse_time_ns(
             f"{pmt_pulse_modulo_ticks}) * {PMT_TIME_TICK_NS:.0f}"
             f" + tdc_start * {TDC_LSB_NS:.2f}"
         )
+        if OPTION2_CENTERED_MODULO:
+            period_ns = pmt_pulse_modulo_ticks * PMT_TIME_TICK_NS
+            pulse_time_ns = np.remainder(pulse_time_ns + period_ns / 2, period_ns) - period_ns / 2
+            label = f"{label} (centered, period={period_ns:g} ns)"
     else:
         raise ValueError(f"Unsupported pulse_time_source: {pulse_time_source}")
 
     return pulse_time_ns, label
+
+
+def compute_pulse_cycle_index(
+    pmt_time: np.ndarray,
+    tdc_start: np.ndarray,
+    pulse_time_source: str,
+    pmt_pulse_modulo_ticks: int,
+) -> np.ndarray:
+    """Assign pulses to the cycles corresponding to the selected time convention."""
+    pmt_time_i64 = pmt_time.astype(np.int64)
+    cycle_index = np.floor_divide(pmt_time_i64, np.int64(pmt_pulse_modulo_ticks))
+    if pulse_time_source == "option2" and OPTION2_CENTERED_MODULO:
+        period_ns = pmt_pulse_modulo_ticks * PMT_TIME_TICK_NS
+        phase_ns = (
+            np.remainder(pmt_time_i64, pmt_pulse_modulo_ticks).astype(np.float64) * PMT_TIME_TICK_NS
+            + tdc_start.astype(np.float64) * TDC_LSB_NS
+        )
+        cycle_index += np.floor((phase_ns + period_ns / 2) / period_ns).astype(np.int64)
+    return cycle_index
 
 
 def first_pulse_in_cycle_mask(pulse_time_ns: np.ndarray, cycle_index: np.ndarray) -> np.ndarray:
@@ -232,7 +263,7 @@ def analyze_channel(
         pulse_time_source=pulse_time_source,
         pmt_pulse_modulo_ticks=pmt_pulse_modulo_ticks,
     )
-    cycle_index = np.floor_divide(pmt_time_ch.astype(np.int64), np.int64(pmt_pulse_modulo_ticks))
+    cycle_index = compute_pulse_cycle_index(pmt_time_ch, tdc_start_ch, pulse_time_source, pmt_pulse_modulo_ticks)
     is_first_pulse_in_cycle = first_pulse_in_cycle_mask(pulse_time_ns, cycle_index)
     tot_ns = compute_tot_ns(tdc_coarse_ch, tdc_start_ch, tdc_stop_ch)
 
@@ -1573,7 +1604,7 @@ def build_tts_from_second_tree_pass(
             pulse_time_source=pulse_time_source,
             pmt_pulse_modulo_ticks=pmt_pulse_modulo_ticks,
         )
-        cycle_index = np.floor_divide(pmt_time_ch.astype(np.int64), np.int64(pmt_pulse_modulo_ticks))
+        cycle_index = compute_pulse_cycle_index(pmt_time_ch, tdc_start_ch, pulse_time_source, pmt_pulse_modulo_ticks)
         first_cycle_mask = first_pulse_in_cycle_mask(pulse_time_ns, cycle_index)
         y_min, y_max = pulse_time_range_by_channel.get(display_ch, default_pulse_time_range)
 
@@ -1595,7 +1626,9 @@ def build_tts_from_second_tree_pass(
 
         c0, a0, b0, d0, e0 = fit_by_channel[display_ch]
         fit_time = timewalk_model(adc_corr, c0, a0, b0, d0, e0)
-        valid = np.isfinite(fit_time) & (fit_time > 0.0)
+        valid = np.isfinite(fit_time)
+        if pulse_time_source != "option2":
+            valid &= fit_time > 0.0
         if not np.any(valid):
             continue
 
@@ -1814,7 +1847,8 @@ def main() -> None:
         help=(
             "Pulse-time definition for the 2D pulse-time-vs-ADC plot: "
             "option1=((pmt_time<<4)+tdc_start)*0.25 ns, "
-            "option2=(pmt_time%%25000)*4 ns + tdc_start*0.25 ns."
+            "option2=(pmt_time%%25000)*4 ns + tdc_start*0.25 ns, "
+            "optionally centered using OPTION2_CENTERED_MODULO."
         ),
     )
     parser.add_argument(
