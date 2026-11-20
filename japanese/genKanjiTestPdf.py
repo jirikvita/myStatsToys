@@ -23,7 +23,7 @@ romanji = ["kakarimasu", "nemasu", "tabemasu", "nomimasu",
            "mimasu", "yomimasu", "hanashimasu", "deimasu", "tsukurimasu",
            "abimasu", "asobimasu", "toiimasu", "wakarimasu", "dekakemasu",
            "aimasu","tanoshii", "suki", "hoshii",
-           "akimasu", "akemasu",
+           "akimasu", "akemasu", "machimasu",
 
            "sai", "ani", "ane", "otouto", "imouto",
            "chichi", "haha",
@@ -54,7 +54,9 @@ romanji = ["kakarimasu", "nemasu", "tabemasu", "nomimasu",
             "tanjoubi", "ashita", "kyou", "ban" ,"yoru", "asa",
             "ima", "shuumatsu", "raishuu", "konshuu", "raigetsu",
             "maishuu", "maigetsu", "maiasa", "maiban", "konban", "mainichi",
-            "juppun"
+            "juppun", "fun",
+
+            "han", "kokoro", "mizu", "ushi", "gohan", "mimi", "te", "neko", "sakana"
 
            ]
 
@@ -128,6 +130,10 @@ japanese = {
     "maigetsu": ("毎月", "まいげつ"), "maiasa": ("毎朝", "まいあさ"),
     "maiban": ("毎晩", "まいばん"), "konban": ("今晩", "こんばん"),
     "mainichi": ("毎日", "まいにち"), "juppun": ("十分", "じゅっぷん"),
+    "machimasu": ("待ちます", "まちます"), "fun": ("分", "ふん"),
+    "han": ("半", "はん"), "kokoro": ("心", "こころ"), "mizu": ("水", "みず"),
+    "ushi": ("牛", "うし"), "gohan": ("ご飯", "ごはん"), "mimi": ("耳", "みみ"),
+    "te": ("手", "て"), "neko": ("猫", "ねこ"), "sakana": ("魚", "さかな"),
 }
 
 
